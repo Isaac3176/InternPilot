@@ -5,6 +5,7 @@ import App from "./App";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import ResumeCenter from "./pages/ResumeCenter";
+import Bullets from "./pages/Bullets";
 import AIChat from "./pages/AIChat";
 import Settings from "./pages/Settings";
 
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "applications", element: <Applications /> },
       { path: "resumes", element: <ResumeCenter /> },
+      { path: "bullets", element: <Bullets /> },
       { path: "chat", element: <AIChat /> },
       { path: "settings", element: <Settings /> },
     ],

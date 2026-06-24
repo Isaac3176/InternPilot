@@ -57,3 +57,8 @@ export async function listResumeBullets(): Promise<ResumeBullet[]> {
   const db = await getDb();
   return db.select<ResumeBullet[]>("SELECT * FROM resume_bullets ORDER BY created_at DESC, id DESC");
 }
+
+export async function deleteResumeBullet(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute("DELETE FROM resume_bullets WHERE id = ?", [id]);
+}
