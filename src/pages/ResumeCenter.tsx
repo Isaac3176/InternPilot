@@ -4,17 +4,19 @@ import {
   deleteResumeVersion,
   listResumeVersions,
   saveResumeBullet,
+  updateResumeVersion,
 } from "../db/resumes";
 import type { ResumeVersion } from "../db/types";
 import { matchResume } from "../ai";
 import type { ResumeMatchResult } from "../ai/types";
 import { hasApiKey } from "../ai/settings";
 
+const emptyForm = { name: "", targetRole: "", content: "" };
+
 export default function ResumeCenter() {
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
-  const [name, setName] = useState("");
-  const [targetRole, setTargetRole] = useState("");
-  const [content, setContent] = useState("");
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jobDescription, setJobDescription] = useState("");
@@ -27,12 +29,22 @@ export default function ResumeCenter() {
   }
   useEffect(load, []);
 
-  async function addVersion() {
-    if (!name.trim()) return;
-    await createResumeVersion({ name, target_role: targetRole, content });
-    setName("");
-    setTargetRole("");
-    setContent("");
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
+  }
+
+  function startEdit(v: ResumeVersion) {
+    setEditingId(v.id);
+    setForm({ name: v.name, targetRole: v.target_role ?? "", content: v.content ?? "" });
+  }
+
+  async function saveVersion() {
+    if (!form.name.trim()) return;
+    const payload = { name: form.name, target_role: form.targetRole, content: form.content };
+    if (editingId) await updateResumeVersion(editingId, payload);
+    else await createResumeVersion(payload);
+    resetForm();
     load();
   }
 
@@ -40,6 +52,7 @@ export default function ResumeCenter() {
     if (!confirm("Delete this resume version?")) return;
     await deleteResumeVersion(id);
     if (selectedId === id) setSelectedId("");
+    if (editingId === id) resetForm();
     load();
   }
 
@@ -86,22 +99,29 @@ export default function ResumeCenter() {
       </div>
 
       <div className="card">
-        <h2>Add a resume version</h2>
+        <h2>{editingId ? "Edit resume version" : "Add a resume version"}</h2>
         <div className="field-row">
           <div className="field">
-            <label>Name *</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Backend Resume" />
+            <label htmlFor="rv-name">Name *</label>
+            <input id="rv-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Backend Resume" />
           </div>
           <div className="field">
-            <label>Target role</label>
-            <input value={targetRole} onChange={(e) => setTargetRole(e.target.value)} placeholder="Backend / API roles" />
+            <label htmlFor="rv-role">Target role</label>
+            <input id="rv-role" value={form.targetRole} onChange={(e) => setForm({ ...form, targetRole: e.target.value })} placeholder="Backend / API roles" />
           </div>
         </div>
         <div className="field">
-          <label>Resume text (paste plain text)</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Paste your resume content here..." />
+          <label htmlFor="rv-content">Resume text (paste plain text)</label>
+          <textarea id="rv-content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="Paste your resume content here..." />
         </div>
-        <button onClick={addVersion} disabled={!name.trim()}>Save version</button>
+        <div className="actions">
+          <button type="button" onClick={saveVersion} disabled={!form.name.trim()}>
+            {editingId ? "Update version" : "Save version"}
+          </button>
+          {editingId && (
+            <button type="button" className="secondary" onClick={resetForm}>Cancel</button>
+          )}
+        </div>
       </div>
 
       <div className="card">
@@ -111,7 +131,7 @@ export default function ResumeCenter() {
         ) : (
           <table>
             <thead>
-              <tr><th>Name</th><th>Target role</th><th>Saved</th><th style={{ width: 90 }}></th></tr>
+              <tr><th>Name</th><th>Target role</th><th>Saved</th><th aria-label="Actions"></th></tr>
             </thead>
             <tbody>
               {versions.map((v) => (
@@ -119,7 +139,12 @@ export default function ResumeCenter() {
                   <td>{v.name}</td>
                   <td className="muted">{v.target_role ?? "—"}</td>
                   <td className="muted">{v.created_at?.slice(0, 10)}</td>
-                  <td><button className="danger small" onClick={() => removeVersion(v.id)}>Delete</button></td>
+                  <td>
+                    <div className="actions">
+                      <button type="button" className="secondary small" onClick={() => startEdit(v)}>Edit</button>
+                      <button type="button" className="danger small" onClick={() => removeVersion(v.id)}>Delete</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -135,32 +160,32 @@ export default function ResumeCenter() {
           </p>
         )}
         <div className="field">
-          <label>Resume version</label>
-          <select value={selectedId} onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : "")}>
+          <label htmlFor="rv-select">Resume version</label>
+          <select id="rv-select" value={selectedId} onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">— select a version —</option>
             {versions.map((v) => (
               <option key={v.id} value={v.id}>{v.name}</option>
             ))}
           </select>
           {selected && !selected.content?.trim() && (
-            <p className="hint">This version has no resume text saved — edit it to add content.</p>
+            <p className="hint">This version has no resume text saved — use Edit above to add content.</p>
           )}
         </div>
         <div className="field">
-          <label>Job description</label>
-          <textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} placeholder="Paste the job description to compare against." />
+          <label htmlFor="rv-jd">Job description</label>
+          <textarea id="rv-jd" value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} placeholder="Paste the job description to compare against." />
         </div>
-        <button onClick={runMatch} disabled={running || !selected?.content?.trim() || !jobDescription.trim()}>
+        <button type="button" onClick={runMatch} disabled={running || !selected?.content?.trim() || !jobDescription.trim()}>
           {running ? "Analyzing..." : "Run match"}
         </button>
 
-        {error && <p className="hint" style={{ color: "var(--red)" }}>{error}</p>}
+        {error && <p className="hint text-red">{error}</p>}
 
         {result && (
-          <div style={{ marginTop: 20 }}>
+          <div className="mt-lg">
             <div className="row-between">
               <div>
-                <div className="label" style={{ color: "var(--text-dim)" }}>Match score</div>
+                <div className="label text-dim">Match score</div>
                 <div className="pill-score">{result.matchScore}%</div>
               </div>
               <span className={`badge ${result.source === "openai" ? "offer" : "interested"}`}>
@@ -168,29 +193,29 @@ export default function ResumeCenter() {
               </span>
             </div>
 
-            <h3 style={{ marginBottom: 4 }}>Matching skills</h3>
+            <h3 className="mb-xs">Matching skills</h3>
             <div className="tag-list">
               {result.matchingSkills.map((s, i) => <span className="tag hit" key={i}>{s}</span>)}
             </div>
 
-            <h3 style={{ marginBottom: 4, marginTop: 16 }}>Missing skills / keywords</h3>
+            <h3 className="result-h3">Missing skills / keywords</h3>
             <div className="tag-list">
               {result.missingSkills.map((s, i) => <span className="tag miss" key={i}>{s}</span>)}
             </div>
 
-            <h3 style={{ marginTop: 16 }}>Suggested bullet rewrites</h3>
+            <h3 className="mt-md">Suggested bullet rewrites</h3>
             {result.suggestedBullets.map((b, i) => (
-              <div className="card" key={i} style={{ background: "var(--bg-elev-2)" }}>
-                <div className="muted" style={{ fontSize: 13 }}>Before: {b.before}</div>
-                <div style={{ marginTop: 6 }}>After: {b.after}</div>
-                <button className="secondary small" style={{ marginTop: 10 }} onClick={() => saveBullet(b.before, b.after)}>
+              <div className="card card-inset" key={i}>
+                <div className="muted text-sm">Before: {b.before}</div>
+                <div className="mt-xs">After: {b.after}</div>
+                <button type="button" className="secondary small mt-sm" onClick={() => saveBullet(b.before, b.after)}>
                   Save to library
                 </button>
               </div>
             ))}
 
-            <h3 style={{ marginTop: 16 }}>Strategy</h3>
-            <p style={{ lineHeight: 1.6 }}>{result.strategy}</p>
+            <h3 className="mt-md">Strategy</h3>
+            <p className="strategy">{result.strategy}</p>
           </div>
         )}
       </div>
