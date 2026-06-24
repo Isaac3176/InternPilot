@@ -14,8 +14,10 @@ Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the
 - **Dashboard** — application counts by status, conversion rates, and recent applications.
 - **Applications** — create / edit / delete / search / filter applications (company, role,
   status, resume version, job description, notes).
-- **Resume Center** — manage multiple targeted resume versions and run an AI resume-to-job
-  match (score, matching skills, missing keywords, suggested bullet rewrites, strategy).
+- **Resume Center** — create/edit multiple targeted resume versions (paste text or import a
+  PDF / DOCX file), and run an AI resume-to-job match (score, matching skills, missing
+  keywords, suggested bullet rewrites, strategy).
+- **Bullet Library** — view, copy, and manage improved resume bullets saved from AI matches.
 - **AI Chat** — a career assistant grounded in your stored application data.
 - **Settings** — OpenAI API key + model, data export (JSON), and delete-all-data.
 

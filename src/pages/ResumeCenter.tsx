@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import {
   createResumeVersion,
   deleteResumeVersion,
@@ -10,6 +10,7 @@ import type { ResumeVersion } from "../db/types";
 import { matchResume } from "../ai";
 import type { ResumeMatchResult } from "../ai/types";
 import { hasApiKey } from "../ai/settings";
+import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 
 const emptyForm = { name: "", targetRole: "", content: "" };
 
@@ -17,6 +18,8 @@ export default function ResumeCenter() {
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
 
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jobDescription, setJobDescription] = useState("");
@@ -37,6 +40,26 @@ export default function ResumeCenter() {
   function startEdit(v: ResumeVersion) {
     setEditingId(v.id);
     setForm({ name: v.name, targetRole: v.target_role ?? "", content: v.content ?? "" });
+  }
+
+  async function handleImport(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const text = await extractTextFromFile(file);
+      setForm((f) => ({
+        ...f,
+        content: text,
+        name: f.name.trim() ? f.name : file.name.replace(/\.[^.]+$/, ""),
+      }));
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function saveVersion() {
@@ -111,8 +134,21 @@ export default function ResumeCenter() {
           </div>
         </div>
         <div className="field">
-          <label htmlFor="rv-content">Resume text (paste plain text)</label>
-          <textarea id="rv-content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="Paste your resume content here..." />
+          <div className="row-between mb-xs">
+            <label htmlFor="rv-content">Resume text</label>
+            <label className="import-link">
+              {importing ? "Importing…" : "Import from file"}
+              <input
+                type="file"
+                accept={ACCEPTED_RESUME_TYPES}
+                onChange={handleImport}
+                disabled={importing}
+                hidden
+              />
+            </label>
+          </div>
+          <textarea id="rv-content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="Paste your resume content, or import a PDF / DOCX file." />
+          {importError && <p className="hint text-red">{importError}</p>}
         </div>
         <div className="actions">
           <button type="button" onClick={saveVersion} disabled={!form.name.trim()}>

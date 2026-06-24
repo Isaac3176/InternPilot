@@ -247,4 +247,12 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .result-h3 { margin: 16px 0 4px; }
 .actions { display: flex; gap: 8px; }
 .strategy { line-height: 1.6; }
+.import-link {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 12px;
+}
+.import-link:hover { text-decoration: underline; }
 
