@@ -1,4 +1,5 @@
 import { getDb } from "./index";
+import { upsertCompany } from "./companies";
 import type { Application, ApplicationRow, Status } from "./types";
 
 export interface ApplicationInput {
@@ -11,20 +12,6 @@ export interface ApplicationInput {
   resume_version_id?: number | null;
   job_description?: string | null;
   notes?: string | null;
-}
-
-/** Find an existing company by name (case-insensitive) or create one. Returns its id. */
-async function upsertCompany(name: string): Promise<number | null> {
-  const trimmed = name.trim();
-  if (!trimmed) return null;
-  const db = await getDb();
-  const existing = await db.select<{ id: number }[]>(
-    "SELECT id FROM companies WHERE name = ? COLLATE NOCASE LIMIT 1",
-    [trimmed],
-  );
-  if (existing.length > 0) return existing[0].id;
-  const res = await db.execute("INSERT INTO companies (name) VALUES (?)", [trimmed]);
-  return res.lastInsertId ?? null;
 }
 
 export async function listApplications(opts?: {
