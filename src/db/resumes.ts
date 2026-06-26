@@ -13,6 +13,12 @@ export async function listResumeVersions(): Promise<ResumeVersion[]> {
   return db.select<ResumeVersion[]>("SELECT * FROM resume_versions ORDER BY created_at DESC, id DESC");
 }
 
+export async function getResumeVersion(id: number): Promise<ResumeVersion | null> {
+  const db = await getDb();
+  const rows = await db.select<ResumeVersion[]>("SELECT * FROM resume_versions WHERE id = ?", [id]);
+  return rows[0] ?? null;
+}
+
 export async function createResumeVersion(input: ResumeVersionInput): Promise<number | null> {
   const db = await getDb();
   const res = await db.execute(

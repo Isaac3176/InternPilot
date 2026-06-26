@@ -100,12 +100,20 @@ CREATE INDEX IF NOT EXISTS idx_tasks_application    ON tasks(application_id);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![Migration {
-        version: 1,
-        description: "create_initial_schema",
-        sql: INITIAL_SCHEMA,
-        kind: MigrationKind::Up,
-    }];
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create_initial_schema",
+            sql: INITIAL_SCHEMA,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_prep_plan_to_interviews",
+            sql: "ALTER TABLE interviews ADD COLUMN prep_plan TEXT;",
+            kind: MigrationKind::Up,
+        },
+    ];
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

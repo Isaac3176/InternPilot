@@ -6,6 +6,7 @@ const NAV = [
   { to: "/applications", label: "Applications", icon: "▤", end: false },
   { to: "/resumes", label: "Resume Center", icon: "▦", end: false },
   { to: "/bullets", label: "Bullet Library", icon: "✎", end: false },
+  { to: "/prep", label: "Interview Prep", icon: "◎", end: false },
   { to: "/chat", label: "AI Chat", icon: "✦", end: false },
   { to: "/settings", label: "Settings", icon: "⚙", end: false },
 ];

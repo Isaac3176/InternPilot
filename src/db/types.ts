@@ -59,6 +59,44 @@ export interface ApplicationRow extends Application {
   resume_version_name: string | null;
 }
 
+export const INTERVIEW_TYPES = ["oa", "technical", "behavioral", "final"] as const;
+export type InterviewType = (typeof INTERVIEW_TYPES)[number];
+
+export const INTERVIEW_TYPE_LABELS: Record<InterviewType, string> = {
+  oa: "Online Assessment",
+  technical: "Technical Interview",
+  behavioral: "Behavioral Interview",
+  final: "Final Round",
+};
+
+export const PREP_STATUSES = ["not_started", "in_progress", "ready"] as const;
+export type PrepStatus = (typeof PREP_STATUSES)[number];
+
+export const PREP_STATUS_LABELS: Record<PrepStatus, string> = {
+  not_started: "Not started",
+  in_progress: "In progress",
+  ready: "Ready",
+};
+
+export interface Interview {
+  id: number;
+  application_id: number | null;
+  type: InterviewType;
+  date: string | null;
+  prep_status: PrepStatus;
+  notes: string | null;
+  prep_plan: string | null;
+  created_at: string;
+}
+
+/** Interview joined with company + role for display. */
+export interface InterviewRow extends Interview {
+  company_name: string | null;
+  role_title: string | null;
+  job_description: string | null;
+  resume_version_id: number | null;
+}
+
 export interface ResumeBullet {
   id: number;
   experience_name: string | null;

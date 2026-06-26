@@ -18,6 +18,9 @@ Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the
   PDF / DOCX file), and run an AI resume-to-job match (score, matching skills, missing
   keywords, suggested bullet rewrites, strategy).
 - **Bullet Library** — view, copy, and manage improved resume bullets saved from AI matches.
+- **Interview Prep** — track OA & interview events and generate company-specific prep plans
+  (focus areas, study schedule, practice, talking points, questions to ask) tailored to the
+  interview type, role, job description, and your resume.
 - **AI Chat** — a career assistant grounded in your stored application data.
 - **Settings** — OpenAI API key + model, data export (JSON), and delete-all-data.
 
