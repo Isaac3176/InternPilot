@@ -243,6 +243,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .mt-md { margin-top: 16px; }
 .mt-lg { margin-top: 20px; }
 .mb-xs { margin-bottom: 4px; }
+.mb-0 { margin-bottom: 0; }
 .card-inset { background: var(--bg-elev-2); }
 .result-h3 { margin: 16px 0 4px; }
 .actions { display: flex; gap: 8px; }
@@ -255,4 +256,57 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   font-size: 12px;
 }
 .import-link:hover { text-decoration: underline; }
+
+/* ---------- Charts ---------- */
+.funnel-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 44px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+.funnel-row:last-child { margin-bottom: 0; }
+.funnel-label { color: var(--text-dim); font-size: 13px; }
+.funnel-count { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.bar-track { background: var(--bg-elev-2); border-radius: 6px; height: 12px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 6px; min-width: 2px; transition: width 0.3s ease; }
+.bar-fill.interested { background: #6b7280; }
+.bar-fill.applied    { background: #8fb0ff; }
+.bar-fill.oa         { background: var(--amber); }
+.bar-fill.interview  { background: var(--purple); }
+.bar-fill.offer      { background: var(--green); }
+.bar-fill.rejected   { background: var(--red); }
+.bar-fill.accent     { background: var(--accent); }
+
+.col-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 150px;
+  padding-top: 8px;
+}
+.col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 100%;
+}
+.col-bar {
+  width: 100%;
+  max-width: 42px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+  border-radius: 6px 6px 0 0;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+.col-val { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.col-label { font-size: 11px; color: var(--text-faint); }
+
+.perf-rate { display: flex; align-items: center; gap: 8px; }
+.perf-rate .bar-track { flex: 1; height: 8px; }
+.perf-rate span { font-size: 12px; color: var(--text-dim); width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
 
