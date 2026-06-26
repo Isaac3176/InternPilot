@@ -10,6 +10,7 @@ import {
   type WeekBucket,
 } from "../db/metrics";
 import { listApplications } from "../db/applications";
+import { getStrategyRecommendation, type Strategy } from "../ai/strategy";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import StatusBadge from "../components/StatusBadge";
 
@@ -19,6 +20,8 @@ export default function Dashboard() {
   const [recent, setRecent] = useState<ApplicationRow[]>([]);
   const [weekly, setWeekly] = useState<WeekBucket[]>([]);
   const [perf, setPerf] = useState<ResumeVersionPerf[]>([]);
+  const [strategy, setStrategy] = useState<Strategy | null>(null);
+  const [loadingStrategy, setLoadingStrategy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -29,6 +32,17 @@ export default function Dashboard() {
       setPerf(await getResumeVersionPerformance());
     })().catch(console.error);
   }, []);
+
+  async function loadStrategy() {
+    setLoadingStrategy(true);
+    try {
+      setStrategy(await getStrategyRecommendation());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoadingStrategy(false);
+    }
+  }
 
   const maxStatusCount = counts ? Math.max(1, ...STATUSES.map((s) => counts[s])) : 1;
   const maxWeek = Math.max(1, ...weekly.map((w) => w.count));
@@ -49,6 +63,28 @@ export default function Dashboard() {
         <Metric label={STATUS_LABELS.interview} value={counts?.interview} />
         <Metric label={STATUS_LABELS.offer} value={counts?.offer} />
         <Metric label={STATUS_LABELS.rejected} value={counts?.rejected} />
+      </div>
+
+      <div className="card">
+        <div className="row-between">
+          <h2 className="mb-0">This week's strategy</h2>
+          <button type="button" className="secondary small" onClick={loadStrategy} disabled={loadingStrategy}>
+            {loadingStrategy ? "Thinking…" : strategy ? "Refresh" : "Generate"}
+          </button>
+        </div>
+        {strategy ? (
+          <div className="mt-md">
+            {strategy.headline && <p className="strategy">{strategy.headline}</p>}
+            <ul className="prep-list">
+              {strategy.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+            <span className={`badge ${strategy.source === "openai" ? "offer" : "interested"}`}>
+              {strategy.source === "openai" ? "OpenAI" : "Offline strategy"}
+            </span>
+          </div>
+        ) : (
+          <p className="hint">Generate an AI-backed action plan based on your current funnel.</p>
+        )}
       </div>
 
       <div className="card">
