@@ -7,6 +7,7 @@ import Applications from "./pages/Applications";
 import ResumeCenter from "./pages/ResumeCenter";
 import Bullets from "./pages/Bullets";
 import InterviewPrep from "./pages/InterviewPrep";
+import Experiences from "./pages/Experiences";
 import AIChat from "./pages/AIChat";
 import Settings from "./pages/Settings";
 
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
       { path: "resumes", element: <ResumeCenter /> },
       { path: "bullets", element: <Bullets /> },
       { path: "prep", element: <InterviewPrep /> },
+      { path: "experiences", element: <Experiences /> },
       { path: "chat", element: <AIChat /> },
       { path: "settings", element: <Settings /> },
     ],

@@ -21,6 +21,8 @@ Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the
 - **Interview Prep** — track OA & interview events and generate company-specific prep plans
   (focus areas, study schedule, practice, talking points, questions to ask) tailored to the
   interview type, role, job description, and your resume.
+- **Interview Experiences** — collect company interview reports (role, source, difficulty,
+  topics, notes) and synthesize them per company into prep guidance with AI.
 - **AI Chat** — a career assistant grounded in your stored application data.
 - **Settings** — OpenAI API key + model, data export (JSON), and delete-all-data.
 
