@@ -97,6 +97,31 @@ export interface InterviewRow extends Interview {
   resume_version_id: number | null;
 }
 
+export const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+};
+
+export interface InterviewExperience {
+  id: number;
+  company_id: number | null;
+  source: string | null;
+  role: string | null;
+  summary: string | null;
+  topics: string | null;
+  difficulty: Difficulty | null;
+  created_at: string;
+}
+
+/** Interview experience joined with its company name for display. */
+export interface ExperienceRow extends InterviewExperience {
+  company_name: string | null;
+}
+
 export interface ResumeBullet {
   id: number;
   experience_name: string | null;
