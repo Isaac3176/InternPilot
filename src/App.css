@@ -332,3 +332,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 }
 .reminder-row:last-child { border-bottom: none; }
 
+.check-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; cursor: pointer; font-weight: 400; color: var(--text); }
+.check-row input { width: auto; margin-top: 2px; cursor: pointer; }
+.checked-text { color: var(--text-faint); text-decoration: line-through; }
+
