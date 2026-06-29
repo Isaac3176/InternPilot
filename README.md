@@ -24,6 +24,8 @@ Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the
 - **Interview Experiences** — collect company interview reports (role, source, difficulty,
   topics, notes) and synthesize them per company into prep guidance with AI.
 - **AI Chat** — a career assistant grounded in your stored application data.
+- **Reminders & desktop notifications** — the dashboard surfaces follow-up reminders for
+  stale applications and upcoming OAs/interviews, and fires native desktop notifications.
 - **Settings** — OpenAI API key + model, data export (JSON), and delete-all-data.
 
 The AI features work **without an API key** using an offline keyword-based estimate, so the

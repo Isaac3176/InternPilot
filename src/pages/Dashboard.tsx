@@ -10,6 +10,8 @@ import {
   type WeekBucket,
 } from "../db/metrics";
 import { listApplications } from "../db/applications";
+import { getReminders, type Reminder } from "../db/reminders";
+import { notifyNewReminders } from "../lib/notify";
 import { getStrategyRecommendation, type Strategy } from "../ai/strategy";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import StatusBadge from "../components/StatusBadge";
@@ -22,6 +24,7 @@ export default function Dashboard() {
   const [perf, setPerf] = useState<ResumeVersionPerf[]>([]);
   const [strategy, setStrategy] = useState<Strategy | null>(null);
   const [loadingStrategy, setLoadingStrategy] = useState(false);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -30,6 +33,9 @@ export default function Dashboard() {
       setRecent((await listApplications()).slice(0, 6));
       setWeekly(await getWeeklyApplications(8));
       setPerf(await getResumeVersionPerformance());
+      const rem = await getReminders();
+      setReminders(rem);
+      notifyNewReminders(rem);
     })().catch(console.error);
   }, []);
 
@@ -64,6 +70,18 @@ export default function Dashboard() {
         <Metric label={STATUS_LABELS.offer} value={counts?.offer} />
         <Metric label={STATUS_LABELS.rejected} value={counts?.rejected} />
       </div>
+
+      {reminders.length > 0 && (
+        <div className="card">
+          <h2>Reminders</h2>
+          {reminders.map((r) => (
+            <div className="reminder-row" key={r.key}>
+              <span className={`badge ${r.kind === "interview" ? "interview" : "oa"}`}>{r.title}</span>
+              <span>{r.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card">
         <div className="row-between">
