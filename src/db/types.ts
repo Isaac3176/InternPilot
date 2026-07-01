@@ -97,6 +97,56 @@ export interface InterviewRow extends Interview {
   resume_version_id: number | null;
 }
 
+export const EMAIL_CATEGORIES = [
+  "confirmation",
+  "rejection",
+  "oa",
+  "interview",
+  "recruiter",
+  "offer",
+  "other",
+] as const;
+export type EmailCategory = (typeof EMAIL_CATEGORIES)[number];
+
+export const EMAIL_CATEGORY_LABELS: Record<EmailCategory, string> = {
+  confirmation: "Application Confirmation",
+  rejection: "Rejection",
+  oa: "Online Assessment",
+  interview: "Interview",
+  recruiter: "Recruiter Follow-up",
+  offer: "Offer",
+  other: "Other / Update",
+};
+
+/** Application status a given email category suggests (null = no change). */
+export const CATEGORY_TO_STATUS: Record<EmailCategory, Status | null> = {
+  confirmation: "applied",
+  rejection: "rejected",
+  oa: "oa",
+  interview: "interview",
+  recruiter: null,
+  offer: "offer",
+  other: null,
+};
+
+export interface Email {
+  id: number;
+  sender: string | null;
+  subject: string | null;
+  body: string | null;
+  received_at: string | null;
+  classification: EmailCategory | null;
+  confidence: number | null;
+  application_id: number | null;
+  created_at: string;
+}
+
+/** Email joined with its linked application's company + role for display. */
+export interface EmailRow extends Email {
+  company_name: string | null;
+  role_title: string | null;
+}
+
 export const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 

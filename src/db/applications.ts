@@ -100,3 +100,8 @@ export async function deleteApplication(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM applications WHERE id = ?", [id]);
 }
+
+export async function setApplicationStatus(id: number, status: Status): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE applications SET status = ? WHERE id = ?", [status, id]);
+}
