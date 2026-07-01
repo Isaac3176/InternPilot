@@ -9,6 +9,7 @@ const NAV = [
   { to: "/prep", label: "Interview Prep", icon: "◎", end: false },
   { to: "/experiences", label: "Experiences", icon: "❝", end: false },
   { to: "/apply", label: "Apply Assist", icon: "➤", end: false },
+  { to: "/emails", label: "Email Inbox", icon: "✉", end: false },
   { to: "/chat", label: "AI Chat", icon: "✦", end: false },
   { to: "/settings", label: "Settings", icon: "⚙", end: false },
 ];

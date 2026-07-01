@@ -336,3 +336,14 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .check-row input { width: auto; margin-top: 2px; cursor: pointer; }
 .checked-text { color: var(--text-faint); text-decoration: line-through; }
 
+.email-body {
+  max-height: 84px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.suggest-col .actions { margin-top: 2px; }
+
