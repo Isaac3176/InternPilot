@@ -12,7 +12,8 @@
     "sql:allow-select",
     "sql:allow-close",
     "notification:default",
-    "oauth:default",
+    "oauth:allow-start",
+    "oauth:allow-cancel",
     {
       "identifier": "http:default",
       "allow": [
