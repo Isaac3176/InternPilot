@@ -1,4 +1,5 @@
 import { getApiKey, getModel, hasApiKey } from "./settings";
+import { httpFetch } from "../lib/http";
 import type { ResumeMatchInput, ResumeMatchResult } from "./types";
 
 const COMMON_STOPWORDS = new Set([
@@ -78,7 +79,7 @@ Return JSON with this exact shape:
 }
 
 async function openaiMatch(input: ResumeMatchInput): Promise<ResumeMatchResult> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await httpFetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

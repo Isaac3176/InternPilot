@@ -1,6 +1,7 @@
 import type { EmailCategory } from "../db/types";
 import { EMAIL_CATEGORIES } from "../db/types";
 import { getApiKey, getModel, hasApiKey } from "./settings";
+import { httpFetch } from "../lib/http";
 
 export interface EmailClassification {
   category: EmailCategory;
@@ -51,7 +52,7 @@ Return JSON: { "category": one of [${EMAIL_CATEGORIES.join(", ")}], "confidence"
 }
 
 async function openaiClassify(email: EmailToClassify): Promise<EmailClassification> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await httpFetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -2,6 +2,7 @@ import { listApplications } from "../db/applications";
 import { getStatusCounts } from "../db/metrics";
 import { STATUS_LABELS } from "../db/types";
 import { getApiKey, getModel, hasApiKey } from "./settings";
+import { httpFetch } from "../lib/http";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -45,7 +46,7 @@ export async function askChat(question: string, history: ChatMessage[]): Promise
   const context = await buildContext();
   if (!hasApiKey()) return stubReply(question, context);
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await httpFetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 import { getFunnelRates, getStatusCounts } from "../db/metrics";
 import { getApiKey, getModel, hasApiKey } from "./settings";
+import { httpFetch } from "../lib/http";
 
 export interface Strategy {
   headline: string;
@@ -56,7 +57,7 @@ Response rate: ${rates.responseRate}% | OA rate: ${rates.oaRate}% | Interview ra
 
 Return JSON: { "headline": string, "recommendations": string[] }`;
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await httpFetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

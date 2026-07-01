@@ -12,6 +12,16 @@
     "sql:allow-select",
     "sql:allow-close",
     "notification:default",
-    "oauth:default"
+    "oauth:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.openai.com/*" },
+        { "url": "https://oauth2.googleapis.com/*" },
+        { "url": "https://accounts.google.com/*" },
+        { "url": "https://gmail.googleapis.com/*" },
+        { "url": "https://www.googleapis.com/*" }
+      ]
+    }
   ]
 }
