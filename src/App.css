@@ -244,6 +244,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .mt-lg { margin-top: 20px; }
 .mb-xs { margin-bottom: 4px; }
 .mb-0 { margin-bottom: 0; }
+.mb-md { margin-bottom: 14px; }
 .ml-xs { margin-left: 6px; }
 .card-inset { background: var(--bg-elev-2); }
 .result-h3 { margin: 16px 0 4px; }
