@@ -113,6 +113,12 @@ pub fn run() {
             sql: "ALTER TABLE interviews ADD COLUMN prep_plan TEXT;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "add_gmail_id_to_emails",
+            sql: "ALTER TABLE emails ADD COLUMN gmail_id TEXT;",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

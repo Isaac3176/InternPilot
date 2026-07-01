@@ -24,6 +24,9 @@ Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the
 - **Interview Experiences** — collect company interview reports (role, source, difficulty,
   topics, notes) and synthesize them per company into prep guidance with AI.
 - **AI Chat** — a career assistant grounded in your stored application data.
+- **Email Inbox + Gmail** — connect Gmail (read-only OAuth) and sync job-related messages,
+  or paste emails manually; each is AI-classified (confirmation / rejection / OA / interview /
+  recruiter / offer) with a review-before-update step to change an application's status.
 - **Apply Assist** — Safe-Mode assisted application prep: recommends the best-matching
   resume version for a job, drafts short-answer responses, builds a prep checklist, and
   opens the posting for you to review and submit.
@@ -100,7 +103,7 @@ Following the project proposal:
 
 - ✅ **Phase 1** — application tracker, resume versions, dashboard, local persistence.
 - ✅ **Phase 2** — AI resume matching, PDF/DOCX import, bullet library.
-- ⏳ **Phase 3** — Gmail integration + email classification (requires Google OAuth setup).
+- ✅ **Phase 3** — Gmail integration (read-only OAuth) + email classification.
 - ✅ **Phase 4** — OA / interview prep plans + desktop notifications.
 - ✅ **Phase 5** — interview-experience research + analytics across resume versions.
 - ✅ **Phase 6** — assisted application workflow (Safe Mode).

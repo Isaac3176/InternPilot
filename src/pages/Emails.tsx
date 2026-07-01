@@ -17,6 +17,8 @@ import {
 } from "../db/types";
 import { classifyEmail } from "../ai/email";
 import { hasApiKey } from "../ai/settings";
+import { isConnected } from "../gmail/config";
+import { syncGmail } from "../gmail/sync";
 
 const CATEGORY_BADGE: Record<EmailCategory, string> = {
   confirmation: "applied",
@@ -35,6 +37,21 @@ export default function Emails() {
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const gmailConnected = isConnected();
+
+  async function sync() {
+    setSyncing(true);
+    try {
+      const result = await syncGmail();
+      alert(`Synced Gmail: ${result.added} new email(s), ${result.classified} classified.`);
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   function load() {
     listEmails().then(setRows).catch(console.error);
@@ -98,6 +115,11 @@ export default function Emails() {
           <h1>Email Inbox</h1>
           <p>Classify job-related emails and update application statuses after your review.</p>
         </div>
+        {gmailConnected && (
+          <button type="button" onClick={sync} disabled={syncing}>
+            {syncing ? "Syncing…" : "Sync Gmail"}
+          </button>
+        )}
       </div>
 
       <div className="card">

@@ -7,6 +7,7 @@ export interface EmailInput {
   body?: string | null;
   received_at?: string | null;
   application_id?: number | null;
+  gmail_id?: string | null;
 }
 
 export async function listEmails(): Promise<EmailRow[]> {
@@ -23,10 +24,26 @@ export async function listEmails(): Promise<EmailRow[]> {
 export async function createEmail(input: EmailInput): Promise<number | null> {
   const db = await getDb();
   const res = await db.execute(
-    "INSERT INTO emails (sender, subject, body, received_at, application_id) VALUES (?, ?, ?, ?, ?)",
-    [input.sender ?? null, input.subject ?? null, input.body ?? null, input.received_at ?? null, input.application_id ?? null],
+    "INSERT INTO emails (sender, subject, body, received_at, application_id, gmail_id) VALUES (?, ?, ?, ?, ?, ?)",
+    [
+      input.sender ?? null,
+      input.subject ?? null,
+      input.body ?? null,
+      input.received_at ?? null,
+      input.application_id ?? null,
+      input.gmail_id ?? null,
+    ],
   );
   return res.lastInsertId ?? null;
+}
+
+/** Gmail message ids already stored, used to avoid re-importing on sync. */
+export async function getExistingGmailIds(): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select<{ gmail_id: string }[]>(
+    "SELECT gmail_id FROM emails WHERE gmail_id IS NOT NULL",
+  );
+  return rows.map((r) => r.gmail_id);
 }
 
 export async function setEmailClassification(

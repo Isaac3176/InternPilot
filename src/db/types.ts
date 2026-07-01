@@ -138,6 +138,7 @@ export interface Email {
   classification: EmailCategory | null;
   confidence: number | null;
   application_id: number | null;
+  gmail_id: string | null;
   created_at: string;
 }
 
