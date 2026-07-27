@@ -142,6 +142,47 @@ pub fn run() {
             sql: "ALTER TABLE applications ADD COLUMN referral TEXT;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "create_contacts_and_referrals",
+            sql: "CREATE TABLE IF NOT EXISTS contacts (
+                    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name                 TEXT NOT NULL,
+                    company_id           INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+                    title                TEXT,
+                    team                 TEXT,
+                    email                TEXT,
+                    linkedin             TEXT,
+                    relationship_type    TEXT,
+                    relationship_strength INTEGER,
+                    how_you_know         TEXT,
+                    contact_again        INTEGER NOT NULL DEFAULT 1,
+                    notes                TEXT,
+                    created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
+                  );
+                  CREATE TABLE IF NOT EXISTS referrals (
+                    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contact_id        INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+                    application_id    INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+                    company_id        INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+                    status            TEXT NOT NULL DEFAULT 'potential_contact',
+                    first_contacted   TEXT,
+                    last_interaction  TEXT,
+                    next_follow_up    TEXT,
+                    confirmation_note TEXT,
+                    referral_link     TEXT,
+                    thank_you_sent    INTEGER NOT NULL DEFAULT 0,
+                    notes             TEXT,
+                    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+                  );
+                  CREATE INDEX IF NOT EXISTS idx_contacts_company ON contacts(company_id);
+                  CREATE INDEX IF NOT EXISTS idx_referrals_contact ON referrals(contact_id);
+                  CREATE INDEX IF NOT EXISTS idx_referrals_application ON referrals(application_id);
+                  CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

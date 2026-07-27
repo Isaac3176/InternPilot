@@ -136,6 +136,103 @@ export interface Profile {
   updated_at: string;
 }
 
+export const RELATIONSHIP_TYPES = [
+  "friend",
+  "alumnus",
+  "professor_connection",
+  "previous_coworker",
+  "cold_outreach",
+  "other",
+] as const;
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
+
+export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
+  friend: "Friend",
+  alumnus: "Alumnus",
+  professor_connection: "Professor connection",
+  previous_coworker: "Previous coworker",
+  cold_outreach: "Cold outreach",
+  other: "Other",
+};
+
+/** Referral pipeline, in progression order. */
+export const REFERRAL_STATUSES = [
+  "no_referral_path",
+  "potential_contact",
+  "outreach_planned",
+  "outreach_sent",
+  "follow_up_due",
+  "contact_responded",
+  "referral_agreed",
+  "referral_submitted",
+  "referral_confirmed",
+  "applied_through_referral",
+  "declined",
+  "no_response",
+  "expired",
+] as const;
+export type ReferralStatus = (typeof REFERRAL_STATUSES)[number];
+
+export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
+  no_referral_path: "No referral path",
+  potential_contact: "Potential contact found",
+  outreach_planned: "Outreach planned",
+  outreach_sent: "Outreach sent",
+  follow_up_due: "Follow-up due",
+  contact_responded: "Contact responded",
+  referral_agreed: "Referral agreed",
+  referral_submitted: "Referral submitted",
+  referral_confirmed: "Referral confirmed",
+  applied_through_referral: "Applied through referral",
+  declined: "Declined",
+  no_response: "No response",
+  expired: "Expired",
+};
+
+export interface Contact {
+  id: number;
+  name: string;
+  company_id: number | null;
+  title: string | null;
+  team: string | null;
+  email: string | null;
+  linkedin: string | null;
+  relationship_type: RelationshipType | null;
+  relationship_strength: number | null;
+  how_you_know: string | null;
+  contact_again: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactRow extends Contact {
+  company_name: string | null;
+}
+
+export interface Referral {
+  id: number;
+  contact_id: number | null;
+  application_id: number | null;
+  company_id: number | null;
+  status: ReferralStatus;
+  first_contacted: string | null;
+  last_interaction: string | null;
+  next_follow_up: string | null;
+  confirmation_note: string | null;
+  referral_link: string | null;
+  thank_you_sent: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReferralRow extends Referral {
+  contact_name: string | null;
+  company_name: string | null;
+  role_title: string | null;
+}
+
 export const EMAIL_CATEGORIES = [
   "confirmation",
   "rejection",
