@@ -50,6 +50,7 @@ export interface Application {
   resume_version_id: number | null;
   job_description: string | null;
   notes: string | null;
+  referral: string | null;
   created_at: string;
 }
 

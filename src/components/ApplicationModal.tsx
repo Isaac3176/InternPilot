@@ -23,6 +23,7 @@ const empty: ApplicationInput = {
   resume_version_id: null,
   job_description: "",
   notes: "",
+  referral: "",
 };
 
 export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
@@ -87,8 +88,8 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
 
         <div className="field-row">
           <div className="field">
-            <label>Status</label>
-            <select value={form.status} onChange={(e) => set("status", e.target.value as Status)}>
+            <label htmlFor="am-status">Status</label>
+            <select id="am-status" value={form.status} onChange={(e) => set("status", e.target.value as Status)}>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{STATUS_LABELS[s]}</option>
               ))}
@@ -102,12 +103,13 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
 
         <div className="field-row">
           <div className="field">
-            <label>Date applied</label>
-            <input type="date" value={form.date_applied ?? ""} onChange={(e) => set("date_applied", e.target.value)} />
+            <label htmlFor="am-date">Date applied</label>
+            <input id="am-date" type="date" value={form.date_applied ?? ""} onChange={(e) => set("date_applied", e.target.value)} />
           </div>
           <div className="field">
-            <label>Resume version</label>
+            <label htmlFor="am-resume">Resume version</label>
             <select
+              id="am-resume"
               value={form.resume_version_id ?? ""}
               onChange={(e) => set("resume_version_id", e.target.value ? Number(e.target.value) : null)}
             >
@@ -130,13 +132,18 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
         </div>
 
         <div className="field">
-          <label>Notes</label>
-          <textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Recruiter name, referral, deadlines..." style={{ minHeight: 60 }} />
+          <label htmlFor="am-referral">Referral</label>
+          <input id="am-referral" value={form.referral ?? ""} onChange={(e) => set("referral", e.target.value)} placeholder="Referrer name / source (leave blank if none)" />
+        </div>
+
+        <div className="field">
+          <label htmlFor="am-notes">Notes</label>
+          <textarea id="am-notes" className="notes-sm" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Recruiter name, deadlines, special requirements..." />
         </div>
 
         <div className="modal-actions">
-          <button className="secondary" onClick={onClose}>Cancel</button>
-          <button onClick={handleSave} disabled={saving || !form.role_title.trim()}>
+          <button type="button" className="secondary" onClick={onClose}>Cancel</button>
+          <button type="button" onClick={handleSave} disabled={saving || !form.role_title.trim()}>
             {saving ? "Saving..." : "Save"}
           </button>
         </div>

@@ -136,6 +136,12 @@ pub fn run() {
                   );",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "add_referral_to_applications",
+            sql: "ALTER TABLE applications ADD COLUMN referral TEXT;",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

@@ -246,6 +246,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .mb-0 { margin-bottom: 0; }
 .mb-md { margin-bottom: 14px; }
 .ml-xs { margin-left: 6px; }
+.notes-sm { min-height: 60px; }
 .card-inset { background: var(--bg-elev-2); }
 .result-h3 { margin: 16px 0 4px; }
 .actions { display: flex; gap: 8px; }

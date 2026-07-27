@@ -46,6 +46,25 @@ export async function getFunnelRates(): Promise<FunnelRates> {
   };
 }
 
+export interface ReferralStats {
+  referred: number;
+  total: number;
+  rate: number; // percent of applications that had a referral
+}
+
+export async function getReferralStats(): Promise<ReferralStats> {
+  const db = await getDb();
+  const rows = await db.select<{ referred: number; total: number }[]>(
+    `SELECT
+       SUM(CASE WHEN referral IS NOT NULL AND TRIM(referral) <> '' THEN 1 ELSE 0 END) AS referred,
+       COUNT(*) AS total
+     FROM applications`,
+  );
+  const referred = rows[0]?.referred ?? 0;
+  const total = rows[0]?.total ?? 0;
+  return { referred, total, rate: total > 0 ? Math.round((referred / total) * 100) : 0 };
+}
+
 export interface ResumeVersionPerf {
   id: number;
   name: string;

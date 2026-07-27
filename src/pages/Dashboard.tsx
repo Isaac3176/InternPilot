@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   getFunnelRates,
+  getReferralStats,
   getResumeVersionPerformance,
   getStatusCounts,
   getWeeklyApplications,
   type FunnelRates,
+  type ReferralStats,
   type ResumeVersionPerf,
   type StatusCounts,
   type WeekBucket,
@@ -22,6 +24,7 @@ export default function Dashboard() {
   const [recent, setRecent] = useState<ApplicationRow[]>([]);
   const [weekly, setWeekly] = useState<WeekBucket[]>([]);
   const [perf, setPerf] = useState<ResumeVersionPerf[]>([]);
+  const [referral, setReferral] = useState<ReferralStats | null>(null);
   const [strategy, setStrategy] = useState<Strategy | null>(null);
   const [loadingStrategy, setLoadingStrategy] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -33,6 +36,7 @@ export default function Dashboard() {
       setRecent((await listApplications()).slice(0, 6));
       setWeekly(await getWeeklyApplications(8));
       setPerf(await getResumeVersionPerformance());
+      setReferral(await getReferralStats());
       const rem = await getReminders();
       setReminders(rem);
       notifyNewReminders(rem);
@@ -146,6 +150,8 @@ export default function Dashboard() {
           <Metric label="OA rate" value={pct(rates?.oaRate)} />
           <Metric label="Interview rate" value={pct(rates?.interviewRate)} />
           <Metric label="Offer rate" value={pct(rates?.offerRate)} />
+          <Metric label="Referral rate" value={pct(referral?.rate)} />
+          <Metric label="Referred" value={referral?.referred} />
         </div>
       </div>
 

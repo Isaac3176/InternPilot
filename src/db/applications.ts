@@ -12,6 +12,7 @@ export interface ApplicationInput {
   resume_version_id?: number | null;
   job_description?: string | null;
   notes?: string | null;
+  referral?: string | null;
 }
 
 export async function listApplications(opts?: {
@@ -56,8 +57,8 @@ export async function createApplication(input: ApplicationInput): Promise<number
   const res = await db.execute(
     `INSERT INTO applications
        (company_id, role_title, job_link, location, status, date_applied,
-        resume_version_id, job_description, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        resume_version_id, job_description, notes, referral)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       companyId,
       input.role_title,
@@ -68,6 +69,7 @@ export async function createApplication(input: ApplicationInput): Promise<number
       input.resume_version_id ?? null,
       input.job_description ?? null,
       input.notes ?? null,
+      input.referral ?? null,
     ],
   );
   return res.lastInsertId ?? null;
@@ -79,7 +81,7 @@ export async function updateApplication(id: number, input: ApplicationInput): Pr
   await db.execute(
     `UPDATE applications SET
        company_id = ?, role_title = ?, job_link = ?, location = ?, status = ?,
-       date_applied = ?, resume_version_id = ?, job_description = ?, notes = ?
+       date_applied = ?, resume_version_id = ?, job_description = ?, notes = ?, referral = ?
      WHERE id = ?`,
     [
       companyId,
@@ -91,6 +93,7 @@ export async function updateApplication(id: number, input: ApplicationInput): Pr
       input.resume_version_id ?? null,
       input.job_description ?? null,
       input.notes ?? null,
+      input.referral ?? null,
       id,
     ],
   );

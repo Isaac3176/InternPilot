@@ -24,6 +24,10 @@ Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the
 - **Interview Experiences** — collect company interview reports (role, source, difficulty,
   topics, notes) and synthesize them per company into prep guidance with AI.
 - **AI Chat** — a career assistant grounded in your stored application data.
+- **Internships feed** — pull ranked internship listings from a public source, tailored to
+  your onboarding profile, with brand-new postings badged and desktop-notified so you can be
+  among the first to apply; one click adds to the tracker or jumps into assisted apply.
+- **Referral tracking** — record a referral per application and see your referral rate.
 - **Email Inbox + Gmail** — connect Gmail (read-only OAuth) and sync job-related messages,
   or paste emails manually; each is AI-classified (confirmation / rejection / OA / interview /
   recruiter / offer) with a review-before-update step to change an application's status.
