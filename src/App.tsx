@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import Onboarding from "./components/Onboarding";
 import "./App.css";
 
 const NAV = [
@@ -11,6 +12,7 @@ const NAV = [
   { to: "/apply", label: "Apply Assist", icon: "➤", end: false },
   { to: "/emails", label: "Email Inbox", icon: "✉", end: false },
   { to: "/chat", label: "AI Chat", icon: "✦", end: false },
+  { to: "/profile", label: "Profile", icon: "◍", end: false },
   { to: "/settings", label: "Settings", icon: "⚙", end: false },
 ];
 
@@ -38,6 +40,7 @@ export default function App() {
       <main className="main">
         <Outlet />
       </main>
+      <Onboarding />
     </div>
   );
 }

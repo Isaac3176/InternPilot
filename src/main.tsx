@@ -10,6 +10,7 @@ import InterviewPrep from "./pages/InterviewPrep";
 import Experiences from "./pages/Experiences";
 import ApplyAssist from "./pages/ApplyAssist";
 import Emails from "./pages/Emails";
+import Profile from "./pages/Profile";
 import AIChat from "./pages/AIChat";
 import Settings from "./pages/Settings";
 
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: "experiences", element: <Experiences /> },
       { path: "apply", element: <ApplyAssist /> },
       { path: "emails", element: <Emails /> },
+      { path: "profile", element: <Profile /> },
       { path: "chat", element: <AIChat /> },
       { path: "settings", element: <Settings /> },
     ],
