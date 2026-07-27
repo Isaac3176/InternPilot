@@ -1,0 +1,38 @@
+/**
+ * Curated internship/early-career tech role categories, similar to the role
+ * picker in Simplify. Used as autocomplete suggestions for target roles.
+ */
+export const ROLE_SUGGESTIONS: string[] = [
+  "Software Engineer",
+  "Frontend Engineer",
+  "Backend Engineer",
+  "Full Stack Engineer",
+  "Mobile Engineer (iOS)",
+  "Mobile Engineer (Android)",
+  "Data Scientist",
+  "Data Engineer",
+  "Data Analyst",
+  "Machine Learning Engineer",
+  "AI Engineer",
+  "Computer Vision Engineer",
+  "NLP Engineer",
+  "Research (AI/ML)",
+  "DevOps Engineer",
+  "Site Reliability Engineer",
+  "Cloud Engineer",
+  "Platform Engineer",
+  "Infrastructure Engineer",
+  "Security Engineer",
+  "Embedded / Firmware Engineer",
+  "Hardware Engineer",
+  "Systems Engineer",
+  "QA / Test Engineer",
+  "Quantitative Developer",
+  "Quantitative Analyst",
+  "Product Manager",
+  "Product Designer (UX/UI)",
+  "Game Developer",
+  "Solutions Engineer",
+  "Business Analyst",
+  "Blockchain / Web3 Engineer",
+];

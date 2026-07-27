@@ -247,6 +247,82 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .mb-md { margin-bottom: 14px; }
 .ml-xs { margin-left: 6px; }
 .notes-sm { min-height: 60px; }
+
+/* ---------- Tag multi-select (Simplify-style) ---------- */
+.tag-select { position: relative; }
+.tag-select-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: text;
+}
+.tag-select-control:focus-within { border-color: var(--accent); }
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-dim);
+  color: #eaf0ff;
+  border-radius: 6px;
+  padding: 3px 6px 3px 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.tag-chip button {
+  background: transparent;
+  border: none;
+  color: #cdd8ff;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tag-chip button:hover { color: #fff; filter: none; }
+.tag-select-input {
+  flex: 1;
+  min-width: 120px;
+  width: auto;
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
+  font-size: 14px;
+}
+.tag-select-input:focus { outline: none; border: none; }
+.tag-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.tag-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tag-option:hover { background: var(--accent-dim); filter: none; }
+.tag-option-custom { color: var(--accent); }
 .card-inset { background: var(--bg-elev-2); }
 .result-h3 { margin: 16px 0 4px; }
 .actions { display: flex; gap: 8px; }

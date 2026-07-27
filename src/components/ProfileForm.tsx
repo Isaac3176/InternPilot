@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getProfile, saveProfile } from "../db/profile";
 import { listResumeVersions } from "../db/resumes";
+import TagMultiSelect from "./TagMultiSelect";
+import { ROLE_SUGGESTIONS } from "../data/roles";
 import {
   REMOTE_PREFS,
   REMOTE_PREF_LABELS,
@@ -81,7 +83,13 @@ export default function ProfileForm({ submitLabel = "Save profile", onSaved }: P
     <>
       <div className="field">
         <label htmlFor="pf-roles">Target roles</label>
-        <input id="pf-roles" value={form.target_roles} onChange={(e) => set("target_roles", e.target.value)} placeholder="Backend, Full-stack, ML (comma-separated)" />
+        <TagMultiSelect
+          id="pf-roles"
+          values={form.target_roles ? form.target_roles.split(",").map((s) => s.trim()).filter(Boolean) : []}
+          onChange={(vals) => set("target_roles", vals.join(", "))}
+          suggestions={ROLE_SUGGESTIONS}
+          placeholder="Search roles — e.g. Backend, Machine Learning…"
+        />
       </div>
       <div className="field-row">
         <div className="field">
