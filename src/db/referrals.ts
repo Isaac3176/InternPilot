@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import type { ReferralRow, ReferralStatus } from "./types";
+import type { ReferralRow, ReferralStatus, Status } from "./types";
 
 export interface ReferralInput {
   contact_id: number | null;
@@ -78,4 +78,93 @@ export async function setReferralStatus(id: number, status: ReferralStatus): Pro
 export async function deleteReferral(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM referrals WHERE id = ?", [id]);
+}
+
+const SENT: ReferralStatus[] = [
+  "outreach_sent", "follow_up_due", "contact_responded", "referral_agreed",
+  "referral_submitted", "referral_confirmed", "applied_through_referral",
+  "declined", "no_response", "expired",
+];
+const RESPONDED: ReferralStatus[] = [
+  "contact_responded", "referral_agreed", "referral_submitted",
+  "referral_confirmed", "applied_through_referral", "declined",
+];
+const AGREED: ReferralStatus[] = [
+  "referral_agreed", "referral_submitted", "referral_confirmed", "applied_through_referral",
+];
+const CONFIRMED: ReferralStatus[] = ["referral_confirmed", "applied_through_referral"];
+const TERMINAL: ReferralStatus[] = ["declined", "no_response", "expired", "applied_through_referral"];
+
+export interface OutcomeRates {
+  count: number;
+  oaRate: number;
+  interviewRate: number;
+}
+
+export interface NetworkingStats {
+  totalPaths: number;
+  outreachSent: number;
+  responded: number;
+  agreed: number;
+  confirmed: number;
+  requestResponseRate: number;
+  agreementRate: number;
+  confirmedRate: number;
+  followUpsDue: number;
+  withReferral: OutcomeRates;
+  withoutReferral: OutcomeRates;
+}
+
+const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
+
+/**
+ * Networking funnel + referral-vs-no-referral outcome rates. Rates are reported
+ * alongside their denominators so the UI can flag small, unreliable samples.
+ * Referral association is correlational, not causal.
+ */
+export async function getNetworkingStats(): Promise<NetworkingStats> {
+  const db = await getDb();
+  const refs = await db.select<{ status: ReferralStatus; next_follow_up: string | null }[]>(
+    "SELECT status, next_follow_up FROM referrals",
+  );
+
+  const inSet = (set: ReferralStatus[], s: ReferralStatus) => set.includes(s);
+  const outreachSent = refs.filter((r) => inSet(SENT, r.status)).length;
+  const responded = refs.filter((r) => inSet(RESPONDED, r.status)).length;
+  const agreed = refs.filter((r) => inSet(AGREED, r.status)).length;
+  const confirmed = refs.filter((r) => inSet(CONFIRMED, r.status)).length;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const followUpsDue = refs.filter(
+    (r) => r.next_follow_up && !inSet(TERMINAL, r.status) && new Date(r.next_follow_up) < today,
+  ).length;
+
+  const quoted = AGREED.map((s) => `'${s}'`).join(",");
+  const appRows = await db.select<{ status: Status; has_referral: number }[]>(
+    `SELECT a.status,
+       EXISTS(SELECT 1 FROM referrals r WHERE r.application_id = a.id AND r.status IN (${quoted})) AS has_referral
+     FROM applications a`,
+  );
+
+  const rates = (rows: { status: Status }[]): OutcomeRates => {
+    const count = rows.length;
+    const oa = rows.filter((r) => ["oa", "interview", "offer"].includes(r.status)).length;
+    const interview = rows.filter((r) => ["interview", "offer"].includes(r.status)).length;
+    return { count, oaRate: pct(oa, count), interviewRate: pct(interview, count) };
+  };
+
+  return {
+    totalPaths: refs.length,
+    outreachSent,
+    responded,
+    agreed,
+    confirmed,
+    requestResponseRate: pct(responded, outreachSent),
+    agreementRate: pct(agreed, outreachSent),
+    confirmedRate: pct(confirmed, outreachSent),
+    followUpsDue,
+    withReferral: rates(appRows.filter((r) => r.has_referral === 1)),
+    withoutReferral: rates(appRows.filter((r) => r.has_referral !== 1)),
+  };
 }

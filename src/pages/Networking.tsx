@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { deleteContact, listContacts } from "../db/contacts";
-import { deleteReferral, listReferrals, setReferralStatus } from "../db/referrals";
+import {
+  deleteReferral,
+  getNetworkingStats,
+  listReferrals,
+  setReferralStatus,
+  type NetworkingStats,
+} from "../db/referrals";
 import {
   REFERRAL_STATUSES,
   REFERRAL_STATUS_LABELS,
@@ -44,10 +50,12 @@ export default function Networking() {
   const [editingContact, setEditingContact] = useState<ContactRow | null>(null);
   const [referralModal, setReferralModal] = useState(false);
   const [editingReferral, setEditingReferral] = useState<ReferralRow | null>(null);
+  const [stats, setStats] = useState<NetworkingStats | null>(null);
 
   function load() {
     listReferrals().then(setReferrals).catch(console.error);
     listContacts().then(setContacts).catch(console.error);
+    getNetworkingStats().then(setStats).catch(console.error);
   }
   useEffect(load, []);
 
@@ -78,6 +86,42 @@ export default function Networking() {
           <button type="button" onClick={() => { setEditingReferral(null); setReferralModal(true); }}>+ Referral</button>
         </div>
       </div>
+
+      {stats && stats.totalPaths > 0 && (
+        <div className="card">
+          <h2>Networking analytics</h2>
+          <div className="metric-grid">
+            <Stat label="Response rate" value={`${stats.requestResponseRate}%`} n={stats.outreachSent} nLabel="sent" />
+            <Stat label="Agreement rate" value={`${stats.agreementRate}%`} n={stats.outreachSent} nLabel="sent" />
+            <Stat label="Confirmed rate" value={`${stats.confirmedRate}%`} n={stats.outreachSent} nLabel="sent" />
+            <Stat label="Follow-ups due" value={String(stats.followUpsDue)} />
+          </div>
+          <h3 className="result-h3">OA & interview rate — with vs without a referral</h3>
+          <table>
+            <thead>
+              <tr><th>Group</th><th>Applications</th><th>OA rate</th><th>Interview rate</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>With referral</td>
+                <td>{stats.withReferral.count}</td>
+                <td>{stats.withReferral.oaRate}%</td>
+                <td>{stats.withReferral.interviewRate}%</td>
+              </tr>
+              <tr>
+                <td>Without referral</td>
+                <td>{stats.withoutReferral.count}</td>
+                <td>{stats.withoutReferral.oaRate}%</td>
+                <td>{stats.withoutReferral.interviewRate}%</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="hint">
+            Correlation only — small samples are unreliable. Treat rates based on fewer than ~10 applications as
+            directional, not conclusive.
+          </p>
+        </div>
+      )}
 
       <div className="card">
         <h2>Referral pipeline</h2>
@@ -152,5 +196,15 @@ export default function Networking() {
         <ReferralModal initial={editingReferral} onClose={() => setReferralModal(false)} onSaved={() => { setReferralModal(false); load(); }} />
       )}
     </>
+  );
+}
+
+function Stat({ label, value, n, nLabel }: { label: string; value: string; n?: number; nLabel?: string }) {
+  return (
+    <div className="metric">
+      <div className="label">{label}</div>
+      <div className="value">{value}</div>
+      {n !== undefined && <div className="hint">n = {n}{nLabel ? ` ${nLabel}` : ""}</div>}
+    </div>
   );
 }
