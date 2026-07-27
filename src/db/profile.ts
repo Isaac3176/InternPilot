@@ -1,15 +1,22 @@
 import { getDb } from "./index";
 import type { Profile, RemotePref, WorkAuth } from "./types";
 
-export interface ProfileInput {
-  target_roles: string;
-  locations: string;
+/** Every writable profile column, in a fixed order used to build the upsert. */
+const PROFILE_COLUMNS = [
+  "first_name", "last_name", "email", "phone", "current_city", "current_state", "current_country",
+  "linkedin_url", "github_url", "portfolio_url",
+  "school", "degree", "major", "minor", "gpa", "graduation_date", "grad_year",
+  "target_roles", "locations", "skills", "remote_pref", "preferred_resume_id",
+  "desired_salary", "willing_to_relocate", "earliest_start_date",
+  "work_auth", "authorized_us", "requires_sponsorship", "security_clearance",
+  "gender", "race_ethnicity", "hispanic_latino", "veteran_status", "disability_status",
+] as const;
+
+export type ProfileInput = {
   work_auth: WorkAuth | null;
-  grad_year: string;
-  skills: string;
-  remote_pref: RemotePref;
+  remote_pref: RemotePref | null;
   preferred_resume_id: number | null;
-}
+} & Record<Exclude<(typeof PROFILE_COLUMNS)[number], "work_auth" | "remote_pref" | "preferred_resume_id">, string | null>;
 
 export async function getProfile(): Promise<Profile | null> {
   const db = await getDb();
@@ -25,28 +32,15 @@ export async function isOnboarded(): Promise<boolean> {
 /** Upsert the single profile row and mark it onboarded. */
 export async function saveProfile(input: ProfileInput): Promise<void> {
   const db = await getDb();
+  const cols = PROFILE_COLUMNS.join(", ");
+  const placeholders = PROFILE_COLUMNS.map(() => "?").join(", ");
+  const updates = PROFILE_COLUMNS.map((c) => `${c} = excluded.${c}`).join(", ");
+  const values = PROFILE_COLUMNS.map((c) => (input as Record<string, unknown>)[c] ?? null);
+
   await db.execute(
-    `INSERT INTO profile
-       (id, target_roles, locations, work_auth, grad_year, skills, remote_pref, preferred_resume_id, onboarded, updated_at)
-     VALUES (1, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))
-     ON CONFLICT(id) DO UPDATE SET
-       target_roles = excluded.target_roles,
-       locations = excluded.locations,
-       work_auth = excluded.work_auth,
-       grad_year = excluded.grad_year,
-       skills = excluded.skills,
-       remote_pref = excluded.remote_pref,
-       preferred_resume_id = excluded.preferred_resume_id,
-       onboarded = 1,
-       updated_at = datetime('now')`,
-    [
-      input.target_roles,
-      input.locations,
-      input.work_auth,
-      input.grad_year,
-      input.skills,
-      input.remote_pref,
-      input.preferred_resume_id,
-    ],
+    `INSERT INTO profile (id, ${cols}, onboarded, updated_at)
+     VALUES (1, ${placeholders}, 1, datetime('now'))
+     ON CONFLICT(id) DO UPDATE SET ${updates}, onboarded = 1, updated_at = datetime('now')`,
+    values,
   );
 }

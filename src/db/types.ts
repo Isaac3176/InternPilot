@@ -99,17 +99,25 @@ export interface InterviewRow extends Interview {
 }
 
 export const WORK_AUTH_OPTIONS = [
-  "citizen",
+  "us_citizen",
   "permanent_resident",
+  "f1_opt",
+  "f1_cpt",
+  "h1b",
+  "tn",
   "need_sponsorship",
   "other",
 ] as const;
 export type WorkAuth = (typeof WORK_AUTH_OPTIONS)[number];
 
 export const WORK_AUTH_LABELS: Record<WorkAuth, string> = {
-  citizen: "U.S. Citizen",
-  permanent_resident: "Permanent Resident",
-  need_sponsorship: "Need sponsorship",
+  us_citizen: "U.S. Citizen",
+  permanent_resident: "Permanent Resident (Green Card)",
+  f1_opt: "F-1 / OPT",
+  f1_cpt: "F-1 / CPT",
+  h1b: "H-1B",
+  tn: "TN",
+  need_sponsorship: "Require sponsorship",
   other: "Other",
 };
 
@@ -123,15 +131,71 @@ export const REMOTE_PREF_LABELS: Record<RemotePref, string> = {
   onsite: "On-site",
 };
 
+// ---- Simplify-style questionnaire option lists (human-readable for autofill) ----
+export const YES_NO = ["Yes", "No"];
+export const DEGREE_OPTIONS = ["High School", "Associate's", "Bachelor's", "Master's", "PhD", "Other"];
+export const GENDER_OPTIONS = ["Male", "Female", "Non-binary", "Prefer not to say"];
+export const RACE_OPTIONS = [
+  "American Indian or Alaska Native",
+  "Asian",
+  "Black or African American",
+  "Hispanic or Latino",
+  "Native Hawaiian or Other Pacific Islander",
+  "White",
+  "Two or More Races",
+  "Prefer not to say",
+];
+export const HISPANIC_OPTIONS = ["Yes", "No", "Prefer not to say"];
+export const VETERAN_OPTIONS = [
+  "I am not a protected veteran",
+  "I am a protected veteran",
+  "Prefer not to say",
+];
+export const DISABILITY_OPTIONS = ["Yes", "No", "Prefer not to say"];
+
 export interface Profile {
   id: number;
+  // Personal
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  current_city: string | null;
+  current_state: string | null;
+  current_country: string | null;
+  // Links
+  linkedin_url: string | null;
+  github_url: string | null;
+  portfolio_url: string | null;
+  // Education
+  school: string | null;
+  degree: string | null;
+  major: string | null;
+  minor: string | null;
+  gpa: string | null;
+  graduation_date: string | null;
+  grad_year: string | null;
+  // Job preferences
   target_roles: string | null;
   locations: string | null;
-  work_auth: WorkAuth | null;
-  grad_year: string | null;
   skills: string | null;
   remote_pref: RemotePref | null;
   preferred_resume_id: number | null;
+  desired_salary: string | null;
+  willing_to_relocate: string | null;
+  earliest_start_date: string | null;
+  // Work authorization
+  work_auth: WorkAuth | null;
+  authorized_us: string | null;
+  requires_sponsorship: string | null;
+  security_clearance: string | null;
+  // Demographics (EEO, optional)
+  gender: string | null;
+  race_ethnicity: string | null;
+  hispanic_latino: string | null;
+  veteran_status: string | null;
+  disability_status: string | null;
+  // Meta
   onboarded: number;
   updated_at: string;
 }

@@ -183,6 +183,38 @@ pub fn run() {
                   CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 7,
+            description: "expand_profile_for_autofill",
+            sql: "ALTER TABLE profile ADD COLUMN first_name TEXT;
+                  ALTER TABLE profile ADD COLUMN last_name TEXT;
+                  ALTER TABLE profile ADD COLUMN email TEXT;
+                  ALTER TABLE profile ADD COLUMN phone TEXT;
+                  ALTER TABLE profile ADD COLUMN current_city TEXT;
+                  ALTER TABLE profile ADD COLUMN current_state TEXT;
+                  ALTER TABLE profile ADD COLUMN current_country TEXT;
+                  ALTER TABLE profile ADD COLUMN linkedin_url TEXT;
+                  ALTER TABLE profile ADD COLUMN github_url TEXT;
+                  ALTER TABLE profile ADD COLUMN portfolio_url TEXT;
+                  ALTER TABLE profile ADD COLUMN school TEXT;
+                  ALTER TABLE profile ADD COLUMN degree TEXT;
+                  ALTER TABLE profile ADD COLUMN major TEXT;
+                  ALTER TABLE profile ADD COLUMN minor TEXT;
+                  ALTER TABLE profile ADD COLUMN gpa TEXT;
+                  ALTER TABLE profile ADD COLUMN graduation_date TEXT;
+                  ALTER TABLE profile ADD COLUMN authorized_us TEXT;
+                  ALTER TABLE profile ADD COLUMN requires_sponsorship TEXT;
+                  ALTER TABLE profile ADD COLUMN security_clearance TEXT;
+                  ALTER TABLE profile ADD COLUMN desired_salary TEXT;
+                  ALTER TABLE profile ADD COLUMN willing_to_relocate TEXT;
+                  ALTER TABLE profile ADD COLUMN earliest_start_date TEXT;
+                  ALTER TABLE profile ADD COLUMN gender TEXT;
+                  ALTER TABLE profile ADD COLUMN race_ethnicity TEXT;
+                  ALTER TABLE profile ADD COLUMN hispanic_latino TEXT;
+                  ALTER TABLE profile ADD COLUMN veteran_status TEXT;
+                  ALTER TABLE profile ADD COLUMN disability_status TEXT;",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
