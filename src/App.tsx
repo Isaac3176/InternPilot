@@ -1,6 +1,11 @@
+import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import Onboarding from "./components/Onboarding";
+import { checkNewListingsAndNotify } from "./listings/notify";
 import "./App.css";
+
+// Run the new-listing notification check once per app launch.
+let listingCheckRan = false;
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: "▣", end: true },
@@ -18,6 +23,12 @@ const NAV = [
 ];
 
 export default function App() {
+  useEffect(() => {
+    if (listingCheckRan) return;
+    listingCheckRan = true;
+    checkNewListingsAndNotify();
+  }, []);
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
