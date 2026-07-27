@@ -21,7 +21,8 @@
         { "url": "https://oauth2.googleapis.com/*" },
         { "url": "https://accounts.google.com/*" },
         { "url": "https://gmail.googleapis.com/*" },
-        { "url": "https://www.googleapis.com/*" }
+        { "url": "https://www.googleapis.com/*" },
+        { "url": "https://raw.githubusercontent.com/*" }
       ]
     }
   ]
