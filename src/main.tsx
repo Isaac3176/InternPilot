@@ -7,6 +7,7 @@ import Applications from "./pages/Applications";
 import Internships from "./pages/Internships";
 import ResumeCenter from "./pages/ResumeCenter";
 import Bullets from "./pages/Bullets";
+import Networking from "./pages/Networking";
 import InterviewPrep from "./pages/InterviewPrep";
 import Experiences from "./pages/Experiences";
 import ApplyAssist from "./pages/ApplyAssist";
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
       { path: "internships", element: <Internships /> },
       { path: "resumes", element: <ResumeCenter /> },
       { path: "bullets", element: <Bullets /> },
+      { path: "networking", element: <Networking /> },
       { path: "prep", element: <InterviewPrep /> },
       { path: "experiences", element: <Experiences /> },
       { path: "apply", element: <ApplyAssist /> },

@@ -13,6 +13,7 @@ const NAV = [
   { to: "/internships", label: "Internships", icon: "◆", end: false },
   { to: "/resumes", label: "Resume Center", icon: "▦", end: false },
   { to: "/bullets", label: "Bullet Library", icon: "✎", end: false },
+  { to: "/networking", label: "Networking", icon: "⚇", end: false },
   { to: "/prep", label: "Interview Prep", icon: "◎", end: false },
   { to: "/experiences", label: "Experiences", icon: "❝", end: false },
   { to: "/apply", label: "Apply Assist", icon: "➤", end: false },
