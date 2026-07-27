@@ -6,6 +6,9 @@ resumes against job descriptions with AI, and ask a chatbot grounded in your own
 
 Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the AI features.
 
+**Status: Beta** — actively developed and usable locally, not yet independently tested at
+scale. Individual features are labeled below as _implemented_, _experimental_, or _planned_.
+
 ## Download
 
 Grab the latest installer for your operating system from the
@@ -72,51 +75,48 @@ app is demoable out of the box. Add an OpenAI key in Settings for real analysis.
 
 ```
 src/                  React frontend
-  ai/                 AI service layer (OpenAI + offline stub) and settings
-  components/         Reusable UI (status badge, application modal)
+  ai/                 AI service layer (OpenAI + offline fallbacks)
+  components/         Reusable UI (modals, status badge, onboarding, profile form)
   db/                 SQLite access layer (typed CRUD + metrics)
-  pages/              Dashboard, Applications, ResumeCenter, AIChat, Settings
+  gmail/              Gmail OAuth (loopback + PKCE), API client, sync
+  listings/           Internship feed: fetch, rank, notify
+  lib/                HTTP (CORS-safe), notifications, file extraction
+  pages/              Dashboard, Applications, Internships, Resume Center, ...
 src-tauri/            Rust backend
   src/lib.rs          Tauri setup + SQLite schema migrations
 ```
 
-The database schema (all 8 tables from the proposal) is created via Rust-side migrations in
-[`src-tauri/src/lib.rs`](src-tauri/src/lib.rs). Phase 1 uses `companies`, `applications`,
-`resume_versions`, `resume_bullets`, and `tasks`.
+The SQLite schema is created and evolved via Rust-side migrations in
+[`src-tauri/src/lib.rs`](src-tauri/src/lib.rs).
 
-## Prerequisites
+## Build from source
 
-- [Node.js](https://nodejs.org/) 18+
-- [Rust](https://www.rust-lang.org/tools/install) (stable, MSVC toolchain on Windows)
-- Tauri prerequisites for your OS — see https://tauri.app/start/prerequisites/
-  (Windows: WebView2 + the MSVC C++ build tools)
-
-## Build from source (developers)
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for prerequisites, commands, release process,
+and proxy/TLS troubleshooting.
 
 ```bash
 npm install
-npm run tauri dev      # run the desktop app in dev mode
+npm run tauri dev
 ```
-
-Build a production bundle:
-
-```bash
-npm run tauri build
-```
-
-### Notes for this environment (corporate TLS)
-
-This machine intercepts HTTPS with a custom root CA, which breaks default certificate
-verification. Two environment variables (already persisted via `setx`) work around it:
-
-- `NODE_OPTIONS=--use-system-ca` — lets npm/Node use the Windows certificate store.
-- `CARGO_HTTP_CHECK_REVOKE=false` — lets cargo skip the (failing) revocation check.
 
 ## Privacy
 
-All application data is stored locally in SQLite. Nothing leaves your device except the
-resume / job-description / question text you explicitly send to OpenAI when you run a match
-or use the chat. You can export or delete all data from Settings.
+InternPilot is local-first. Here is exactly what data lives where and what leaves the device:
+
+- **Stored locally (SQLite):** applications, companies, resume versions and bullets, emails,
+  interviews, experiences, tasks, and your profile. Export or delete all of it from Settings.
+- **Sent to OpenAI** (only when you invoke an AI feature, and only if a key is set): the
+  resume / job-description / email / question text needed for that request. With no key, the
+  offline fallbacks run and nothing is sent.
+- **Sent to Google (Gmail), if you connect it:** read-only requests using a **narrow query**
+  for job-related mail; message metadata and snippets are stored locally. InternPilot never
+  modifies your inbox.
+- **Job feed:** fetched from a public listings URL (`raw.githubusercontent.com`); no personal
+  data is sent.
+- **Credentials:** the OpenAI key and Gmail OAuth tokens are currently stored in the app's
+  local storage. **Planned:** move these to the OS keychain (see roadmap) — do not treat the
+  current storage as hardened.
+- **Logs/backups:** no telemetry is sent anywhere; there is no automatic cloud backup.
 
 ## Roadmap
 
