@@ -6,10 +6,27 @@ resumes against job descriptions with AI, and ask a chatbot grounded in your own
 
 Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the AI features.
 
-> Status: **MVP / Phase 1** — application tracking, resume versions, AI resume matching,
-> a grounded chatbot, and a metrics dashboard. All data is stored locally.
+## Download
 
-## Features (current)
+Grab the latest installer for your operating system from the
+**[Releases page](https://github.com/Isaac3176/InternPilot/releases/latest)**:
+
+| OS | File |
+| --- | --- |
+| Windows | `.msi` or `.exe` (NSIS) installer |
+| macOS | `.dmg` (Apple Silicon and Intel builds) |
+| Linux | `.AppImage` or `.deb` |
+
+The app is **unsigned**, so your OS may warn on first launch — this is expected for an
+open-source app without a paid signing certificate:
+
+- **Windows:** "Windows protected your PC" → **More info** → **Run anyway**.
+- **macOS:** right-click the app → **Open**, or **System Settings → Privacy & Security → Open Anyway**.
+
+All data stays on your device. The AI features work with offline fallbacks, and become fully
+tailored once you add an **OpenAI API key** in Settings. Gmail sync is optional and read-only.
+
+## Features
 
 - **Dashboard** — application counts by status, conversion rates, and recent applications.
 - **Applications** — create / edit / delete / search / filter applications (company, role,
@@ -74,7 +91,7 @@ The database schema (all 8 tables from the proposal) is created via Rust-side mi
 - Tauri prerequisites for your OS — see https://tauri.app/start/prerequisites/
   (Windows: WebView2 + the MSVC C++ build tools)
 
-## Getting started
+## Build from source (developers)
 
 ```bash
 npm install
