@@ -97,6 +97,44 @@ export interface InterviewRow extends Interview {
   resume_version_id: number | null;
 }
 
+export const WORK_AUTH_OPTIONS = [
+  "citizen",
+  "permanent_resident",
+  "need_sponsorship",
+  "other",
+] as const;
+export type WorkAuth = (typeof WORK_AUTH_OPTIONS)[number];
+
+export const WORK_AUTH_LABELS: Record<WorkAuth, string> = {
+  citizen: "U.S. Citizen",
+  permanent_resident: "Permanent Resident",
+  need_sponsorship: "Need sponsorship",
+  other: "Other",
+};
+
+export const REMOTE_PREFS = ["any", "remote", "hybrid", "onsite"] as const;
+export type RemotePref = (typeof REMOTE_PREFS)[number];
+
+export const REMOTE_PREF_LABELS: Record<RemotePref, string> = {
+  any: "Any",
+  remote: "Remote",
+  hybrid: "Hybrid",
+  onsite: "On-site",
+};
+
+export interface Profile {
+  id: number;
+  target_roles: string | null;
+  locations: string | null;
+  work_auth: WorkAuth | null;
+  grad_year: string | null;
+  skills: string | null;
+  remote_pref: RemotePref | null;
+  preferred_resume_id: number | null;
+  onboarded: number;
+  updated_at: string;
+}
+
 export const EMAIL_CATEGORIES = [
   "confirmation",
   "rejection",

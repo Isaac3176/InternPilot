@@ -119,6 +119,23 @@ pub fn run() {
             sql: "ALTER TABLE emails ADD COLUMN gmail_id TEXT;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "create_profile",
+            sql: "CREATE TABLE IF NOT EXISTS profile (
+                    id                  INTEGER PRIMARY KEY CHECK (id = 1),
+                    target_roles        TEXT,
+                    locations           TEXT,
+                    work_auth           TEXT,
+                    grad_year           TEXT,
+                    skills              TEXT,
+                    remote_pref         TEXT,
+                    preferred_resume_id INTEGER,
+                    onboarded           INTEGER NOT NULL DEFAULT 0,
+                    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+                  );",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
