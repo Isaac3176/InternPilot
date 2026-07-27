@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listApplications } from "../db/applications";
 import { listResumeVersions } from "../db/resumes";
@@ -7,6 +8,7 @@ import { generateApplyAssist, recommendResume, type ApplyAssist as Assist } from
 import { hasApiKey } from "../ai/settings";
 
 export default function ApplyAssist() {
+  const [searchParams] = useSearchParams();
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
   const [appId, setAppId] = useState<number | "">("");
@@ -22,6 +24,14 @@ export default function ApplyAssist() {
     listApplications().then(setApps).catch(console.error);
     listResumeVersions().then(setVersions).catch(console.error);
   }, []);
+
+  // Preselect an application when arriving from the Internships feed (?app=<id>).
+  useEffect(() => {
+    const appParam = searchParams.get("app");
+    if (appParam && apps.some((a) => a.id === Number(appParam))) {
+      setAppId(Number(appParam));
+    }
+  }, [apps, searchParams]);
 
   const app = apps.find((a) => a.id === appId);
 
