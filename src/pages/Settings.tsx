@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DEFAULT_MODEL,
   getApiKey,
@@ -15,6 +15,7 @@ import {
   setClientSecret,
 } from "../gmail/config";
 import { connectGmail, disconnectGmail } from "../gmail/oauth";
+import { getAccountEmail, logout } from "../auth";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -27,6 +28,16 @@ export default function Settings() {
   const [connected, setConnected] = useState(isConnected());
   const [connecting, setConnecting] = useState(false);
   const [gmailError, setGmailError] = useState("");
+
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  useEffect(() => {
+    getAccountEmail().then(setAccountEmail).catch(console.error);
+  }, []);
+
+  function signOut() {
+    logout();
+    window.location.reload();
+  }
 
   function save() {
     setApiKey(apiKey.trim());
@@ -87,6 +98,14 @@ export default function Settings() {
           <h1>Settings</h1>
           <p>API keys, Gmail, AI model, and your local data.</p>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Account</h2>
+        <p className="hint mb-md">
+          Signed in{accountEmail ? ` as ${accountEmail}` : ""}. Your login is local to this device.
+        </p>
+        <button type="button" className="secondary" onClick={signOut}>Log out</button>
       </div>
 
       <div className="card">

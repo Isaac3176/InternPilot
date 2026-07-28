@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import Onboarding from "./components/Onboarding";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import "./App.css";
 
@@ -48,12 +47,11 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-footer">MVP · Phase 1 · Local-only</div>
+        <div className="sidebar-footer">Local-only · Beta</div>
       </aside>
       <main className="main">
         <Outlet />
       </main>
-      <Onboarding />
     </div>
   );
 }

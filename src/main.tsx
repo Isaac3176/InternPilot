@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
+import AuthGate from "./components/AuthGate";
+import "./App.css";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Internships from "./pages/Internships";
@@ -40,6 +42,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthGate>
+      <RouterProvider router={router} />
+    </AuthGate>
   </React.StrictMode>,
 );
