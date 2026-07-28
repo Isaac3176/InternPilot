@@ -215,6 +215,18 @@ pub fn run() {
                   ALTER TABLE profile ADD COLUMN disability_status TEXT;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "create_accounts",
+            sql: "CREATE TABLE IF NOT EXISTS accounts (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email         TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    salt          TEXT NOT NULL,
+                    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+                  );",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
