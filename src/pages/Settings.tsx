@@ -16,6 +16,7 @@ import {
 } from "../gmail/config";
 import { connectGmail, disconnectGmail } from "../gmail/oauth";
 import { getAccountEmail, logout } from "../auth";
+import { BRIDGE_PORT, getBridgeToken } from "../bridge";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -106,6 +107,24 @@ export default function Settings() {
           Signed in{accountEmail ? ` as ${accountEmail}` : ""}. Your login is local to this device.
         </p>
         <button type="button" className="secondary" onClick={signOut}>Log out</button>
+      </div>
+
+      <div className="card">
+        <h2>Browser extension</h2>
+        <p className="hint mb-md">
+          The InternPilot extension autofills applications from your profile and records them here.
+          It talks to the app over a local bridge, so <strong>keep the app running</strong> while you apply.
+        </p>
+        <div className="field">
+          <label htmlFor="bridge-addr">Bridge address</label>
+          <input id="bridge-addr" aria-label="Bridge address" readOnly value={`http://127.0.0.1:${BRIDGE_PORT}`} />
+        </div>
+        <div className="field">
+          <label htmlFor="bridge-token">Connection token (paste into the extension)</label>
+          <input id="bridge-token" aria-label="Connection token" readOnly value={getBridgeToken()} onFocus={(e) => e.target.select()} />
+          <p className="hint">Keep this private — anything with this token can read your profile from the local bridge.</p>
+        </div>
+        <button type="button" className="secondary" onClick={() => navigator.clipboard.writeText(getBridgeToken()).catch(() => {})}>Copy token</button>
       </div>
 
       <div className="card">

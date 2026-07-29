@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
+import { pushProfileToBridge, startBridgeListener } from "./bridge";
 import "./App.css";
 
-// Run the new-listing notification check once per app launch.
-let listingCheckRan = false;
+// Run one-time startup tasks per app launch.
+let startupRan = false;
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: "▣", end: true },
@@ -24,9 +25,11 @@ const NAV = [
 
 export default function App() {
   useEffect(() => {
-    if (listingCheckRan) return;
-    listingCheckRan = true;
+    if (startupRan) return;
+    startupRan = true;
     checkNewListingsAndNotify();
+    pushProfileToBridge();
+    startBridgeListener();
   }, []);
 
   return (
