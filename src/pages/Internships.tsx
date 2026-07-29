@@ -2,14 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { createApplication, listApplications } from "../db/applications";
+import { listContacts } from "../db/contacts";
 import { getProfile } from "../db/profile";
 import { getFeed, markFeedSeen } from "../listings/service";
 import type { RankedListing } from "../listings/types";
+import type { ApplicationRow, ContactRow, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
+import ReadinessGauge from "../components/ReadinessGauge";
 
 const MAX_SHOWN = 200;
 const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
 type JobType = (typeof JOB_TYPES)[number];
+
+const STAGES = ["Saved", "Applied", "Assessment", "Interview", "Offer"];
+const STATUS_STAGE: Record<Status, number> = {
+  interested: 0, applied: 1, oa: 2, interview: 3, offer: 4, rejected: 1,
+};
+const LOGO_COLORS = ["#1A1A1A", "#4B4FD6", "#2E9E3E", "#D6455E", "#E0761A", "#33383D", "#0E8F63", "#8A5300"];
 
 function jobTypeOf(title: string): JobType {
   const t = title.toLowerCase();
@@ -18,21 +27,33 @@ function jobTypeOf(title: string): JobType {
   if (/new ?grad|university grad|early career|full[- ]?time/.test(t)) return "Full-time";
   return "Internship";
 }
-
 function postedAgo(datePosted?: number): string {
   if (!datePosted) return "";
   const hours = (Date.now() - datePosted * 1000) / 3_600_000;
-  if (hours < 1) return "Posted just now";
+  if (hours < 1) return "Just posted";
   if (hours < 24) return `Posted ${Math.floor(hours)}h ago`;
   if (hours < 48) return "Posted yesterday";
   return `Posted ${Math.floor(hours / 24)} days ago`;
+}
+function logoColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return LOGO_COLORS[h % LOGO_COLORS.length];
+}
+function initials(name: string): string {
+  return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+}
+function bandColor(v: number): string {
+  return v >= 80 ? "var(--beacon)" : v >= 55 ? "var(--amber)" : "var(--alert)";
 }
 
 export default function Internships() {
   const navigate = useNavigate();
   const [listings, setListings] = useState<RankedListing[]>([]);
-  const [addedUrls, setAddedUrls] = useState<Map<string, number>>(new Map());
+  const [appByUrl, setAppByUrl] = useState<Map<string, ApplicationRow>>(new Map());
+  const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
+  const [mySkills, setMySkills] = useState<string[]>([]);
   const [hasRoles, setHasRoles] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -42,30 +63,31 @@ export default function Internships() {
   const [onlyNew, setOnlyNew] = useState(false);
   const [matchesMyRoles, setMatchesMyRoles] = useState(false);
   const [sort, setSort] = useState<"relevance" | "recent">("relevance");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
 
-  async function refreshAddedMap() {
+  async function refreshApps() {
     const apps = await listApplications();
-    const map = new Map<string, number>();
-    for (const a of apps) if (a.job_link) map.set(a.job_link, a.id);
-    setAddedUrls(map);
+    const map = new Map<string, ApplicationRow>();
+    for (const a of apps) if (a.job_link) map.set(a.job_link, a);
+    setAppByUrl(map);
   }
 
   async function load() {
     setLoading(true);
     setError("");
     try {
-      const [feed, profile] = await Promise.all([getFeed(), getProfile()]);
+      const [feed, profile, cts] = await Promise.all([getFeed(), getProfile(), listContacts()]);
       setListings(feed.listings);
       setTotal(feed.listings.length);
+      setContacts(cts);
       setPreferredResumeId(profile?.preferred_resume_id ?? null);
+      setMySkills((profile?.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean));
       const roles = (profile?.target_roles ?? "").split(",").map((r) => r.trim()).filter(Boolean);
       setHasRoles(roles.length > 0);
       if (roles.length > 0) setMatchesMyRoles(true);
-      await refreshAddedMap();
+      await refreshApps();
       markFeedSeen(feed.listings);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -73,10 +95,7 @@ export default function Internships() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -89,64 +108,49 @@ export default function Internships() {
       if (matchesMyRoles && !l.matchesRoles) return false;
       return true;
     });
-    if (sort === "recent") {
-      rows = [...rows].sort((a, b) => (b.datePosted ?? 0) - (a.datePosted ?? 0));
-    }
+    if (sort === "recent") rows = [...rows].sort((a, b) => (b.datePosted ?? 0) - (a.datePosted ?? 0));
     return rows.slice(0, MAX_SHOWN);
   }, [listings, search, selectedTypes, location, onlyNew, matchesMyRoles, sort]);
+
+  const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
 
   function toggleType(t: JobType) {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }
-
   function clearAll() {
-    setSearch("");
-    setSelectedTypes([]);
-    setLocation("");
-    setOnlyNew(false);
+    setSearch(""); setSelectedTypes([]); setLocation(""); setOnlyNew(false);
   }
-
   const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0);
   const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew);
 
-  const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
-
   async function addToTracker(l: RankedListing): Promise<number | null> {
-    if (addedUrls.has(l.url)) return addedUrls.get(l.url)!;
+    const existing = appByUrl.get(l.url);
+    if (existing) return existing.id;
     const id = await createApplication({
-      company_name: l.company,
-      role_title: l.title,
-      job_link: l.url,
-      location: l.locations.join(", "),
-      status: "interested",
-      resume_version_id: preferredResumeId,
+      company_name: l.company, role_title: l.title, job_link: l.url,
+      location: l.locations.join(", "), status: "interested", resume_version_id: preferredResumeId,
     });
-    await refreshAddedMap();
+    await refreshApps();
     return id;
   }
-
   async function apply(l: RankedListing) {
     const id = await addToTracker(l);
     await openUrl(l.url);
     if (id) navigate(`/apply?app=${id}`);
   }
 
+  const selApp = selected ? appByUrl.get(selected.url) : undefined;
+  const selStage = selApp ? STATUS_STAGE[selApp.status] : -1;
+  const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
+  const matchedSkills = selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [];
+
   return (
     <>
-      <div className="page-header">
-        <div>
-          <h1>Internships</h1>
-          <p>Fresh postings tailored to your profile.</p>
-        </div>
-        <button type="button" onClick={load} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
-      </div>
-
       <div className="filter-bar">
         <div className="filter-search">
           <span className="search-ico">🔎</span>
           <input placeholder="Search company or role…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-
         <FilterPill label="Job Type" count={selectedTypes.length}>
           <div className="popover-title">Job Type</div>
           <div className="popover-sub">Filter by job type</div>
@@ -159,96 +163,173 @@ export default function Internships() {
           )}
           {JOB_TYPES.map((t) => (
             <label className="opt-check" key={t}>
-              <input type="checkbox" checked={selectedTypes.includes(t)} onChange={() => toggleType(t)} />
-              {t}
+              <input type="checkbox" checked={selectedTypes.includes(t)} onChange={() => toggleType(t)} />{t}
             </label>
           ))}
         </FilterPill>
-
         <FilterPill label="Location" count={location.trim() ? 1 : 0} width={280}>
           <div className="popover-title">Location</div>
           <div className="popover-sub">Filter by city, state, or "remote"</div>
           <input placeholder="e.g. New York, Remote" value={location} onChange={(e) => setLocation(e.target.value)} />
         </FilterPill>
-
-        <FilterPill label="Sort" width={220}>
-          <div className="popover-title">Sort by</div>
-          <div className="popover-sub">Order the results</div>
-          <label className="opt-check"><input type="radio" name="sort" checked={sort === "relevance"} onChange={() => setSort("relevance")} />Best match</label>
-          <label className="opt-check"><input type="radio" name="sort" checked={sort === "recent"} onChange={() => setSort("recent")} />Most recent</label>
-        </FilterPill>
-
         <FilterPill label="More filters" count={moreCount} width={260}>
           <div className="popover-title">More filters</div>
           <div className="popover-sub">Refine your results</div>
           <label className="opt-check"><input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} />New postings only</label>
-          {hasRoles && (
-            <label className="opt-check"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} />Matches my roles</label>
-          )}
+          {hasRoles && <label className="opt-check"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} />Matches my roles</label>}
         </FilterPill>
-
-        {anyActive && <button type="button" className="pop-clear" onClick={clearAll}>Clear all filters</button>}
+        {anyActive && <button type="button" className="pop-clear" onClick={clearAll}>Clear all</button>}
+        <button type="button" className="secondary" onClick={load} disabled={loading} style={{ marginLeft: "auto" }}>{loading ? "Loading…" : "Refresh"}</button>
       </div>
 
-      <div className="jobs-count">Showing {filtered.length} of {total} jobs</div>
       {error && <p className="hint text-red">{error}</p>}
 
-      {filtered.length === 0 ? (
-        <div className="empty">{listings.length === 0 ? "No listings loaded — click Refresh." : "No listings match your filters."}</div>
-      ) : (
-        <div className="jobs-layout">
-          <div className="jobs-list">
-            {filtered.map((l) => (
-              <button type="button" key={l.id} className={"job-card" + (selected?.id === l.id ? " active" : "")} onClick={() => setSelectedId(l.id)}>
-                <div className="job-card-top">
-                  <strong>{l.company}</strong>
-                  {l.isNew && <span className="badge oa">NEW</span>}
+      <div className="workspace">
+        <aside className="results">
+          <div className="results-head">
+            <div className="count">Showing <b>{filtered.length}</b> of <b>{total}</b> internships</div>
+            <div className="seg">
+              <button type="button" className={sort === "relevance" ? "on" : ""} onClick={() => setSort("relevance")}>Best fit</button>
+              <button type="button" className={sort === "recent" ? "on" : ""} onClick={() => setSort("recent")}>Newest</button>
+            </div>
+          </div>
+          <div className="list">
+            {filtered.length === 0 ? (
+              <div className="empty">{listings.length === 0 ? "No listings — click Refresh." : "No listings match your filters."}</div>
+            ) : filtered.map((l) => (
+              <button type="button" key={l.id} className={"job" + (selected?.id === l.id ? " on" : "")} onClick={() => setSelectedId(l.id)}>
+                <div className="job-top">
+                  <div className="logo" style={{ background: logoColor(l.company) }}>{initials(l.company)}</div>
+                  <div className="job-org">
+                    <div className="nm">{l.company}</div>
+                    <div className="lbl">{jobTypeOf(l.title)}{l.isNew ? " · New" : ""}</div>
+                  </div>
+                  {appByUrl.has(l.url) && <span className="bookmark saved">★</span>}
                 </div>
-                <div className="job-card-title">{l.title}</div>
-                <div className="job-card-tags">
-                  <span className="tag">{jobTypeOf(l.title)}</span>
-                  {l.locations[0] && <span className="tag">{l.locations[0]}</span>}
-                  {!l.sponsorshipOk && <span className="tag miss">No sponsorship</span>}
+                <h3>{l.title}</h3>
+                <div className="facts">
+                  {l.locations[0] && <span className="fact">{l.locations[0]}</span>}
+                  <span className="fact">{jobTypeOf(l.title)}</span>
+                  {!l.sponsorshipOk && <span className="fact neg">No sponsorship</span>}
+                </div>
+                <div className="job-foot">
+                  <span className="closes">{postedAgo(l.datePosted).toUpperCase()}</span>
+                  <span className="matchpip"><i style={{ ["--w" as string]: `${l.score}%`, ["--c" as string]: bandColor(l.score) }} />{l.score}</span>
                 </div>
               </button>
             ))}
           </div>
+        </aside>
 
+        <section className="detail">
           {selected && (
-            <div className="job-detail card">
-              <div className="row-between">
-                <div>
-                  <h2 className="mb-0">{selected.title}</h2>
-                  <div className="muted mt-xs">{selected.company}</div>
+            <>
+              <div className="detail-head">
+                <div className="tabs"><button type="button" className="on">Overview</button></div>
+                <div className="actions">
+                  <button type="button" className="secondary" onClick={() => addToTracker(selected)} disabled={appByUrl.has(selected.url)}>{appByUrl.has(selected.url) ? "Saved" : "Save"}</button>
+                  <button type="button" onClick={() => apply(selected)}>⚡ Apply with autofill</button>
                 </div>
-                <span className="badge interview">{jobTypeOf(selected.title)}</span>
               </div>
+              <div className="detail-body">
+                <div className="pillrow">
+                  <span className="pill">{selected.season ?? "Internship"}</span>
+                  {selected.isNew && <span className="pill live">Recently posted</span>}
+                </div>
+                <h1>{selected.title}</h1>
+                <div className="sub">{selected.company} · {postedAgo(selected.datePosted)}</div>
 
-              <div className="job-meta">
-                <div><span className="muted">Location</span><div>{selected.locations.join(", ") || "—"}</div></div>
-                <div><span className="muted">Posted</span><div>{postedAgo(selected.datePosted) || "—"}</div></div>
-                {selected.season && <div><span className="muted">Season</span><div>{selected.season}</div></div>}
-                <div><span className="muted">Sponsorship</span><div>{selected.sponsorship ?? "Not specified"}</div></div>
-              </div>
+                <div className="orgcard">
+                  <div className="logo" style={{ background: logoColor(selected.company) }}>{initials(selected.company)}</div>
+                  <div>
+                    <div className="nm">{selected.company}</div>
+                    <div className="meta">{jobTypeOf(selected.title)}{selected.locations[0] ? ` · ${selected.locations[0]}` : ""}</div>
+                  </div>
+                  <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>Open posting</button>
+                </div>
 
-              <h3 className="result-h3">Profile match</h3>
-              <div className="perf-rate">
-                <div className="bar-track"><div className="bar-fill accent" style={{ width: `${Math.min(100, selected.score)}%` }} /></div>
-                <span>{Math.min(100, selected.score)}</span>
-              </div>
-              <p className="hint">Keyword match against your target roles, skills, and locations. Full job description opens on the company site.</p>
+                <div className="rail">
+                  <div className="rail-top">
+                    <span className="lbl">Your status</span>
+                    <em>{selApp ? STAGES[selStage] ?? "Tracked" : "Not started"}</em>
+                  </div>
+                  <div className="stages">
+                    {STAGES.map((s, k) => (
+                      <div key={s} className={"stage " + (k < selStage ? "done" : k === selStage ? "now" : "")}>
+                        <i /><span>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="actions mt-md">
-                <button type="button" onClick={() => apply(selected)}>Apply</button>
-                <button type="button" className="secondary" onClick={() => addToTracker(selected)} disabled={addedUrls.has(selected.url)}>
-                  {addedUrls.has(selected.url) ? "Added" : "Save"}
-                </button>
-                <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>Open posting</button>
+                <div className="grid">
+                  <div className="cell"><span className="lbl">Location</span><b>{selected.locations.join(", ") || "—"}</b></div>
+                  <div className="cell"><span className="lbl">Type</span><b>{jobTypeOf(selected.title)}</b></div>
+                  <div className="cell"><span className="lbl">Visa sponsorship</span><b className={selected.sponsorshipOk ? "pos" : "neg"}>{selected.sponsorship ?? "Not specified"}</b></div>
+                  <div className="cell"><span className="lbl">Posted</span><b>{postedAgo(selected.datePosted) || "—"}</b></div>
+                  <div className="cell"><span className="lbl">Compensation</span><b>Not listed</b></div>
+                  <div className="cell"><span className="lbl">Season</span><b>{selected.season ?? "—"}</b></div>
+                </div>
+
+                <h2>About the role</h2>
+                <div className="prose">
+                  <p>This posting comes from the public internship feed, which lists the role, company, and location but not the full description. Open the posting on the company site for full details and requirements.</p>
+                </div>
+                <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>View full posting →</button>
               </div>
-            </div>
+            </>
           )}
-        </div>
-      )}
+        </section>
+
+        <aside className="rightrail">
+          {selected && (
+            <>
+              <div className="panel">
+                <div className="panel-head"><span className="lbl">Readiness</span></div>
+                <ReadinessGauge value={selected.score} />
+                <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--slate)", textAlign: "center" }}>
+                  Match on your target roles, skills, and locations
+                </p>
+              </div>
+
+              <div className="panel">
+                <div className="panel-head"><span className="lbl">Skills on your résumé</span></div>
+                {matchedSkills.length > 0 ? (
+                  <ul className="check">
+                    {matchedSkills.map((m) => (
+                      <li key={m}><span className="box">✓</span>{m}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 12.5, color: "var(--slate)" }}>
+                    No résumé skills detected in this title. Full requirement matching runs on the posting page.
+                  </p>
+                )}
+              </div>
+
+              <div className="panel">
+                <div className="panel-head">
+                  <span className="lbl">Contacts at {selected.company}</span>
+                  <button type="button" onClick={() => navigate("/networking")}>Manage</button>
+                </div>
+                {selContacts.length > 0 ? selContacts.slice(0, 4).map((c) => (
+                  <div className="person" key={c.id}>
+                    <span className="av">{initials(c.name)}</span>
+                    <span className="who"><b>{c.name}</b><span>{c.title ?? "—"}</span></span>
+                    <button type="button" className="secondary small" onClick={() => navigate("/networking")}>Ask</button>
+                  </div>
+                )) : (
+                  <p style={{ margin: 0, fontSize: 12.5, color: "var(--slate)" }}>
+                    No contacts here yet. Add one in Networking to build a referral path.
+                  </p>
+                )}
+              </div>
+
+              <div className="foot">InternPilot · Internship feed</div>
+            </>
+          )}
+        </aside>
+      </div>
     </>
   );
 }
