@@ -461,6 +461,34 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .perf-rate .bar-track { flex: 1; height: 8px; }
 .perf-rate span { font-size: 12px; color: var(--text-dim); width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
 
+/* ---------- Filter pills (Simplify-style) ---------- */
+.filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-search { flex: 1 1 300px; position: relative; }
+.filter-search input { padding-left: 34px; border-radius: 999px; }
+.filter-search .search-ico { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
+.filter-pill-wrap { position: relative; }
+.filter-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg-elev); color: var(--text);
+  border: 1px solid #d5d9e0; border-radius: 999px;
+  padding: 9px 15px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+}
+.filter-pill:hover { border-color: var(--accent); filter: none; }
+.filter-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.filter-pill .chevron { font-size: 10px; opacity: 0.6; }
+.filter-popover {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 60;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow-lg); padding: 18px;
+}
+.popover-title { font-weight: 700; font-size: 15px; }
+.popover-sub { color: var(--text-dim); font-size: 12.5px; margin: 3px 0 12px; }
+.popover-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.popover-divider { border-top: 1px solid var(--border); margin: 14px 0; }
+.pop-clear { color: var(--accent); font-size: 12.5px; cursor: pointer; font-weight: 600; background: none; border: none; padding: 0; }
+.opt-check { display: flex; align-items: center; gap: 10px; padding: 7px 0; cursor: pointer; font-weight: 500; color: var(--text); }
+.opt-check input { width: auto; margin: 0; }
+
 /* ---------- Jobs (Internships) ---------- */
 .jobs-toolbar { flex-wrap: wrap; }
 .jobs-toolbar .loc-input { flex: 0 1 160px; }

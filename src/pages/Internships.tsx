@@ -5,12 +5,13 @@ import { createApplication, listApplications } from "../db/applications";
 import { getProfile } from "../db/profile";
 import { getFeed, markFeedSeen } from "../listings/service";
 import type { RankedListing } from "../listings/types";
+import FilterPill from "../components/FilterPill";
 
 const MAX_SHOWN = 200;
-const JOB_TYPES = ["All", "Internship", "Co-op", "Full-time"] as const;
+const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
 type JobType = (typeof JOB_TYPES)[number];
 
-function jobTypeOf(title: string): Exclude<JobType, "All"> {
+function jobTypeOf(title: string): JobType {
   const t = title.toLowerCase();
   if (/co-?op/.test(t)) return "Co-op";
   if (/intern/.test(t)) return "Internship";
@@ -36,7 +37,7 @@ export default function Internships() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [jobType, setJobType] = useState<JobType>("All");
+  const [selectedTypes, setSelectedTypes] = useState<JobType[]>([]);
   const [location, setLocation] = useState("");
   const [onlyNew, setOnlyNew] = useState(false);
   const [matchesMyRoles, setMatchesMyRoles] = useState(false);
@@ -82,7 +83,7 @@ export default function Internships() {
     const loc = location.trim().toLowerCase();
     let rows = listings.filter((l) => {
       if (onlyNew && !l.isNew) return false;
-      if (jobType !== "All" && jobTypeOf(l.title) !== jobType) return false;
+      if (selectedTypes.length && !selectedTypes.includes(jobTypeOf(l.title))) return false;
       if (loc && !l.locations.join(" ").toLowerCase().includes(loc)) return false;
       if (term && !l.company.toLowerCase().includes(term) && !l.title.toLowerCase().includes(term)) return false;
       if (matchesMyRoles && !l.matchesRoles) return false;
@@ -92,7 +93,21 @@ export default function Internships() {
       rows = [...rows].sort((a, b) => (b.datePosted ?? 0) - (a.datePosted ?? 0));
     }
     return rows.slice(0, MAX_SHOWN);
-  }, [listings, search, jobType, location, onlyNew, matchesMyRoles, sort]);
+  }, [listings, search, selectedTypes, location, onlyNew, matchesMyRoles, sort]);
+
+  function toggleType(t: JobType) {
+    setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  }
+
+  function clearAll() {
+    setSearch("");
+    setSelectedTypes([]);
+    setLocation("");
+    setOnlyNew(false);
+  }
+
+  const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0);
+  const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew);
 
   const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
 
@@ -126,20 +141,53 @@ export default function Internships() {
         <button type="button" onClick={load} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
       </div>
 
-      <div className="toolbar jobs-toolbar">
-        <input placeholder="Search company or role…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select aria-label="Job type" value={jobType} onChange={(e) => setJobType(e.target.value as JobType)}>
-          {JOB_TYPES.map((t) => <option key={t} value={t}>{t === "All" ? "All types" : t}</option>)}
-        </select>
-        <input className="loc-input" placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
-        <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value as "relevance" | "recent")}>
-          <option value="relevance">Best match</option>
-          <option value="recent">Most recent</option>
-        </select>
-        <label className="check-row"><input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} /><span>New</span></label>
-        {hasRoles && (
-          <label className="check-row"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} /><span>My roles</span></label>
-        )}
+      <div className="filter-bar">
+        <div className="filter-search">
+          <span className="search-ico">🔎</span>
+          <input placeholder="Search company or role…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+
+        <FilterPill label="Job Type" count={selectedTypes.length}>
+          <div className="popover-title">Job Type</div>
+          <div className="popover-sub">Filter by job type</div>
+          {selectedTypes.length > 0 && (
+            <div className="popover-chips">
+              {selectedTypes.map((t) => (
+                <span className="tag-chip" key={t}>{t}<button type="button" aria-label={`Remove ${t}`} onClick={() => toggleType(t)}>×</button></span>
+              ))}
+            </div>
+          )}
+          {JOB_TYPES.map((t) => (
+            <label className="opt-check" key={t}>
+              <input type="checkbox" checked={selectedTypes.includes(t)} onChange={() => toggleType(t)} />
+              {t}
+            </label>
+          ))}
+        </FilterPill>
+
+        <FilterPill label="Location" count={location.trim() ? 1 : 0} width={280}>
+          <div className="popover-title">Location</div>
+          <div className="popover-sub">Filter by city, state, or "remote"</div>
+          <input placeholder="e.g. New York, Remote" value={location} onChange={(e) => setLocation(e.target.value)} />
+        </FilterPill>
+
+        <FilterPill label="Sort" width={220}>
+          <div className="popover-title">Sort by</div>
+          <div className="popover-sub">Order the results</div>
+          <label className="opt-check"><input type="radio" name="sort" checked={sort === "relevance"} onChange={() => setSort("relevance")} />Best match</label>
+          <label className="opt-check"><input type="radio" name="sort" checked={sort === "recent"} onChange={() => setSort("recent")} />Most recent</label>
+        </FilterPill>
+
+        <FilterPill label="More filters" count={moreCount} width={260}>
+          <div className="popover-title">More filters</div>
+          <div className="popover-sub">Refine your results</div>
+          <label className="opt-check"><input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} />New postings only</label>
+          {hasRoles && (
+            <label className="opt-check"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} />Matches my roles</label>
+          )}
+        </FilterPill>
+
+        {anyActive && <button type="button" className="pop-clear" onClick={clearAll}>Clear all filters</button>}
       </div>
 
       <div className="jobs-count">Showing {filtered.length} of {total} jobs</div>
