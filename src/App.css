@@ -606,6 +606,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .detail-body h2 { font-size: 12px; font-family: var(--mono); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--slate); margin: 0 0 12px; padding-bottom: 9px; border-bottom: 1px solid var(--line-2); }
 .prose { max-width: 70ch; color: #243444; margin-bottom: 16px; }
 .prose p { margin: 0 0 12px; }
+.prose.jd { white-space: pre-wrap; line-height: 1.6; font-size: 13.5px; }
 
 .rightrail { border-left: 1px solid var(--line); background: #f4f6f8; overflow-y: auto; padding: 16px 14px 24px; min-height: 0; }
 .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px; margin-bottom: 12px; }

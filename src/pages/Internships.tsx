@@ -5,6 +5,7 @@ import { createApplication, listApplications } from "../db/applications";
 import { listContacts } from "../db/contacts";
 import { getProfile } from "../db/profile";
 import { getFeed, markFeedSeen } from "../listings/service";
+import { fetchJobDescription } from "../listings/description";
 import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
@@ -66,6 +67,9 @@ export default function Internships() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
+  const [descByUrl, setDescByUrl] = useState<Map<string, string>>(new Map());
+  const [descLoading, setDescLoading] = useState(false);
+  const [descError, setDescError] = useState("");
 
   async function refreshApps() {
     const apps = await listApplications();
@@ -113,6 +117,23 @@ export default function Internships() {
   }, [listings, search, selectedTypes, location, onlyNew, matchesMyRoles, sort]);
 
   const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
+  const selectedUrl = selected?.url ?? null;
+
+  // Fetch the job description for the selected posting (cached per URL).
+  useEffect(() => {
+    if (!selectedUrl || descByUrl.has(selectedUrl)) {
+      setDescError("");
+      return;
+    }
+    let cancelled = false;
+    setDescLoading(true);
+    setDescError("");
+    fetchJobDescription(selectedUrl)
+      .then((txt) => { if (!cancelled) setDescByUrl((m) => new Map(m).set(selectedUrl, txt)); })
+      .catch((e) => { if (!cancelled) setDescError(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (!cancelled) setDescLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleType(t: JobType) {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -272,9 +293,15 @@ export default function Internships() {
                 </div>
 
                 <h2>About the role</h2>
-                <div className="prose">
-                  <p>This posting comes from the public internship feed, which lists the role, company, and location but not the full description. Open the posting on the company site for full details and requirements.</p>
-                </div>
+                {descLoading ? (
+                  <p className="hint">Loading description from the posting…</p>
+                ) : descByUrl.get(selected.url) ? (
+                  <div className="prose jd">{descByUrl.get(selected.url)}</div>
+                ) : (
+                  <div className="prose">
+                    <p>{descError || "Description not available for this posting."}</p>
+                  </div>
+                )}
                 <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>View full posting →</button>
               </div>
             </>
