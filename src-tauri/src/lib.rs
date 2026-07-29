@@ -1,6 +1,109 @@
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_sql::{Migration, MigrationKind};
+use tiny_http::{Header, Method, Response, Server};
 
 const DB_URL: &str = "sqlite:internpilot.db";
+
+/// Local bridge between the browser extension and the app. The frontend pushes
+/// the current profile + a shared token here; the extension reads /profile for
+/// autofill and posts /application to record a job (relayed to the frontend).
+#[derive(Default)]
+struct BridgeState {
+    token: Option<String>,
+    profile_json: Option<String>,
+}
+type SharedBridge = Arc<Mutex<BridgeState>>;
+
+#[tauri::command]
+fn bridge_set_profile(state: tauri::State<SharedBridge>, token: String, profile: String) {
+    let mut s = state.lock().unwrap();
+    s.token = Some(token);
+    s.profile_json = Some(profile);
+}
+
+fn cors_headers() -> Vec<Header> {
+    [
+        ("Access-Control-Allow-Origin", "*"),
+        ("Access-Control-Allow-Headers", "Content-Type, X-IP-Token"),
+        ("Access-Control-Allow-Methods", "GET, POST, OPTIONS"),
+        ("Content-Type", "application/json"),
+    ]
+    .iter()
+    .filter_map(|(k, v)| Header::from_bytes(k.as_bytes(), v.as_bytes()).ok())
+    .collect()
+}
+
+fn respond(request: tiny_http::Request, status: u16, body: &str) {
+    let mut resp = Response::from_string(body).with_status_code(status);
+    for h in cors_headers() {
+        resp.add_header(h);
+    }
+    let _ = request.respond(resp);
+}
+
+fn header_value(request: &tiny_http::Request, name: &str) -> Option<String> {
+    request
+        .headers()
+        .iter()
+        .find(|h| h.field.as_str().as_str().eq_ignore_ascii_case(name))
+        .map(|h| h.value.as_str().to_string())
+}
+
+fn start_bridge(app: AppHandle, shared: SharedBridge) {
+    let mut server = None;
+    for port in 8765u16..8769 {
+        if let Ok(s) = Server::http(("127.0.0.1", port)) {
+            server = Some(s);
+            break;
+        }
+    }
+    let Some(server) = server else { return };
+
+    std::thread::spawn(move || {
+        for mut request in server.incoming_requests() {
+            let method = request.method().clone();
+            let path = request.url().split('?').next().unwrap_or("").to_string();
+
+            if method == Method::Options {
+                respond(request, 204, "");
+                continue;
+            }
+            if path == "/ping" {
+                respond(request, 200, "{\"ok\":true,\"app\":\"InternPilot\"}");
+                continue;
+            }
+
+            let token_ok = {
+                let s = shared.lock().unwrap();
+                match (&s.token, header_value(&request, "X-IP-Token")) {
+                    (Some(t), Some(h)) => !t.is_empty() && *t == h,
+                    _ => false,
+                }
+            };
+            if !token_ok {
+                respond(request, 401, "{\"error\":\"unauthorized\"}");
+                continue;
+            }
+
+            match (method, path.as_str()) {
+                (Method::Get, "/profile") => {
+                    let body = shared.lock().unwrap().profile_json.clone().unwrap_or_else(|| "{}".into());
+                    respond(request, 200, &body);
+                }
+                (Method::Post, "/application") => {
+                    let mut body = String::new();
+                    let _ = request.as_reader().read_to_string(&mut body);
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
+                        let _ = app.emit("bridge://application", val);
+                    }
+                    respond(request, 200, "{\"ok\":true}");
+                }
+                _ => respond(request, 404, "{\"error\":\"not found\"}"),
+            }
+        }
+    });
+}
 
 /// Full schema based on the InternPilot AI proposal (section 8 - Database Design).
 /// All tables are created up front so the data model is stable; Phase 1 only
@@ -235,6 +338,8 @@ pub fn run() {
         },
     ];
 
+    let bridge: SharedBridge = Arc::new(Mutex::new(BridgeState::default()));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
@@ -245,6 +350,12 @@ pub fn run() {
                 .add_migrations(DB_URL, migrations)
                 .build(),
         )
+        .manage(bridge.clone())
+        .invoke_handler(tauri::generate_handler![bridge_set_profile])
+        .setup(move |app| {
+            start_bridge(app.handle().clone(), bridge.clone());
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
