@@ -20,9 +20,19 @@ function toText(input: string): string {
   return s
     .split("\n")
     .map((l) => l.trim())
+    .map((l) => (/^[•\s]+$/.test(l) ? "" : l)) // drop bullet-only / empty lines
     .filter((l, i, a) => !(l === "" && a[i - 1] === ""))
     .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/** True when extracted text is a careers-page template/listing, not a real JD. */
+function looksLikeJunk(text: string): boolean {
+  if (/%LABEL_|%BUTTON_|%DROPDOWN_|%HEADER_|%DOC_/.test(text)) return true;
+  if ((text.match(/%[A-Z0-9_]+%/g) || []).length >= 3) return true; // template placeholders
+  if ((text.match(/\bapply\b/gi) || []).length >= 8) return true; // job-list page
+  return false;
 }
 
 async function fetchText(url: string): Promise<string> {
@@ -86,11 +96,32 @@ export async function fetchJobDescription(url: string): Promise<string> {
     }
   }
 
-  // Generic HTML → text
+  // SmartRecruiters
+  const sr = url.match(/smartrecruiters\.com\/([\w-]+)\/(\d+)/i);
+  if (sr) {
+    try {
+      const res = await httpFetch(`https://api.smartrecruiters.com/v1/companies/${sr[1]}/postings/${sr[2]}`);
+      if (res.ok) {
+        const d = await res.json();
+        const sections = d?.jobAd?.sections ?? {};
+        const parts: string[] = [];
+        for (const key of ["companyDescription", "jobDescription", "qualifications", "additionalInformation"]) {
+          const t = sections[key]?.text;
+          if (t) parts.push(toText(String(t)));
+        }
+        const txt = parts.join("\n\n").trim();
+        if (txt.length > 120) return txt;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // Generic HTML → text (best effort; reject careers-page templates / listings)
   const html = await fetchText(url);
   const txt = toText(html);
-  if (txt.length < 200) {
-    throw new Error("This posting needs JavaScript to load its description. Open it on the company site.");
+  if (txt.length < 220 || looksLikeJunk(txt)) {
+    throw new Error("This posting doesn't expose its description to us — open it on the company site to read the details.");
   }
   return txt.slice(0, 8000);
 }
