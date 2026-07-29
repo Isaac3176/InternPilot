@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; width: 300px; margin: 0; padding: 14px; color: #0f1b2d; font-size: 13px; }
+      h1 { font-size: 14px; margin: 0 0 2px; }
+      .sub { color: #6b7a8d; font-size: 11.5px; margin: 0 0 12px; }
+      .status { font-size: 12px; padding: 7px 9px; border-radius: 7px; background: #f1f4f8; color: #33445a; margin-bottom: 12px; }
+      .status.ok { background: #e4f3ee; color: #157f5f; }
+      .status.err { background: #fbeae6; color: #b03d2a; }
+      label { display: block; font-size: 11px; font-weight: 600; color: #6b7a8d; margin: 10px 0 4px; }
+      input { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #d5d9e0; border-radius: 7px; font: inherit; }
+      button { width: 100%; padding: 9px; border-radius: 8px; border: none; background: #1f6feb; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 8px; }
+      button.sec { background: #fff; color: #33445a; border: 1px solid #d5d9e0; }
+      .row { display: flex; gap: 8px; }
+      .row > * { flex: 1; }
+      details { margin-top: 12px; }
+      summary { cursor: pointer; color: #6b7a8d; font-size: 12px; }
+      hr { border: none; border-top: 1px solid #eef1f5; margin: 12px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>InternPilot Autofill</h1>
+    <p class="sub">Fill this application and record it to the app.</p>
+    <div id="status" class="status">Checking connection…</div>
+
+    <button id="autofill">Autofill this page</button>
+
+    <hr />
+    <label for="company">Company</label>
+    <input id="company" placeholder="Company" />
+    <label for="title">Role</label>
+    <input id="title" placeholder="Role title" />
+    <button id="save-job" class="sec">Save to InternPilot</button>
+
+    <details>
+      <summary>Connection settings</summary>
+      <label for="token">Token (from app Settings → Browser extension)</label>
+      <input id="token" placeholder="paste token" />
+      <label for="port">Port</label>
+      <input id="port" value="8765" />
+      <div class="row">
+        <button id="save-settings" class="sec">Save</button>
+        <button id="test" class="sec">Test</button>
+      </div>
+    </details>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

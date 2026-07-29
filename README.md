@@ -51,6 +51,10 @@ tailored once you add an **OpenAI API key** in Settings. Gmail sync is optional 
 - **Email Inbox + Gmail** — connect Gmail (read-only OAuth) and sync job-related messages,
   or paste emails manually; each is AI-classified (confirmation / rejection / OA / interview /
   recruiter / offer) with a review-before-update step to change an application's status.
+- **Browser extension (autofill)** — a companion Chrome/Edge extension
+  ([`extension/`](extension/)) that autofills applications from your profile and records
+  them into your Applications list, via a local token-protected bridge (the app must be
+  running). You always review and submit yourself.
 - **Apply Assist** — Safe-Mode assisted application prep: recommends the best-matching
   resume version for a job, drafts short-answer responses, builds a prep checklist, and
   opens the posting for you to review and submit.
