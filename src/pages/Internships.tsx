@@ -45,7 +45,7 @@ function initials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 function bandColor(v: number): string {
-  return v >= 80 ? "var(--beacon)" : v >= 55 ? "var(--amber)" : "var(--alert)";
+  return v >= 80 ? "var(--beacon)" : v >= 65 ? "var(--accent)" : "var(--warn)";
 }
 
 export default function Internships() {
@@ -314,23 +314,23 @@ export default function Internships() {
               <div className="panel">
                 <div className="panel-head"><span className="lbl">Readiness</span></div>
                 <ReadinessGauge value={selected.score} />
-                <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--slate)", textAlign: "center" }}>
-                  Match on your target roles, skills, and locations
-                </p>
+                <p className="gauge-note">Match on your target roles, skills, and locations</p>
               </div>
 
               <div className="panel">
-                <div className="panel-head"><span className="lbl">Skills on your résumé</span></div>
+                <div className="panel-head">
+                  <span className="lbl">Skills</span>
+                  <button type="button" onClick={() => navigate("/resumes")}>Edit résumé</button>
+                </div>
                 {matchedSkills.length > 0 ? (
-                  <ul className="check">
-                    {matchedSkills.map((m) => (
-                      <li key={m}><span className="box">✓</span>{m}</li>
-                    ))}
-                  </ul>
+                  <>
+                    <div className="sub-label">On your résumé ({matchedSkills.length})</div>
+                    <div className="skills">
+                      {matchedSkills.map((m) => <span className="skill" key={m}>✓ {m}</span>)}
+                    </div>
+                  </>
                 ) : (
-                  <p style={{ margin: 0, fontSize: 12.5, color: "var(--slate)" }}>
-                    No résumé skills detected in this title. Full requirement matching runs on the posting page.
-                  </p>
+                  <p className="muted-note">No résumé skills detected in this title. Full requirement matching runs on the posting page.</p>
                 )}
               </div>
 
@@ -346,11 +346,17 @@ export default function Internships() {
                     <button type="button" className="secondary small" onClick={() => navigate("/networking")}>Ask</button>
                   </div>
                 )) : (
-                  <p style={{ margin: 0, fontSize: 12.5, color: "var(--slate)" }}>
-                    No contacts here yet. Add one in Networking to build a referral path.
-                  </p>
+                  <p className="muted-note">No contacts here yet. Add one in Networking to build a referral path.</p>
                 )}
               </div>
+
+              {selected.datePosted && (
+                <div className="panel deadline">
+                  <span className="lbl">Age of posting</span>
+                  <div className="big">{postedAgo(selected.datePosted).replace("Posted ", "").replace(" ago", "")}</div>
+                  <p>Older listings fill first — apply sooner rather than later.</p>
+                </div>
+              )}
 
               <div className="foot">InternPilot · Internship feed</div>
             </>

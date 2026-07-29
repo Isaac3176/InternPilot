@@ -1,8 +1,8 @@
 function band(v: number): string {
-  return v >= 80 ? "var(--beacon)" : v >= 55 ? "var(--amber)" : "var(--alert)";
+  return v >= 80 ? "var(--beacon)" : v >= 65 ? "var(--accent)" : "var(--warn)";
 }
 function verdictOf(v: number): string {
-  return v >= 80 ? "Strong fit" : v >= 65 ? "Good fit" : v >= 45 ? "Fair fit" : "Reach";
+  return v >= 80 ? "Strong fit" : v >= 65 ? "Good fit" : "Fair fit";
 }
 
 /** Analog readiness gauge (SVG) showing a 0-100 profile match. */
