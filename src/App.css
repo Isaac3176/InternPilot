@@ -363,6 +363,18 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .wizard-bar-fill { height: 100%; background: var(--accent); transition: width 0.25s ease; }
 .wizard-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
 .wizard-skip { text-align: center; margin-top: 10px; }
+.resume-drop {
+  display: block;
+  text-align: center;
+  padding: 22px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.resume-drop:hover { border-color: var(--accent); background: var(--bg-elev-2); }
 
 /* ---------- Form sections ---------- */
 .form-section { margin-bottom: 22px; }

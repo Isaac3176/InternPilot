@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { signup } from "../auth";
 import { PROFILE_SECTIONS, useProfileForm } from "./useProfileForm";
+import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
+import { parseResume } from "../ai/resumeParse";
+import { createResumeVersion } from "../db/resumes";
 
 export default function SignupWizard({ onDone }: { onDone: () => void }) {
   const h = useProfileForm();
@@ -11,10 +14,43 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const totalSteps = PROFILE_SECTIONS.length + 1; // account step + profile sections
+  const [resumeBusy, setResumeBusy] = useState(false);
+  const [resumeMsg, setResumeMsg] = useState("");
+  const [resumeErr, setResumeErr] = useState("");
+
+  // Steps: 0 = account, 1 = resume, 2.. = profile sections
+  const totalSteps = PROFILE_SECTIONS.length + 2;
   const isAccount = step === 0;
+  const isResume = step === 1;
   const isLast = step === totalSteps - 1;
-  const section = isAccount ? null : PROFILE_SECTIONS[step - 1];
+  const section = step >= 2 ? PROFILE_SECTIONS[step - 2] : null;
+
+  async function handleResume(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setResumeBusy(true);
+    setResumeMsg("");
+    setResumeErr("");
+    try {
+      const text = await extractTextFromFile(file);
+      const parsed = await parseResume(text);
+      let filled = 0;
+      for (const [k, v] of Object.entries(parsed)) {
+        if (v) {
+          h.set(k, v);
+          filled++;
+        }
+      }
+      const id = await createResumeVersion({ name: file.name.replace(/\.[^.]+$/, "") || "My Resume", content: text });
+      if (id) h.set("preferred_resume_id", String(id));
+      setResumeMsg(`Parsed ${file.name} — autofilled ${filled} field${filled === 1 ? "" : "s"}. Review them in the next steps.`);
+    } catch (err) {
+      setResumeErr(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResumeBusy(false);
+    }
+  }
 
   function next() {
     setError("");
@@ -24,12 +60,12 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
       if (password !== confirm) return setError("Passwords do not match.");
       if (!h.s.email) h.set("email", email.trim().toLowerCase());
     }
-    setStep((s) => s + 1);
+    setStep((x) => x + 1);
   }
 
   function back() {
     setError("");
-    setStep((s) => Math.max(0, s - 1));
+    setStep((x) => Math.max(0, x - 1));
   }
 
   async function finish() {
@@ -54,7 +90,7 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
           <div className="wizard-bar-fill" style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
         </div>
 
-        {isAccount ? (
+        {isAccount && (
           <>
             <h2>Create your account</h2>
             <p className="hint mb-md">
@@ -73,10 +109,29 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
               <input id="su-pw2" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </div>
           </>
-        ) : (
+        )}
+
+        {isResume && (
           <>
-            <h2>{section!.title}</h2>
-            {section!.render(h)}
+            <h2>Upload your resume</h2>
+            <p className="hint mb-md">
+              We'll parse it and autofill everything we can — you review and complete the rest in the next steps.
+              PDF, DOCX, or TXT.
+            </p>
+            <label className="resume-drop">
+              {resumeBusy ? "Parsing…" : "Choose resume file"}
+              <input type="file" accept={ACCEPTED_RESUME_TYPES} onChange={handleResume} disabled={resumeBusy} hidden />
+            </label>
+            {resumeMsg && <p className="hint">✓ {resumeMsg}</p>}
+            {resumeErr && <p className="hint text-red">{resumeErr}</p>}
+            <p className="hint">Prefer to fill manually? Just click Next.</p>
+          </>
+        )}
+
+        {section && (
+          <>
+            <h2>{section.title}</h2>
+            {section.render(h)}
           </>
         )}
 
@@ -90,7 +145,7 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
             <button type="button" onClick={next}>Next</button>
           )}
         </div>
-        {!isAccount && <p className="hint wizard-skip">Optional — you can edit all of this later in Profile.</p>}
+        {section && <p className="hint wizard-skip">Optional — you can edit all of this later in Profile.</p>}
       </div>
     </div>
   );
