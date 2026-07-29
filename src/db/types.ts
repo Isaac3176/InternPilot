@@ -184,6 +184,7 @@ export interface Profile {
   desired_salary: string | null;
   willing_to_relocate: string | null;
   earliest_start_date: string | null;
+  target_date: string | null;
   // Work authorization
   work_auth: WorkAuth | null;
   authorized_us: string | null;

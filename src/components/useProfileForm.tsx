@@ -29,7 +29,7 @@ const emptyState: State = {
   linkedin_url: "", github_url: "", portfolio_url: "",
   school: "", degree: "", major: "", minor: "", gpa: "", graduation_date: "", grad_year: "",
   target_roles: "", locations: "", skills: "", remote_pref: "any",
-  desired_salary: "", willing_to_relocate: "", earliest_start_date: "",
+  desired_salary: "", willing_to_relocate: "", earliest_start_date: "", target_date: "",
   work_auth: "", authorized_us: "", requires_sponsorship: "", security_clearance: "",
   gender: "", race_ethnicity: "", hispanic_latino: "", veteran_status: "", disability_status: "",
   preferred_resume_id: "",
@@ -92,7 +92,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
         remote_pref: (s.remote_pref || "any") as RemotePref,
         preferred_resume_id: s.preferred_resume_id ? Number(s.preferred_resume_id) : null,
         desired_salary: str(s.desired_salary), willing_to_relocate: str(s.willing_to_relocate),
-        earliest_start_date: str(s.earliest_start_date),
+        earliest_start_date: str(s.earliest_start_date), target_date: str(s.target_date),
         work_auth: (s.work_auth || null) as WorkAuth | null,
         authorized_us: str(s.authorized_us), requires_sponsorship: str(s.requires_sponsorship),
         security_clearance: str(s.security_clearance),
@@ -191,6 +191,10 @@ export const PROFILE_SECTIONS: { title: string; render: (h: ProfileFormApi) => R
           {h.choice("willing_to_relocate", "Willing to relocate?", YES_NO)}
         </div>
         <div className="field-row">{h.text("desired_salary", "Desired salary", "$40/hr")}{h.text("earliest_start_date", "Earliest start date", "June 2026")}</div>
+        <div className="field">
+          <label htmlFor="pf-target_date">Target job-by date</label>
+          <input id="pf-target_date" type="date" value={h.s.target_date} onChange={(e) => h.set("target_date", e.target.value)} />
+        </div>
         <div className="field">
           <label htmlFor="pf-resume">Preferred resume</label>
           <select id="pf-resume" value={h.s.preferred_resume_id} onChange={(e) => h.set("preferred_resume_id", e.target.value)}>

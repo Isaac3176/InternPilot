@@ -4,6 +4,7 @@ import { PROFILE_SECTIONS, useProfileForm } from "./useProfileForm";
 import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { parseResume } from "../ai/resumeParse";
 import { createResumeVersion } from "../db/resumes";
+import { ROLE_SUGGESTIONS } from "../data/roles";
 
 export default function SignupWizard({ onDone }: { onDone: () => void }) {
   const h = useProfileForm();
@@ -18,12 +19,13 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
   const [resumeMsg, setResumeMsg] = useState("");
   const [resumeErr, setResumeErr] = useState("");
 
-  // Steps: 0 = account, 1 = resume, 2.. = profile sections
-  const totalSteps = PROFILE_SECTIONS.length + 2;
+  // Steps: 0 = account, 1 = resume, 2 = goal, 3.. = profile sections
+  const totalSteps = PROFILE_SECTIONS.length + 3;
   const isAccount = step === 0;
   const isResume = step === 1;
+  const isGoal = step === 2;
   const isLast = step === totalSteps - 1;
-  const section = step >= 2 ? PROFILE_SECTIONS[step - 2] : null;
+  const section = step >= 3 ? PROFILE_SECTIONS[step - 3] : null;
 
   async function handleResume(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -125,6 +127,18 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
             {resumeMsg && <p className="hint">✓ {resumeMsg}</p>}
             {resumeErr && <p className="hint text-red">{resumeErr}</p>}
             <p className="hint">Prefer to fill manually? Just click Next.</p>
+          </>
+        )}
+
+        {isGoal && (
+          <>
+            <h2>Your goal</h2>
+            <p className="hint mb-md">We'll use this to surface and prioritize the right postings for you.</p>
+            {h.tags("target_roles", "What roles are you looking for?", ROLE_SUGGESTIONS, "Search roles — e.g. Backend, Machine Learning…")}
+            <div className="field">
+              <label htmlFor="su-target-date">When do you want a job by?</label>
+              <input id="su-target-date" type="date" value={h.s.target_date} onChange={(e) => h.set("target_date", e.target.value)} />
+            </div>
           </>
         )}
 

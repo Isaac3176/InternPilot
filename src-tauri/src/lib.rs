@@ -227,6 +227,12 @@ pub fn run() {
                   );",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 9,
+            description: "add_target_date_to_profile",
+            sql: "ALTER TABLE profile ADD COLUMN target_date TEXT;",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

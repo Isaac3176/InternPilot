@@ -7,7 +7,7 @@ const PROFILE_COLUMNS = [
   "linkedin_url", "github_url", "portfolio_url",
   "school", "degree", "major", "minor", "gpa", "graduation_date", "grad_year",
   "target_roles", "locations", "skills", "remote_pref", "preferred_resume_id",
-  "desired_salary", "willing_to_relocate", "earliest_start_date",
+  "desired_salary", "willing_to_relocate", "earliest_start_date", "target_date",
   "work_auth", "authorized_us", "requires_sponsorship", "security_clearance",
   "gender", "race_ethnicity", "hispanic_latino", "veteran_status", "disability_status",
 ] as const;
