@@ -32,7 +32,7 @@ export default function Internships() {
   const [listings, setListings] = useState<RankedListing[]>([]);
   const [addedUrls, setAddedUrls] = useState<Map<string, number>>(new Map());
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
-  const [myRoles, setMyRoles] = useState<string[]>([]);
+  const [hasRoles, setHasRoles] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
@@ -61,7 +61,9 @@ export default function Internships() {
       setListings(feed.listings);
       setTotal(feed.listings.length);
       setPreferredResumeId(profile?.preferred_resume_id ?? null);
-      setMyRoles((profile?.target_roles ?? "").split(",").map((r) => r.trim().toLowerCase()).filter(Boolean));
+      const roles = (profile?.target_roles ?? "").split(",").map((r) => r.trim()).filter(Boolean);
+      setHasRoles(roles.length > 0);
+      if (roles.length > 0) setMatchesMyRoles(true);
       await refreshAddedMap();
       markFeedSeen(feed.listings);
     } catch (e) {
@@ -83,14 +85,14 @@ export default function Internships() {
       if (jobType !== "All" && jobTypeOf(l.title) !== jobType) return false;
       if (loc && !l.locations.join(" ").toLowerCase().includes(loc)) return false;
       if (term && !l.company.toLowerCase().includes(term) && !l.title.toLowerCase().includes(term)) return false;
-      if (matchesMyRoles && myRoles.length && !myRoles.some((r) => l.title.toLowerCase().includes(r))) return false;
+      if (matchesMyRoles && !l.matchesRoles) return false;
       return true;
     });
     if (sort === "recent") {
       rows = [...rows].sort((a, b) => (b.datePosted ?? 0) - (a.datePosted ?? 0));
     }
     return rows.slice(0, MAX_SHOWN);
-  }, [listings, search, jobType, location, onlyNew, matchesMyRoles, myRoles, sort]);
+  }, [listings, search, jobType, location, onlyNew, matchesMyRoles, sort]);
 
   const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
 
@@ -135,7 +137,9 @@ export default function Internships() {
           <option value="recent">Most recent</option>
         </select>
         <label className="check-row"><input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} /><span>New</span></label>
-        <label className="check-row"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} /><span>My roles</span></label>
+        {hasRoles && (
+          <label className="check-row"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} /><span>My roles</span></label>
+        )}
       </div>
 
       <div className="jobs-count">Showing {filtered.length} of {total} jobs</div>

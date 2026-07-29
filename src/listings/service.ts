@@ -52,22 +52,59 @@ function sponsorshipOk(listing: Listing, profile: Profile | null): boolean {
   return !(s.includes("does not offer") || s.includes("citizenship is required"));
 }
 
-/** Heuristic relevance score of a listing against the user's profile. */
+// Generic words that don't help distinguish a role.
+const ROLE_STOP = new Set([
+  "engineer", "engineering", "developer", "development", "intern", "internship",
+  "co", "op", "coop", "i", "ii", "iii", "senior", "staff", "jr", "sr", "new",
+  "grad", "graduate", "university", "the", "and", "of", "for", "a", "an", "role", "roles",
+]);
+
+/** Break a target role into distinguishing tokens + synonym phrases. */
+function roleKeywords(role: string): { tokens: string[]; phrases: string[] } {
+  const clean = role.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+  const tokens = clean.split(/\s+/).filter((t) => t && !ROLE_STOP.has(t));
+  const phrases: string[] = [];
+  if (/software/.test(clean)) phrases.push("swe", "sde", "software");
+  if (/machine learning|\bai\b|\bml\b/.test(clean)) phrases.push("machine learning", "ml", "ai");
+  if (/full[\s-]?stack/.test(clean)) phrases.push("full stack", "fullstack", "full-stack");
+  if (/front[\s-]?end/.test(clean)) phrases.push("frontend", "front end", "front-end");
+  if (/back[\s-]?end/.test(clean)) phrases.push("backend", "back end", "back-end");
+  if (/data scien/.test(clean)) phrases.push("data scien");
+  return { tokens, phrases };
+}
+
+/** 0..1 best match of the title against any of the user's target roles. */
+function roleScore(title: string, roles: string[]): number {
+  const t = title.toLowerCase();
+  let best = 0;
+  for (const role of roles) {
+    const { tokens, phrases } = roleKeywords(role);
+    if (phrases.some((p) => t.includes(p))) {
+      best = 1;
+      continue;
+    }
+    if (tokens.length === 0) continue;
+    const matched = tokens.filter((tok) => t.includes(tok)).length;
+    best = Math.max(best, matched / tokens.length);
+  }
+  return best;
+}
+
+/** Normalized 0-100 profile match, weighted toward target-role fit. */
 function scoreListing(listing: Listing, profile: Profile | null): number {
-  if (!profile) return 0;
-  let score = 0;
+  const roles = splitCsv(profile?.target_roles);
+  const skills = splitCsv(profile?.skills);
+  const locs = splitCsv(profile?.locations);
   const title = listing.title.toLowerCase();
   const listingLocs = listing.locations.join(" ").toLowerCase();
 
-  for (const role of splitCsv(profile.target_roles)) if (title.includes(role)) score += 30;
-  for (const skill of splitCsv(profile.skills)) if (title.includes(skill)) score += 5;
-  for (const loc of splitCsv(profile.locations)) {
-    if (listingLocs.includes(loc)) score += 15;
-  }
-  if (profile.remote_pref === "remote" && listingLocs.includes("remote")) score += 10;
-  if (!sponsorshipOk(listing, profile)) score -= 40;
+  const rScore = roles.length ? roleScore(listing.title, roles) : 0.5;
+  const skillHit = skills.length ? skills.filter((s) => title.includes(s)).length / skills.length : 0;
+  const locHit = locs.length ? (locs.some((l) => listingLocs.includes(l)) ? 1 : 0) : 0;
 
-  return score;
+  let score = 0.8 * rScore + 0.12 * skillHit + 0.08 * locHit;
+  if (!sponsorshipOk(listing, profile)) score *= 0.5;
+  return Math.round(score * 100);
 }
 
 export interface Feed {
@@ -83,16 +120,18 @@ export interface Feed {
 export async function getFeed(): Promise<Feed> {
   const [listings, profile] = await Promise.all([fetchListings(), getProfile()]);
   const lastSeen = getLastSeenPosted();
+  const roles = splitCsv(profile?.target_roles);
 
   const ranked: RankedListing[] = listings.map((l) => ({
     ...l,
     score: scoreListing(l, profile),
     isNew: !!l.datePosted && l.datePosted > lastSeen,
+    matchesRoles: roles.length ? roleScore(l.title, roles) >= 0.5 : true,
     sponsorshipOk: sponsorshipOk(l, profile),
   }));
 
+  // Best match first, then freshness — so relevant roles top the list, not random new ones.
   ranked.sort((a, b) => {
-    if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
     if (b.score !== a.score) return b.score - a.score;
     return (b.datePosted ?? 0) - (a.datePosted ?? 0);
   });
