@@ -453,6 +453,44 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .perf-rate .bar-track { flex: 1; height: 8px; }
 .perf-rate span { font-size: 12px; color: var(--text-dim); width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
 
+/* ---------- Jobs (Internships) ---------- */
+.jobs-toolbar { flex-wrap: wrap; }
+.jobs-toolbar .loc-input { flex: 0 1 160px; }
+.jobs-count { color: var(--text-dim); font-size: 12.5px; margin-bottom: 12px; }
+.jobs-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  height: calc(100vh - 250px);
+}
+.jobs-list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.job-card {
+  text-align: left;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.12s, background 0.12s;
+}
+.job-card:hover { background: var(--bg-elev-2); filter: none; }
+.job-card.active { border-color: var(--accent); background: var(--bg-elev-2); }
+.job-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.job-card-title { margin-top: 4px; font-weight: 600; font-size: 13.5px; }
+.job-card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.job-detail { overflow-y: auto; margin-bottom: 0; }
+.job-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.job-meta .muted { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+
 /* ---------- Prep plan ---------- */
 .plan-row {
   display: grid;
