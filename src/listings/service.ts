@@ -119,13 +119,13 @@ export interface Feed {
  */
 export async function getFeed(): Promise<Feed> {
   const [listings, profile] = await Promise.all([fetchListings(), getProfile()]);
-  const lastSeen = getLastSeenPosted();
   const roles = splitCsv(profile?.target_roles);
+  const freshCutoff = Date.now() / 1000 - 5 * 24 * 60 * 60; // posted within 5 days
 
   const ranked: RankedListing[] = listings.map((l) => ({
     ...l,
     score: scoreListing(l, profile),
-    isNew: !!l.datePosted && l.datePosted > lastSeen,
+    isNew: !!l.datePosted && l.datePosted > freshCutoff,
     matchesRoles: roles.length ? roleScore(l.title, roles) >= 0.5 : true,
     sponsorshipOk: sponsorshipOk(l, profile),
   }));

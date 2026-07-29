@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { createApplication, listApplications } from "../db/applications";
 import { listContacts } from "../db/contacts";
 import { getProfile } from "../db/profile";
-import { getFeed, markFeedSeen } from "../listings/service";
+import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
 import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Status } from "../db/types";
@@ -90,9 +90,7 @@ export default function Internships() {
       setMySkills((profile?.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean));
       const roles = (profile?.target_roles ?? "").split(",").map((r) => r.trim()).filter(Boolean);
       setHasRoles(roles.length > 0);
-      if (roles.length > 0) setMatchesMyRoles(true);
       await refreshApps();
-      markFeedSeen(feed.listings);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -139,10 +137,10 @@ export default function Internships() {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }
   function clearAll() {
-    setSearch(""); setSelectedTypes([]); setLocation(""); setOnlyNew(false);
+    setSearch(""); setSelectedTypes([]); setLocation(""); setOnlyNew(false); setMatchesMyRoles(false);
   }
   const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0);
-  const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew);
+  const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew || matchesMyRoles);
 
   async function addToTracker(l: RankedListing): Promise<number | null> {
     const existing = appByUrl.get(l.url);
@@ -216,7 +214,12 @@ export default function Internships() {
           </div>
           <div className="list">
             {filtered.length === 0 ? (
-              <div className="empty">{listings.length === 0 ? "No listings — click Refresh." : "No listings match your filters."}</div>
+              <div className="empty">
+                {listings.length === 0 ? "No listings — click Refresh." : "No listings match your filters."}
+                {listings.length > 0 && anyActive && (
+                  <div className="mt-sm"><button type="button" className="secondary small" onClick={clearAll}>Clear filters</button></div>
+                )}
+              </div>
             ) : filtered.map((l) => (
               <button type="button" key={l.id} className={"job" + (selected?.id === l.id ? " on" : "")} onClick={() => setSelectedId(l.id)}>
                 <div className="job-top">
