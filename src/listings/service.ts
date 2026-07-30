@@ -90,6 +90,27 @@ function roleScore(title: string, roles: string[]): number {
   return best;
 }
 
+// Titles that are not internships to apply to (courses, tutoring, talent pools…).
+const NON_ROLE =
+  /\b(train(ing|ee)|bootcamp|boot camp|academy|course|certificat\w*|tutor\w*|teaching|instructor|mentorship|ambassador|volunteer|scholarship|workshop|seminar|talent (community|network|pool)|general application|expression of interest)\b/i;
+
+// Signals that a title is a software-engineering role.
+const ENG_SIGNAL =
+  /engineer|developer|\bswe\b|\bsde\b|software|programmer|full[\s-]?stack|front[\s-]?end|back[\s-]?end|data scien|machine learning|\bml\b|\bai\b|devops|\bsre\b|embedded|firmware|mobile|\bios\b|android|infrastructure|platform|systems|security|\bqa\b|test/i;
+
+/** Whether the user is broadly targeting software-engineering roles. */
+function isGenericSwe(roles: string[]): boolean {
+  return roles.some((r) => /software|full[\s-]?stack|front[\s-]?end|back[\s-]?end|swe|sde|developer|engineer/i.test(r));
+}
+
+/** Whether a listing is a real role matching the user's target roles. */
+function matchesTargetRoles(title: string, roles: string[]): boolean {
+  if (NON_ROLE.test(title)) return false;
+  if (!roles.length) return true;
+  if (roleScore(title, roles) >= 0.5) return true;
+  return isGenericSwe(roles) && ENG_SIGNAL.test(title);
+}
+
 /** Normalized 0-100 profile match, weighted toward target-role fit. */
 function scoreListing(listing: Listing, profile: Profile | null): number {
   const roles = splitCsv(profile?.target_roles);
@@ -98,7 +119,13 @@ function scoreListing(listing: Listing, profile: Profile | null): number {
   const title = listing.title.toLowerCase();
   const listingLocs = listing.locations.join(" ").toLowerCase();
 
-  const rScore = roles.length ? roleScore(listing.title, roles) : 0.5;
+  // Courses / bootcamps / tutoring / talent pools are not internships — sink them.
+  if (NON_ROLE.test(listing.title)) return 3;
+
+  let rScore = roles.length ? roleScore(listing.title, roles) : 0.5;
+  // A software-engineer's search should rank any engineering internship highly.
+  if (rScore < 0.8 && isGenericSwe(roles) && ENG_SIGNAL.test(listing.title)) rScore = Math.max(rScore, 0.8);
+
   const skillHit = skills.length ? skills.filter((s) => title.includes(s)).length / skills.length : 0;
   const locHit = locs.length ? (locs.some((l) => listingLocs.includes(l)) ? 1 : 0) : 0;
 
@@ -126,7 +153,7 @@ export async function getFeed(): Promise<Feed> {
     ...l,
     score: scoreListing(l, profile),
     isNew: !!l.datePosted && l.datePosted > freshCutoff,
-    matchesRoles: roles.length ? roleScore(l.title, roles) >= 0.5 : true,
+    matchesRoles: matchesTargetRoles(l.title, roles),
     sponsorshipOk: sponsorshipOk(l, profile),
   }));
 

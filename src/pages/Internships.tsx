@@ -96,6 +96,7 @@ export default function Internships() {
       setResumeHay(`${resumeContent} ${profile?.skills ?? ""}`.toLowerCase());
       const roles = (profile?.target_roles ?? "").split(",").map((r) => r.trim()).filter(Boolean);
       setHasRoles(roles.length > 0);
+      if (roles.length > 0) setMatchesMyRoles(true);
       await refreshApps();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
