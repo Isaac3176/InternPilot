@@ -6,6 +6,8 @@ import { listContacts } from "../db/contacts";
 import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
+import { jdSkillMatch } from "../listings/match";
+import { getResumeVersion } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
@@ -55,6 +57,7 @@ export default function Internships() {
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
   const [mySkills, setMySkills] = useState<string[]>([]);
+  const [resumeHay, setResumeHay] = useState("");
   const [hasRoles, setHasRoles] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -86,8 +89,11 @@ export default function Internships() {
       setListings(feed.listings);
       setTotal(feed.listings.length);
       setContacts(cts);
-      setPreferredResumeId(profile?.preferred_resume_id ?? null);
+      const preferredId = profile?.preferred_resume_id ?? null;
+      setPreferredResumeId(preferredId);
       setMySkills((profile?.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean));
+      const resumeContent = preferredId ? (await getResumeVersion(preferredId))?.content ?? "" : "";
+      setResumeHay(`${resumeContent} ${profile?.skills ?? ""}`.toLowerCase());
       const roles = (profile?.target_roles ?? "").split(",").map((r) => r.trim()).filter(Boolean);
       setHasRoles(roles.length > 0);
       await refreshApps();
@@ -162,6 +168,11 @@ export default function Internships() {
   const selStage = selApp ? STATUS_STAGE[selApp.status] : -1;
   const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
   const matchedSkills = selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [];
+
+  // JD-powered match when the description has loaded; else fall back to the title-based feed score.
+  const selDesc = selectedUrl ? descByUrl.get(selectedUrl) : undefined;
+  const jdMatch = selDesc && resumeHay.trim() ? jdSkillMatch(selDesc, resumeHay) : null;
+  const gaugeValue = jdMatch && jdMatch.matched.length + jdMatch.missing.length > 0 ? jdMatch.score : selected?.score ?? 0;
 
   return (
     <>
@@ -316,8 +327,12 @@ export default function Internships() {
             <>
               <div className="panel">
                 <div className="panel-head"><span className="lbl">Readiness</span></div>
-                <ReadinessGauge value={selected.score} />
-                <p className="gauge-note">Match on your target roles, skills, and locations</p>
+                <ReadinessGauge value={gaugeValue} />
+                <p className="gauge-note">
+                  {jdMatch
+                    ? `${jdMatch.matched.length} of ${jdMatch.matched.length + jdMatch.missing.length} skills from the description found on your résumé`
+                    : "Match on your target roles, skills, and locations — open a posting to score against its description"}
+                </p>
               </div>
 
               <div className="panel">
@@ -325,7 +340,24 @@ export default function Internships() {
                   <span className="lbl">Skills</span>
                   <button type="button" onClick={() => navigate("/resumes")}>Edit résumé</button>
                 </div>
-                {matchedSkills.length > 0 ? (
+                {jdMatch ? (
+                  <>
+                    <div className="sub-label">On your résumé ({jdMatch.matched.length})</div>
+                    <div className="skills">
+                      {jdMatch.matched.length > 0
+                        ? jdMatch.matched.slice(0, 14).map((m) => <span className="skill" key={m}>✓ {m}</span>)
+                        : <span className="muted-note">None of the JD's keywords matched yet.</span>}
+                    </div>
+                    {jdMatch.missing.length > 0 && (
+                      <>
+                        <div className="sub-label">Missing ({jdMatch.missing.length})</div>
+                        <div className="skills">
+                          {jdMatch.missing.slice(0, 14).map((m) => <span className="skill miss" key={m}>− {m}</span>)}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : matchedSkills.length > 0 ? (
                   <>
                     <div className="sub-label">On your résumé ({matchedSkills.length})</div>
                     <div className="skills">
@@ -333,7 +365,7 @@ export default function Internships() {
                     </div>
                   </>
                 ) : (
-                  <p className="muted-note">No résumé skills detected in this title. Full requirement matching runs on the posting page.</p>
+                  <p className="muted-note">Loading the job description to match your résumé skills…</p>
                 )}
               </div>
 
