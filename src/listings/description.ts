@@ -17,14 +17,16 @@ function toText(input: string): string {
     .replace(/<br\s*\/?>/gi, "\n");
   s = s.replace(/<[^>]+>/g, " ");
   s = s.replace(/[ \t ]+/g, " ").replace(/\n{3,}/g, "\n\n");
-  return s
-    .split("\n")
-    .map((l) => l.trim())
-    .map((l) => (/^[•\s]+$/.test(l) ? "" : l)) // drop bullet-only / empty lines
-    .filter((l, i, a) => !(l === "" && a[i - 1] === ""))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const out: string[] = [];
+  for (const raw of s.split("\n")) {
+    // collapse bullet runs ("• • • •") to a space, tidy spacing
+    let line = raw.replace(/(?:•\s*){2,}/g, " ").replace(/[ \t]{2,}/g, " ").trim();
+    if (/^[•\s]+$/.test(line)) line = "";
+    if (line === "" && out[out.length - 1] === "") continue; // no double blanks
+    if (line !== "" && line === out[out.length - 1]) continue; // drop duplicate consecutive lines
+    out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** True when extracted text is a careers-page template/listing, not a real JD. */
@@ -93,6 +95,24 @@ export async function fetchJobDescription(url: string): Promise<string> {
       }
     } catch {
       /* fall through to generic */
+    }
+  }
+
+  // Ashby (e.g. jobs.ashbyhq.com/{org}/{jobId})
+  const ashby = url.match(/ashbyhq\.com\/([\w-]+)\/([0-9a-f-]{16,})/i);
+  if (ashby) {
+    try {
+      const res = await httpFetch(`https://api.ashbyhq.com/posting-api/job-board/${ashby[1]}?includeCompensation=true`);
+      if (res.ok) {
+        const data = await res.json();
+        const job = (data?.jobs ?? []).find((j: { id?: string }) => j.id === ashby[2]);
+        if (job) {
+          const text = job.descriptionPlain || (job.descriptionHtml ? toText(String(job.descriptionHtml)) : "");
+          if (text && text.length > 80) return String(text).trim();
+        }
+      }
+    } catch {
+      /* fall through */
     }
   }
 

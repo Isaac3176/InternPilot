@@ -72,7 +72,6 @@ export default function Internships() {
   const [total, setTotal] = useState(0);
   const [descByUrl, setDescByUrl] = useState<Map<string, string>>(new Map());
   const [descLoading, setDescLoading] = useState(false);
-  const [descError, setDescError] = useState("");
 
   async function refreshApps() {
     const apps = await listApplications();
@@ -126,16 +125,12 @@ export default function Internships() {
 
   // Fetch the job description for the selected posting (cached per URL).
   useEffect(() => {
-    if (!selectedUrl || descByUrl.has(selectedUrl)) {
-      setDescError("");
-      return;
-    }
+    if (!selectedUrl || descByUrl.has(selectedUrl)) return;
     let cancelled = false;
     setDescLoading(true);
-    setDescError("");
     fetchJobDescription(selectedUrl)
       .then((txt) => { if (!cancelled) setDescByUrl((m) => new Map(m).set(selectedUrl, txt)); })
-      .catch((e) => { if (!cancelled) setDescError(e instanceof Error ? e.message : String(e)); })
+      .catch((e) => console.error("description fetch failed", e))
       .finally(() => { if (!cancelled) setDescLoading(false); });
     return () => { cancelled = true; };
   }, [selectedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -314,7 +309,7 @@ export default function Internships() {
                   <div className="prose jd">{descByUrl.get(selected.url)}</div>
                 ) : (
                   <div className="prose">
-                    <p>{descError || "Description not available for this posting."}</p>
+                    <p>We couldn't load the description automatically for this posting — open it on the company site to read the full details.</p>
                   </div>
                 )}
                 <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>View full posting →</button>
