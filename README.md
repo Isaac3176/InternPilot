@@ -1,134 +1,118 @@
 # InternPilot AI
 
-An AI-powered desktop application tracker and career assistant for software engineering
-internship applicants. Track every application, manage targeted resume versions, match
-resumes against job descriptions with AI, and ask a chatbot grounded in your own data.
+A local-first **desktop career assistant** for software-engineering internship hunting.
+InternPilot discovers internships, tailors your résumé, tracks every application, manages
+referrals, prepares you for OAs and interviews, and can **autofill applications from a
+browser extension** — all grounded in your own data, stored on your device.
 
-Built with **Tauri + React + TypeScript + SQLite**, with **OpenAI** powering the AI features.
+Built with **Tauri 2 + React 19 + TypeScript + SQLite**, with **OpenAI** powering the AI
+features (every AI feature has an offline fallback, so the app is usable without a key).
 
-**Status: Beta** — actively developed and usable locally, not yet independently tested at
-scale. Individual features are labeled below as _implemented_, _experimental_, or _planned_.
+**Status: Beta** — actively developed, usable locally, not yet independently tested at scale.
+
+- **Repo:** https://github.com/Isaac3176/InternPilot
+- **Deeper docs:** [Architecture](docs/ARCHITECTURE.md) · [Browser extension](docs/EXTENSION.md) · [Privacy](docs/PRIVACY.md) · [Development](docs/DEVELOPMENT.md)
 
 ## Download
 
-Grab the latest installer for your operating system from the
+Grab the latest installer from the
 **[Releases page](https://github.com/Isaac3176/InternPilot/releases/latest)**:
 
 | OS | File |
 | --- | --- |
-| Windows | `.msi` or `.exe` (NSIS) installer |
-| macOS | `.dmg` (Apple Silicon and Intel builds) |
-| Linux | `.AppImage` or `.deb` |
+| Windows | `.msi` / `.exe` (NSIS) |
+| macOS | `.dmg` (Apple Silicon + Intel) |
+| Linux | `.AppImage` / `.deb` |
 
-The app is **unsigned**, so your OS may warn on first launch — this is expected for an
-open-source app without a paid signing certificate:
-
-- **Windows:** "Windows protected your PC" → **More info** → **Run anyway**.
-- **macOS:** right-click the app → **Open**, or **System Settings → Privacy & Security → Open Anyway**.
-
-All data stays on your device. The AI features work with offline fallbacks, and become fully
-tailored once you add an **OpenAI API key** in Settings. Gmail sync is optional and read-only.
+The app is unsigned, so your OS may warn on first launch (Windows: More info → Run anyway;
+macOS: right-click → Open). All data stays on your device.
 
 ## Features
 
-- **Dashboard** — application counts by status, conversion rates, and recent applications.
-- **Applications** — create / edit / delete / search / filter applications (company, role,
-  status, resume version, job description, notes).
-- **Resume Center** — create/edit multiple targeted resume versions (paste text or import a
-  PDF / DOCX file), and run an AI resume-to-job match (score, matching skills, missing
-  keywords, suggested bullet rewrites, strategy).
-- **Bullet Library** — view, copy, and manage improved resume bullets saved from AI matches.
-- **Interview Prep** — track OA & interview events and generate company-specific prep plans
-  (focus areas, study schedule, practice, talking points, questions to ask) tailored to the
-  interview type, role, job description, and your resume.
-- **Interview Experiences** — collect company interview reports (role, source, difficulty,
-  topics, notes) and synthesize them per company into prep guidance with AI.
-- **AI Chat** — a career assistant grounded in your stored application data.
-- **Internships feed** — pull ranked internship listings from a public source, tailored to
-  your onboarding profile, with brand-new postings badged and desktop-notified so you can be
-  among the first to apply; one click adds to the tracker or jumps into assisted apply.
-- **Referral tracking** — record a referral per application and see your referral rate.
-- **Email Inbox + Gmail** — connect Gmail (read-only OAuth) and sync job-related messages,
-  or paste emails manually; each is AI-classified (confirmation / rejection / OA / interview /
-  recruiter / offer) with a review-before-update step to change an application's status.
-- **Browser extension (autofill)** — a companion Chrome/Edge extension
-  ([`extension/`](extension/)) that autofills applications from your profile and records
-  them into your Applications list, via a local token-protected bridge (the app must be
-  running). You always review and submit yourself.
-- **Apply Assist** — Safe-Mode assisted application prep: recommends the best-matching
-  resume version for a job, drafts short-answer responses, builds a prep checklist, and
-  opens the posting for you to review and submit.
-- **Reminders & desktop notifications** — the dashboard surfaces follow-up reminders for
-  stale applications and upcoming OAs/interviews, and fires native desktop notifications.
-- **Settings** — OpenAI API key + model, data export (JSON), and delete-all-data.
+**Onboarding & account**
+- Local login (passwords hashed on-device with PBKDF2) and a **Simplify-style signup wizard**:
+  upload your résumé → it's **parsed and autofills** your profile → set your target roles and
+  goal date → fill the rest (personal, links, education, work authorization, EEO).
 
-The AI features work **without an API key** using an offline keyword-based estimate, so the
-app is demoable out of the box. Add an OpenAI key in Settings for real analysis.
+**Discover internships**
+- A three-pane job browser: a filterable results list, a detail pane with the **real job
+  description** (fetched from Greenhouse / Lever / SmartRecruiters / Ashby), and a right rail.
+- Listings come from a public feed (SimplifyJobs) and are **ranked to your profile** — courses,
+  bootcamps, tutoring and talent-pools are filtered out; any engineering internship matches a
+  software-engineer's search.
+- **Readiness gauge + skill preflight**: once a description loads, it scores keyword coverage
+  against your résumé and shows matched / missing skills ("X of Y found").
+- One click to **Save** to your tracker or **Apply with autofill**.
 
-## Tech stack
+**Applications & analytics**
+- Application tracker (CRUD, search, status filters, résumé version, referral, notes).
+- Dashboard: status funnel, weekly trend, conversion rates, résumé-version performance,
+  referral rate, reminders + desktop notifications, and an on-demand **AI weekly strategy**.
 
-| Layer            | Technology                          |
-| ---------------- | ----------------------------------- |
-| Desktop shell    | Tauri 2                             |
-| Frontend         | React 19 + TypeScript + Vite        |
-| Local database   | SQLite (`tauri-plugin-sql`)         |
-| AI provider      | OpenAI Chat Completions API         |
-| Routing          | React Router                        |
+**Résumé**
+- Résumé Center: multiple targeted versions, **PDF/DOCX import**, and an AI résumé-to-job match.
+- Bullet Library for saved AI-improved bullets.
 
-## Project structure
+**Networking (referral CRM)**
+- Contacts + a full **referral pipeline** (potential → confirmed → applied) with proactive
+  warnings (agreed-but-unconfirmed, no thank-you, overdue follow-up) and networking analytics
+  (response/agreement/confirmed rates, OA/interview rate with vs. without a referral) — all
+  labeled correlational with sample-size guards.
 
-```
-src/                  React frontend
-  ai/                 AI service layer (OpenAI + offline fallbacks)
-  components/         Reusable UI (modals, status badge, onboarding, profile form)
-  db/                 SQLite access layer (typed CRUD + metrics)
-  gmail/              Gmail OAuth (loopback + PKCE), API client, sync
-  listings/           Internship feed: fetch, rank, notify
-  lib/                HTTP (CORS-safe), notifications, file extraction
-  pages/              Dashboard, Applications, Internships, Resume Center, ...
-src-tauri/            Rust backend
-  src/lib.rs          Tauri setup + SQLite schema migrations
-```
+**Interviews & research**
+- Interview Prep: track OA/interview events and generate company-specific prep plans.
+- Interview Experiences: collect reports and synthesize per-company prep guidance with AI.
 
-The SQLite schema is created and evolved via Rust-side migrations in
-[`src-tauri/src/lib.rs`](src-tauri/src/lib.rs).
+**Email (optional)**
+- Connect Gmail (read-only OAuth) and sync job-related mail, or paste emails; each is
+  AI-classified (confirmation / rejection / OA / interview / recruiter / offer) with a
+  **review-before-update** step before any status change.
+
+**Apply Assist & Chat**
+- Apply Assist: Safe-Mode prep (best résumé, AI-drafted short answers, checklist, open posting).
+- AI Chat grounded in your stored data.
+
+**Browser extension**
+- A companion Chrome/Edge extension that **autofills applications from your profile** and
+  **records them into your tracker** — see setup below.
+
+## Browser extension setup
+
+The extension talks to the app over a local, token-protected bridge, so **keep the app
+running** while you apply. Full guide: [docs/EXTENSION.md](docs/EXTENSION.md).
+
+1. In the app, open **Settings → Browser extension** and copy your **token**.
+2. In Chrome/Edge go to `chrome://extensions`, enable **Developer mode**, click
+   **Load unpacked**, and select this repo's **[`extension/`](extension/)** folder.
+3. Click the InternPilot extension → **Connection settings** → paste the **token**
+   (port stays `8765`) → **Save**. It should show **"Connected ✓"**.
+
+**Using it:** on an application page, click the extension → **Autofill this page** (review
+everything — it never submits for you), then **Save to InternPilot** to record the job in
+your Applications list.
 
 ## Build from source
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for prerequisites, commands, release process,
-and proxy/TLS troubleshooting.
+Full prerequisites, commands, release process, and proxy/TLS notes are in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ```bash
 npm install
-npm run tauri dev
+npm run tauri dev      # run the desktop app in dev mode
+npm run tauri build    # produce an installer bundle
 ```
 
 ## Privacy
 
-InternPilot is local-first. Here is exactly what data lives where and what leaves the device:
-
-- **Stored locally (SQLite):** applications, companies, resume versions and bullets, emails,
-  interviews, experiences, tasks, and your profile. Export or delete all of it from Settings.
-- **Sent to OpenAI** (only when you invoke an AI feature, and only if a key is set): the
-  resume / job-description / email / question text needed for that request. With no key, the
-  offline fallbacks run and nothing is sent.
-- **Sent to Google (Gmail), if you connect it:** read-only requests using a **narrow query**
-  for job-related mail; message metadata and snippets are stored locally. InternPilot never
-  modifies your inbox.
-- **Job feed:** fetched from a public listings URL (`raw.githubusercontent.com`); no personal
-  data is sent.
-- **Credentials:** the OpenAI key and Gmail OAuth tokens are currently stored in the app's
-  local storage. **Planned:** move these to the OS keychain (see roadmap) — do not treat the
-  current storage as hardened.
-- **Logs/backups:** no telemetry is sent anywhere; there is no automatic cloud backup.
+Local-first: your applications, résumés, contacts, emails, and profile live in a local SQLite
+database. Text is sent to OpenAI only when you invoke an AI feature (with a key set), and to
+Google only for read-only Gmail sync if you connect it. Full data-flow breakdown:
+[docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Roadmap
 
-Following the project proposal:
-
-- ✅ **Phase 1** — application tracker, resume versions, dashboard, local persistence.
-- ✅ **Phase 2** — AI resume matching, PDF/DOCX import, bullet library.
-- ✅ **Phase 3** — Gmail integration (read-only OAuth) + email classification.
-- ✅ **Phase 4** — OA / interview prep plans + desktop notifications.
-- ✅ **Phase 5** — interview-experience research + analytics across resume versions.
-- ✅ **Phase 6** — assisted application workflow (Safe Mode).
+- ✅ Tracking, dashboard, résumé matching, Gmail classification, interview prep, experience
+  research, referral CRM, internship Discover feed, Apply Assist, autofill browser extension,
+  JD-powered matching, local auth + onboarding.
+- ⏳ **Next Best Action** engine (prioritized daily actions), **work-authorization eligibility
+  screening**, and **security hardening** (move secrets to the OS keychain).
