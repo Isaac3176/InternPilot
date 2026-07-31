@@ -586,6 +586,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .facts { display: flex; flex-wrap: wrap; gap: 5px; }
 .fact { display: inline-flex; align-items: center; gap: 5px; background: #f1f4f7; border-radius: 6px; padding: 3px 8px; font-size: 11.5px; color: var(--ink-2); font-weight: 500; }
 .fact.neg { background: var(--alert-soft); color: var(--alert); }
+.fact.pay { background: var(--beacon-soft); color: var(--beacon); }
 .job-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 11px; padding-top: 9px; border-top: 1px dashed var(--line); }
 .closes { font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em; color: var(--slate); }
 .matchpip { font-family: var(--mono); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; color: var(--slate); }
@@ -629,6 +630,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .cell b { font-size: 14px; font-weight: 600; display: block; }
 .cell b.pos { color: var(--beacon); }
 .cell b.neg { color: var(--alert); }
+.cell b.unknown { color: var(--slate-2); font-weight: 500; }
+.cell-note { display: block; margin-top: 2px; font-size: 10.5px; color: var(--slate); }
 .detail-body h2 { font-size: 14px; font-weight: 600; letter-spacing: -.015em; color: var(--ink); margin: 0 0 11px; }
 .prose { max-width: 70ch; color: #243444; margin-bottom: 16px; }
 .prose p { margin: 0 0 12px; }

@@ -165,10 +165,18 @@ export default function Internships() {
   const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
   const matchedSkills = selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [];
 
-  // JD-powered match when the description has loaded; else fall back to the title-based feed score.
+  // Skill match: prefer the fetched JD; else use source-extracted skills; else title-based score.
   const selDesc = selectedUrl ? descByUrl.get(selectedUrl) : undefined;
   const jdMatch = selDesc && resumeHay.trim() ? jdSkillMatch(selDesc, resumeHay) : null;
-  const gaugeValue = jdMatch && jdMatch.matched.length + jdMatch.missing.length > 0 ? jdMatch.score : selected?.score ?? 0;
+  const srcMatch = !jdMatch && selected?.skills?.length && resumeHay.trim()
+    ? (() => {
+        const matched = selected.skills!.filter((s) => resumeHay.includes(s.toLowerCase()));
+        const missing = selected.skills!.filter((s) => !resumeHay.includes(s.toLowerCase()));
+        return { matched, missing, score: Math.round((matched.length / selected.skills!.length) * 100) };
+      })()
+    : null;
+  const effMatch = jdMatch ?? srcMatch;
+  const gaugeValue = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch.score : selected?.score ?? 0;
 
   return (
     <>
@@ -239,8 +247,9 @@ export default function Internships() {
                 </div>
                 <h3>{l.title}</h3>
                 <div className="facts">
+                  {l.salary && <span className="fact pay">{l.salary}</span>}
                   {l.locations[0] && <span className="fact">{l.locations[0]}</span>}
-                  <span className="fact">{jobTypeOf(l.title)}</span>
+                  {l.remote && <span className="fact">Remote</span>}
                   {!l.sponsorshipOk && <span className="fact neg">No sponsorship</span>}
                 </div>
                 <div className="job-foot">
@@ -294,12 +303,12 @@ export default function Internships() {
                 </div>
 
                 <div className="grid">
-                  <div className="cell"><span className="lbl">Location</span><b>{selected.locations.join(", ") || "—"}</b></div>
-                  <div className="cell"><span className="lbl">Type</span><b>{jobTypeOf(selected.title)}</b></div>
-                  <div className="cell"><span className="lbl">Visa sponsorship</span><b className={selected.sponsorshipOk ? "pos" : "neg"}>{selected.sponsorship ?? "Not specified"}</b></div>
+                  <div className="cell"><span className="lbl">Location</span><b>{selected.locations.join(", ") || "—"}</b>{selected.remote ? <span className="cell-note">Remote available</span> : null}</div>
+                  <div className="cell"><span className="lbl">Compensation</span><b className={selected.salary ? "" : "unknown"}>{selected.salary ?? "Not listed"}</b></div>
+                  <div className="cell"><span className="lbl">Season</span><b>{selected.season ?? "—"}</b>{selected.season ? <span className="cell-note">{selected.seasonInferred ? "Inferred — verify" : "Confirmed"}</span> : null}</div>
+                  <div className="cell"><span className="lbl">Visa sponsorship</span><b className={selected.sponsorshipOk ? "" : "neg"}>{selected.sponsorship ?? "Not stated"}</b><span className="cell-note">Estimate — confirm in JD</span></div>
                   <div className="cell"><span className="lbl">Posted</span><b>{postedAgo(selected.datePosted) || "—"}</b></div>
-                  <div className="cell"><span className="lbl">Compensation</span><b>Not listed</b></div>
-                  <div className="cell"><span className="lbl">Season</span><b>{selected.season ?? "—"}</b></div>
+                  <div className="cell"><span className="lbl">Source</span><b>{selected.source}</b></div>
                 </div>
 
                 <h2>About the role</h2>
@@ -325,9 +334,9 @@ export default function Internships() {
                 <div className="panel-head"><span className="lbl">Readiness</span></div>
                 <ReadinessGauge value={gaugeValue} />
                 <p className="gauge-note">
-                  {jdMatch
-                    ? `${jdMatch.matched.length} of ${jdMatch.matched.length + jdMatch.missing.length} skills from the description found on your résumé`
-                    : "Match on your target roles, skills, and locations — open a posting to score against its description"}
+                  {effMatch
+                    ? `${effMatch.matched.length} of ${effMatch.matched.length + effMatch.missing.length} listed skills found on your résumé`
+                    : "Match on your target roles, skills, and locations"}
                 </p>
               </div>
 
@@ -336,19 +345,19 @@ export default function Internships() {
                   <span className="lbl">Skills</span>
                   <button type="button" onClick={() => navigate("/resumes")}>Edit résumé</button>
                 </div>
-                {jdMatch ? (
+                {effMatch ? (
                   <>
-                    <div className="sub-label">On your résumé ({jdMatch.matched.length})</div>
+                    <div className="sub-label">On your résumé ({effMatch.matched.length})</div>
                     <div className="skills">
-                      {jdMatch.matched.length > 0
-                        ? jdMatch.matched.slice(0, 14).map((m) => <span className="skill" key={m}>✓ {m}</span>)
-                        : <span className="muted-note">None of the JD's keywords matched yet.</span>}
+                      {effMatch.matched.length > 0
+                        ? effMatch.matched.slice(0, 14).map((m) => <span className="skill" key={m}>✓ {m}</span>)
+                        : <span className="muted-note">None of the listed skills matched yet.</span>}
                     </div>
-                    {jdMatch.missing.length > 0 && (
+                    {effMatch.missing.length > 0 && (
                       <>
-                        <div className="sub-label">Missing ({jdMatch.missing.length})</div>
+                        <div className="sub-label">Missing ({effMatch.missing.length})</div>
                         <div className="skills">
-                          {jdMatch.missing.slice(0, 14).map((m) => <span className="skill miss" key={m}>− {m}</span>)}
+                          {effMatch.missing.slice(0, 14).map((m) => <span className="skill miss" key={m}>− {m}</span>)}
                         </div>
                       </>
                     )}
