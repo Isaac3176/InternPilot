@@ -17,6 +17,19 @@ import {
 import { connectGmail, disconnectGmail } from "../gmail/oauth";
 import { getAccountEmail, logout } from "../auth";
 import { BRIDGE_PORT, getBridgeToken } from "../bridge";
+import {
+  DEFAULT_AUTO_URL,
+  DEFAULT_SIMPLIFY_URL,
+  getAutoUrl,
+  getSimplifyUrl,
+  isAutoOn,
+  isSimplifyOn,
+  setAutoOn,
+  setAutoUrl,
+  setSimplifyOn,
+  setSimplifyUrl,
+} from "../listings/config";
+import { probeSources, type SourceProbe } from "../listings/sources";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -34,6 +47,47 @@ export default function Settings() {
   useEffect(() => {
     getAccountEmail().then(setAccountEmail).catch(console.error);
   }, []);
+
+  // Internship sources
+  const [simplifyOn, setSimplifyOnState] = useState(isSimplifyOn());
+  const [simplifyUrl, setSimplifyUrlState] = useState(getSimplifyUrl());
+  const [autoOn, setAutoOnState] = useState(isAutoOn());
+  const [autoUrl, setAutoUrlState] = useState(getAutoUrl());
+  const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
+  const [probing, setProbing] = useState(false);
+
+  async function saveAndTestSources() {
+    setSimplifyOn(simplifyOn);
+    setAutoOn(autoOn);
+    setSimplifyUrl(simplifyUrl.trim());
+    setAutoUrl(autoUrl.trim());
+    setProbing(true);
+    try {
+      setProbe(await probeSources());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProbing(false);
+    }
+  }
+
+  function resetSources() {
+    setSimplifyUrl("");
+    setAutoUrl("");
+    setSimplifyUrlState(DEFAULT_SIMPLIFY_URL);
+    setAutoUrlState(DEFAULT_AUTO_URL);
+    setSimplifyOnState(true);
+    setAutoOnState(true);
+    setSimplifyOn(true);
+    setAutoOn(true);
+    setProbe(null);
+  }
+
+  function sourceStatus(p: SourceProbe | undefined): string {
+    if (!p) return "";
+    if (p.error) return `Error: ${p.error}`;
+    return `${p.count} listing${p.count === 1 ? "" : "s"}`;
+  }
 
   function signOut() {
     logout();
@@ -148,6 +202,37 @@ export default function Settings() {
           <input id="s-model" value={model} onChange={(e) => setModelState(e.target.value)} placeholder={DEFAULT_MODEL} />
         </div>
         <button type="button" onClick={save}>{saved ? "Saved ✓" : "Save settings"}</button>
+      </div>
+
+      <div className="card">
+        <h2>Internship sources</h2>
+        <p className="hint mb-md">
+          The internship feed merges these sources and de-duplicates across them. Toggle or edit a URL,
+          then Save &amp; test. Changes apply on the next Refresh in Internships.
+        </p>
+
+        <div className="field">
+          <label className="check-row">
+            <input type="checkbox" checked={simplifyOn} onChange={(e) => setSimplifyOnState(e.target.checked)} />
+            <span>SimplifyJobs (curated)</span>
+          </label>
+          <input aria-label="SimplifyJobs URL" value={simplifyUrl} onChange={(e) => setSimplifyUrlState(e.target.value)} placeholder={DEFAULT_SIMPLIFY_URL} />
+          {probe && <p className="hint">{sourceStatus(probe.simplify)}</p>}
+        </div>
+
+        <div className="field">
+          <label className="check-row">
+            <input type="checkbox" checked={autoOn} onChange={(e) => setAutoOnState(e.target.checked)} />
+            <span>Automated ATS engine (skills, salary, sponsorship)</span>
+          </label>
+          <input aria-label="Automated engine URL" value={autoUrl} onChange={(e) => setAutoUrlState(e.target.value)} placeholder={DEFAULT_AUTO_URL} />
+          {probe && <p className="hint">{sourceStatus(probe.auto)}</p>}
+        </div>
+
+        <div className="actions">
+          <button type="button" onClick={saveAndTestSources} disabled={probing}>{probing ? "Testing…" : "Save & test"}</button>
+          <button type="button" className="secondary" onClick={resetSources}>Reset to defaults</button>
+        </div>
       </div>
 
       <div className="card">

@@ -149,3 +149,18 @@ export async function fetchAllListings(): Promise<Listing[]> {
   }
   return [...map.values()];
 }
+
+export interface SourceProbe {
+  count: number | null;
+  error: string | null;
+}
+
+/** Fetch each source's current URL and report how many listings it returns (for Settings). */
+export async function probeSources(): Promise<{ simplify: SourceProbe; auto: SourceProbe }> {
+  const [s, a] = await Promise.allSettled([fetchSimplify(), fetchAuto()]);
+  const of = (r: PromiseSettledResult<Listing[]>): SourceProbe =>
+    r.status === "fulfilled"
+      ? { count: r.value.length, error: null }
+      : { count: null, error: r.reason instanceof Error ? r.reason.message : String(r.reason) };
+  return { simplify: of(s), auto: of(a) };
+}
