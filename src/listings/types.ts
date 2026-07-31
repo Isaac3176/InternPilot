@@ -5,8 +5,14 @@ export interface Listing {
   url: string;
   locations: string[];
   sponsorship?: string;
-  datePosted?: number; // unix seconds
+  datePosted?: number; // unix seconds (when the role was posted)
+  firstSeen?: number; // unix seconds (when a source first saw it)
   season?: string;
+  seasonInferred?: boolean; // true = the source guessed the season, not stated
+  salary?: string | null;
+  remote?: boolean;
+  skills?: string[]; // source-extracted skills, when available
+  source: string; // originating feed / ATS
 }
 
 export interface RankedListing extends Listing {

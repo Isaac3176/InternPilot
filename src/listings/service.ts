@@ -1,42 +1,7 @@
-import { httpFetch } from "../lib/http";
 import { getProfile } from "../db/profile";
 import type { Profile } from "../db/types";
-import { getLastSeenPosted, getListingsUrl, setLastSeenPosted } from "./config";
+import { fetchAllListings } from "./sources";
 import type { Listing, RankedListing } from "./types";
-
-interface RawListing {
-  id?: string;
-  company_name?: string;
-  title?: string;
-  url?: string;
-  locations?: string[];
-  sponsorship?: string;
-  date_posted?: number;
-  active?: boolean;
-  is_visible?: boolean;
-  season?: string;
-}
-
-/** Fetch and normalize active, visible listings from the configured source. */
-export async function fetchListings(): Promise<Listing[]> {
-  const res = await httpFetch(getListingsUrl());
-  if (!res.ok) throw new Error(`Failed to fetch listings (${res.status}).`);
-  const raw = (await res.json()) as RawListing[];
-  if (!Array.isArray(raw)) return [];
-
-  return raw
-    .filter((r) => r.is_visible !== false && r.active !== false && r.url && (r.company_name || r.title))
-    .map((r) => ({
-      id: r.id ?? `${r.company_name ?? ""}-${r.title ?? ""}-${r.url ?? ""}`,
-      company: r.company_name ?? "Unknown",
-      title: r.title ?? "",
-      url: r.url ?? "",
-      locations: Array.isArray(r.locations) ? r.locations : [],
-      sponsorship: r.sponsorship,
-      datePosted: r.date_posted,
-      season: r.season,
-    }));
-}
 
 function splitCsv(value: string | null | undefined): string[] {
   return (value ?? "")
@@ -140,12 +105,12 @@ export interface Feed {
 }
 
 /**
- * Build the profile-tailored feed: rank by relevance, flag brand-new postings
- * (posted after the last time the feed was reviewed), and sort freshest/most
- * relevant first. Does not mutate the last-seen marker — call markFeedSeen for that.
+ * Build the profile-tailored feed from all enabled sources: normalize + dedupe,
+ * rank by relevance, flag brand-new postings (posted within the last few days),
+ * and sort by best match then freshness.
  */
 export async function getFeed(): Promise<Feed> {
-  const [listings, profile] = await Promise.all([fetchListings(), getProfile()]);
+  const [listings, profile] = await Promise.all([fetchAllListings(), getProfile()]);
   const roles = splitCsv(profile?.target_roles);
   const freshCutoff = Date.now() / 1000 - 5 * 24 * 60 * 60; // posted within 5 days
 
@@ -164,10 +129,4 @@ export async function getFeed(): Promise<Feed> {
   });
 
   return { listings: ranked, newCount: ranked.filter((l) => l.isNew).length };
-}
-
-/** Mark the current newest listing as seen so future syncs only flag newer ones. */
-export function markFeedSeen(listings: Listing[]): void {
-  const maxPosted = listings.reduce((max, l) => Math.max(max, l.datePosted ?? 0), getLastSeenPosted());
-  setLastSeenPosted(maxPosted);
 }
