@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getNextActions, type NextAction } from "../actions/engine";
 import {
   getFunnelRates,
   getReferralStats,
@@ -19,6 +21,9 @@ import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db
 import StatusBadge from "../components/StatusBadge";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const [actions, setActions] = useState<NextAction[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(true);
   const [counts, setCounts] = useState<StatusCounts | null>(null);
   const [rates, setRates] = useState<FunnelRates | null>(null);
   const [recent, setRecent] = useState<ApplicationRow[]>([]);
@@ -41,6 +46,12 @@ export default function Dashboard() {
       setReminders(rem);
       notifyNewReminders(rem);
     })().catch(console.error);
+
+    // Next best actions load separately (the feed fetch is large) so the rest renders first.
+    getNextActions()
+      .then(setActions)
+      .catch(console.error)
+      .finally(() => setActionsLoading(false));
   }, []);
 
   async function loadStrategy() {
@@ -64,6 +75,28 @@ export default function Dashboard() {
           <h1>Dashboard</h1>
           <p>Your internship search at a glance.</p>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Next best actions</h2>
+        {actionsLoading ? (
+          <p className="hint">Prioritizing your day…</p>
+        ) : actions.length === 0 ? (
+          <p className="muted-note">You're all caught up. Add applications or connect the feed to get suggestions.</p>
+        ) : (
+          <ul className="nba-list">
+            {actions.map((a) => (
+              <li className="nba" key={a.key}>
+                <span className={`nba-dot ${a.kind}`} />
+                <div className="nba-body">
+                  <b>{a.title}</b>
+                  <span>{a.detail}</span>
+                </div>
+                <button type="button" className="secondary small" onClick={() => navigate(a.href)}>Go</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="metric-grid">
