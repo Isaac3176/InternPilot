@@ -7,9 +7,10 @@ import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
 import { jdSkillMatch } from "../listings/match";
+import { assessEligibility } from "../listings/eligibility";
 import { getResumeVersion } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
-import type { ApplicationRow, ContactRow, Status } from "../db/types";
+import type { ApplicationRow, ContactRow, Profile, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
 
@@ -58,6 +59,7 @@ export default function Internships() {
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
   const [mySkills, setMySkills] = useState<string[]>([]);
   const [resumeHay, setResumeHay] = useState("");
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [hasRoles, setHasRoles] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -66,6 +68,7 @@ export default function Internships() {
   const [location, setLocation] = useState("");
   const [onlyNew, setOnlyNew] = useState(false);
   const [matchesMyRoles, setMatchesMyRoles] = useState(false);
+  const [hideIneligible, setHideIneligible] = useState(false);
   const [sort, setSort] = useState<"relevance" | "recent">("relevance");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -88,6 +91,7 @@ export default function Internships() {
       setListings(feed.listings);
       setTotal(feed.listings.length);
       setContacts(cts);
+      setProfile(profile);
       const preferredId = profile?.preferred_resume_id ?? null;
       setPreferredResumeId(preferredId);
       setMySkills((profile?.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean));
@@ -114,11 +118,12 @@ export default function Internships() {
       if (loc && !l.locations.join(" ").toLowerCase().includes(loc)) return false;
       if (term && !l.company.toLowerCase().includes(term) && !l.title.toLowerCase().includes(term)) return false;
       if (matchesMyRoles && !l.matchesRoles) return false;
+      if (hideIneligible && assessEligibility(profile, l).level === "ineligible") return false;
       return true;
     });
     if (sort === "recent") rows = [...rows].sort((a, b) => (b.datePosted ?? 0) - (a.datePosted ?? 0));
     return rows.slice(0, MAX_SHOWN);
-  }, [listings, search, selectedTypes, location, onlyNew, matchesMyRoles, sort]);
+  }, [listings, search, selectedTypes, location, onlyNew, matchesMyRoles, hideIneligible, profile, sort]);
 
   const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
   const selectedUrl = selected?.url ?? null;
@@ -139,10 +144,10 @@ export default function Internships() {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }
   function clearAll() {
-    setSearch(""); setSelectedTypes([]); setLocation(""); setOnlyNew(false); setMatchesMyRoles(false);
+    setSearch(""); setSelectedTypes([]); setLocation(""); setOnlyNew(false); setMatchesMyRoles(false); setHideIneligible(false);
   }
-  const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0);
-  const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew || matchesMyRoles);
+  const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0) + (hideIneligible ? 1 : 0);
+  const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew || matchesMyRoles || hideIneligible);
 
   async function addToTracker(l: RankedListing): Promise<number | null> {
     const existing = appByUrl.get(l.url);
@@ -177,6 +182,7 @@ export default function Internships() {
     : null;
   const effMatch = jdMatch ?? srcMatch;
   const gaugeValue = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch.score : selected?.score ?? 0;
+  const selElig = selected ? assessEligibility(profile, selected, selDesc) : null;
 
   return (
     <>
@@ -211,6 +217,7 @@ export default function Internships() {
           <div className="popover-sub">Refine your results</div>
           <label className="opt-check"><input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} />New postings only</label>
           {hasRoles && <label className="opt-check"><input type="checkbox" checked={matchesMyRoles} onChange={(e) => setMatchesMyRoles(e.target.checked)} />Matches my roles</label>}
+          <label className="opt-check"><input type="checkbox" checked={hideIneligible} onChange={(e) => setHideIneligible(e.target.checked)} />Hide likely ineligible</label>
         </FilterPill>
         {anyActive && <button type="button" className="pop-clear" onClick={clearAll}>Clear all</button>}
         <button type="button" className="secondary" onClick={load} disabled={loading} style={{ marginLeft: "auto" }}>{loading ? "Loading…" : "Refresh"}</button>
@@ -310,6 +317,21 @@ export default function Internships() {
                   <div className="cell"><span className="lbl">Posted</span><b>{postedAgo(selected.datePosted) || "—"}</b></div>
                   <div className="cell"><span className="lbl">Source</span><b>{selected.source}</b></div>
                 </div>
+
+                {selElig && selElig.level !== "unknown" && (
+                  <div className={`elig elig-${selElig.level}`}>
+                    <div className="elig-head">
+                      <span className="elig-badge">{selElig.label}</span>
+                      <span className="lbl">Eligibility · estimate</span>
+                    </div>
+                    <ul className="elig-reasons">
+                      {selElig.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {selElig?.level === "unknown" && (
+                  <p className="muted-note mb-md">{selElig.reasons[0]} <button type="button" className="pop-clear" onClick={() => navigate("/profile")}>Set it</button></p>
+                )}
 
                 <h2>About the role</h2>
                 {descLoading ? (
