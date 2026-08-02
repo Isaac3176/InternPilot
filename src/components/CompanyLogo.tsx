@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { companyDomain, isLogosOn, logoUrl } from "../listings/logo";
+import { companyDomain, isLogosOn, logoUrls } from "../listings/logo";
 
 const LOGO_COLORS = [
   "#1F6FEB", "#7C5CFF", "#157F5F", "#B03D2A", "#A9761C",
@@ -20,19 +20,20 @@ function initialsFor(name: string): string {
  * existing `.logo` styles so sizing matches wherever it's dropped in.
  */
 export default function CompanyLogo({ company, className }: { company: string; className?: string }) {
-  const [failed, setFailed] = useState(false);
   const domain = useMemo(() => companyDomain(company), [company]);
+  const urls = useMemo(() => (domain ? logoUrls(domain) : []), [domain]);
+  const [idx, setIdx] = useState(0);
 
-  // Reset the error flag when the company (domain) changes on a reused instance.
-  useEffect(() => setFailed(false), [domain]);
+  // Restart from the first source when the company (domain) changes.
+  useEffect(() => setIdx(0), [domain]);
 
-  const showImg = isLogosOn() && !!domain && !failed;
+  const showImg = isLogosOn() && idx < urls.length;
   const cls = "logo" + (showImg ? " img" : "") + (className ? ` ${className}` : "");
 
   if (showImg) {
     return (
       <div className={cls}>
-        <img src={logoUrl(domain!)} alt="" loading="lazy" onError={() => setFailed(true)} />
+        <img src={urls[idx]} alt="" loading="lazy" onError={() => setIdx((i) => i + 1)} />
       </div>
     );
   }

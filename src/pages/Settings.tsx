@@ -241,8 +241,8 @@ export default function Settings() {
             <span>Show company logos</span>
           </label>
           <p className="hint">
-            Loads each company's logo from Clearbit (guessed from the name). Turning this off keeps everything
-            local — listings show a colored monogram instead, with no third-party image requests.
+            Loads each company's icon from DuckDuckGo / Google (domain guessed from the name). Turning this off
+            keeps everything local — listings show a colored monogram instead, with no third-party image requests.
           </p>
         </div>
 

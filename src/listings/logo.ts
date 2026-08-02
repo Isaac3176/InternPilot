@@ -1,7 +1,9 @@
 /**
  * Company logo helpers for the Discover feed. We resolve a best-guess domain
- * from the company name and load the logo from Clearbit; the UI always falls
- * back to a colored monogram when there's no domain or the image 404s.
+ * from the company name and load the icon from DuckDuckGo (falling back to
+ * Google's favicon service); the UI always falls back to a colored monogram
+ * when there's no domain or both sources 404. (Clearbit's logo API was shut
+ * down after the HubSpot acquisition, so it's no longer usable.)
  */
 
 // Names that don't slugify cleanly to "{name}.com".
@@ -52,9 +54,16 @@ export function companyDomain(company: string): string | null {
   return slug ? `${slug}.com` : null;
 }
 
-/** Clearbit logo URL for a domain. */
-export function logoUrl(domain: string): string {
-  return `https://logo.clearbit.com/${domain}?size=96`;
+/**
+ * Icon URLs to try in order for a domain. DuckDuckGo returns a real,
+ * reasonably-sized icon and a proper 404 for unknown domains (so wrong guesses
+ * fall through to the monogram); Google's favicon service is the backup.
+ */
+export function logoUrls(domain: string): string[] {
+  return [
+    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  ];
 }
 
 const K_LOGOS_ON = "internpilot.listings.logosOn";
