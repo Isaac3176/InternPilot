@@ -50,6 +50,10 @@ function initials(name: string): string {
 function bandColor(v: number): string {
   return v >= 80 ? "var(--beacon)" : v >= 65 ? "var(--accent)" : "var(--warn)";
 }
+function shortLocations(locs: string[]): string {
+  if (locs.length <= 3) return locs.join(", ") || "—";
+  return `${locs.slice(0, 3).join(", ")} +${locs.length - 3} more`;
+}
 
 export default function Internships() {
   const navigate = useNavigate();
@@ -160,9 +164,15 @@ export default function Internships() {
     return id;
   }
   async function apply(l: RankedListing) {
-    const id = await addToTracker(l);
-    await openUrl(l.url);
-    if (id) navigate(`/apply?app=${id}`);
+    try {
+      const id = await addToTracker(l);
+      // Opening the posting is best-effort — don't let it block adding + navigating.
+      openUrl(l.url).catch((e) => console.error("open posting failed", e));
+      if (id) navigate(`/apply?app=${id}`);
+      else setError("Couldn't add this application. Try again.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }
 
   const selApp = selected ? appByUrl.get(selected.url) : undefined;
@@ -310,7 +320,7 @@ export default function Internships() {
                 </div>
 
                 <div className="grid">
-                  <div className="cell"><span className="lbl">Location</span><b>{selected.locations.join(", ") || "—"}</b>{selected.remote ? <span className="cell-note">Remote available</span> : null}</div>
+                  <div className="cell"><span className="lbl">Location</span><b>{shortLocations(selected.locations)}</b>{selected.remote ? <span className="cell-note">Remote available</span> : null}</div>
                   <div className="cell"><span className="lbl">Compensation</span><b className={selected.salary ? "" : "unknown"}>{selected.salary ?? "Not listed"}</b></div>
                   <div className="cell"><span className="lbl">Season</span><b>{selected.season ?? "—"}</b>{selected.season ? <span className="cell-note">{selected.seasonInferred ? "Inferred — verify" : "Confirmed"}</span> : null}</div>
                   <div className="cell"><span className="lbl">Visa sponsorship</span><b className={selected.sponsorshipOk ? "" : "neg"}>{selected.sponsorship ?? "Not stated"}</b><span className="cell-note">Estimate — confirm in JD</span></div>
