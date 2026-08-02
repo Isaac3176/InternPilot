@@ -148,13 +148,32 @@ function guessJob() {
   return { company, title: (title || "").slice(0, 140), url: location.href };
 }
 
+// True while this content script's extension context is still valid. After the
+// extension is reloaded/updated, old tabs keep running this stale script and
+// any chrome.* call throws "Extension context invalidated" — detect that early.
+function extAlive() {
+  try { return !!(chrome.runtime && chrome.runtime.id); } catch { return false; }
+}
+async function sendBg(msg) {
+  if (!extAlive()) throw new Error("Extension was updated — reload this page (F5) to reconnect.");
+  try {
+    return await chrome.runtime.sendMessage(msg);
+  } catch (e) {
+    const m = e && e.message ? e.message : String(e);
+    if (/context invalidated|receiving end does not exist|message port closed/i.test(m)) {
+      throw new Error("Extension was updated — reload this page (F5) to reconnect.");
+    }
+    throw e;
+  }
+}
+
 async function getProfile() {
-  const r = await chrome.runtime.sendMessage({ type: "getProfile" });
+  const r = await sendBg({ type: "getProfile" });
   if (!r || !r.ok) throw new Error(r && r.error ? r.error : "Could not load profile");
   return r.data || {};
 }
 async function recordJob() {
-  return chrome.runtime.sendMessage({ type: "recordApplication", payload: guessJob() });
+  return sendBg({ type: "recordApplication", payload: guessJob() });
 }
 
 // ============ on-page panel ============
