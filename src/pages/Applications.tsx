@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { deleteApplication, listApplications } from "../db/applications";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
+import { APP_RECORDED_EVENT } from "../bridge";
 import StatusBadge from "../components/StatusBadge";
 import ApplicationModal from "../components/ApplicationModal";
 
@@ -17,6 +18,12 @@ export default function Applications() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Refresh when the browser extension records a job while this page is open.
+  useEffect(() => {
+    window.addEventListener(APP_RECORDED_EVENT, load);
+    return () => window.removeEventListener(APP_RECORDED_EVENT, load);
   }, [load]);
 
   function openNew() {

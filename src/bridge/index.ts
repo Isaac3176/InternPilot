@@ -1,12 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getProfile } from "../db/profile";
-import { createApplication } from "../db/applications";
+import { createApplication, listApplications } from "../db/applications";
 import { WORK_AUTH_LABELS, type WorkAuth } from "../db/types";
 import { notify } from "../lib/notify";
 
 const TOKEN_KEY = "internpilot.bridge.token";
 export const BRIDGE_PORT = 8765;
+
+/** Fired on window after the extension records a job, so open pages can refresh. */
+export const APP_RECORDED_EVENT = "internpilot:application-recorded";
 
 /** Stable per-device token the extension must send to read/write the bridge. */
 export function getBridgeToken(): string {
@@ -78,15 +81,27 @@ export async function startBridgeListener(onRecorded?: () => void): Promise<void
   await listen<Record<string, string>>("bridge://application", async (event) => {
     const p = event.payload ?? {};
     try {
+      // Don't create a duplicate if this posting URL is already tracked.
+      const url = p.url || null;
+      if (url) {
+        const existing = await listApplications();
+        if (existing.some((a) => a.job_link === url)) {
+          notify("Already tracked", `${p.company || "This role"} is already in your applications.`);
+          window.dispatchEvent(new CustomEvent(APP_RECORDED_EVENT));
+          onRecorded?.();
+          return;
+        }
+      }
       await createApplication({
         company_name: p.company ?? "",
         role_title: p.title || p.role || "Application",
-        job_link: p.url || null,
+        job_link: url,
         location: p.location || null,
         status: "applied",
         date_applied: new Date().toISOString().slice(0, 10),
       });
       notify("Application recorded", `${p.company || "A company"} — ${p.title || "role"} added from the extension.`);
+      window.dispatchEvent(new CustomEvent(APP_RECORDED_EVENT));
       onRecorded?.();
     } catch (e) {
       console.error("record application failed", e);

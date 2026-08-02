@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { getNextActions, type ActionKind, type NextAction } from "../actions/engine";
+import { APP_RECORDED_EVENT } from "../bridge";
 import {
   getFunnelRates,
   getReferralStats,
@@ -57,25 +58,34 @@ export default function Dashboard() {
   const [loadingStrategy, setLoadingStrategy] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
+  const loadMetrics = useCallback(async () => {
+    setCounts(await getStatusCounts());
+    setRates(await getFunnelRates());
+    setRecent((await listApplications()).slice(0, 6));
+    setWeekly(await getWeeklyApplications(8));
+    setPerf(await getResumeVersionPerformance());
+    setReferral(await getReferralStats());
+    const rem = await getReminders();
+    setReminders(rem);
+    notifyNewReminders(rem);
+  }, []);
+
   useEffect(() => {
-    (async () => {
-      setCounts(await getStatusCounts());
-      setRates(await getFunnelRates());
-      setRecent((await listApplications()).slice(0, 6));
-      setWeekly(await getWeeklyApplications(8));
-      setPerf(await getResumeVersionPerformance());
-      setReferral(await getReferralStats());
-      const rem = await getReminders();
-      setReminders(rem);
-      notifyNewReminders(rem);
-    })().catch(console.error);
+    loadMetrics().catch(console.error);
 
     // Next best actions load separately (the feed fetch is large) so the rest renders first.
     getNextActions()
       .then(setActions)
       .catch(console.error)
       .finally(() => setActionsLoading(false));
-  }, []);
+  }, [loadMetrics]);
+
+  // Refresh metrics when the browser extension records a job while this page is open.
+  useEffect(() => {
+    const onRecorded = () => loadMetrics().catch(console.error);
+    window.addEventListener(APP_RECORDED_EVENT, onRecorded);
+    return () => window.removeEventListener(APP_RECORDED_EVENT, onRecorded);
+  }, [loadMetrics]);
 
   async function loadStrategy() {
     setLoadingStrategy(true);
