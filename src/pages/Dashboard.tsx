@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { getNextActions, type NextAction } from "../actions/engine";
+import { getNextActions, type ActionKind, type NextAction } from "../actions/engine";
 import {
   getFunnelRates,
   getReferralStats,
@@ -17,8 +17,31 @@ import { listApplications } from "../db/applications";
 import { getReminders, type Reminder } from "../db/reminders";
 import { notifyNewReminders } from "../lib/notify";
 import { getStrategyRecommendation, type Strategy } from "../ai/strategy";
-import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
-import StatusBadge from "../components/StatusBadge";
+import type { ApplicationRow, Status } from "../db/types";
+
+const WEEKLY_GOAL = 5;
+
+const EMPTY_COUNTS: StatusCounts = {
+  interested: 0, applied: 0, oa: 0, interview: 0, offer: 0, rejected: 0, total: 0,
+};
+
+const STAGE_META = [
+  { k: "interested", lb: "Interested", v: "--s-interested" },
+  { k: "applied", lb: "Applied", v: "--s-applied" },
+  { k: "oa", lb: "Assessment", v: "--s-oa" },
+  { k: "interview", lb: "Interview", v: "--s-interview" },
+  { k: "offer", lb: "Offer", v: "--s-offer" },
+] as const;
+
+const PILL_LABEL: Record<Status, string> = {
+  interested: "Interested", applied: "Applied", oa: "Assessment",
+  interview: "Interview", offer: "Offer", rejected: "Rejected",
+};
+
+const AVATAR_COLORS = [
+  "#1A1A1A", "#3E4C8C", "#33383D", "#4B4FD6", "#D6455E",
+  "#157F5F", "#B03D2A", "#6B4A2F", "#7A5AF8", "#12509E",
+];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -65,213 +88,318 @@ export default function Dashboard() {
     }
   }
 
-  const maxStatusCount = counts ? Math.max(1, ...STATUSES.map((s) => counts[s])) : 1;
-  const maxWeek = Math.max(1, ...weekly.map((w) => w.count));
+  const c = counts ?? EMPTY_COUNTS;
+  const stageMax = Math.max(1, ...STAGE_META.map((s) => c[s.k]));
+  const maxWeek = Math.max(1, ...weekly.map((w) => w.count), WEEKLY_GOAL);
+  const appliedDenom = c.total - c.interested;
+
+  const RATES = [
+    { lb: "Response rate", sub: "Applied → any reply", v: rates?.responseRate ?? 0, c: "var(--s-applied)" },
+    { lb: "Assessment rate", sub: "Applied → OA", v: rates?.oaRate ?? 0, c: "var(--s-oa)" },
+    { lb: "Interview rate", sub: "Applied → interview", v: rates?.interviewRate ?? 0, c: "var(--s-interview)" },
+    { lb: "Offer rate", sub: "Applied → offer", v: rates?.offerRate ?? 0, c: "var(--s-offer)" },
+    { lb: "Referral rate", sub: "Applications with a contact", v: referral?.rate ?? 0, c: "var(--good)" },
+  ];
+
+  let bestId = -1;
+  let bestScore = -1;
+  for (const p of perf) {
+    if (p.total > 0) {
+      const s = (p.reachedInterview / p.total) * 100 + p.reachedOa / p.total;
+      if (s > bestScore) { bestScore = s; bestId = p.id; }
+    }
+  }
 
   return (
-    <>
+    <div className="dash">
       <div className="page-header">
         <div>
           <h1>Dashboard</h1>
           <p>Your internship search at a glance.</p>
         </div>
-      </div>
-
-      <div className="card">
-        <h2>Next best actions</h2>
-        {actionsLoading ? (
-          <p className="hint">Prioritizing your day…</p>
-        ) : actions.length === 0 ? (
-          <p className="muted-note">You're all caught up. Add applications or connect the feed to get suggestions.</p>
-        ) : (
-          <ul className="nba-list">
-            {actions.map((a) => (
-              <li className="nba" key={a.key}>
-                <span className={`nba-dot ${a.kind}`} />
-                <div className="nba-body">
-                  <b>{a.title}</b>
-                  <span>{a.detail}</span>
-                </div>
-                <button type="button" className="secondary small" onClick={() => navigate(a.href)}>Go</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="metric-grid">
-        <Metric label="Total" value={counts?.total} accent />
-        <Metric label={STATUS_LABELS.applied} value={counts?.applied} />
-        <Metric label="OA" value={counts?.oa} />
-        <Metric label={STATUS_LABELS.interview} value={counts?.interview} />
-        <Metric label={STATUS_LABELS.offer} value={counts?.offer} />
-        <Metric label={STATUS_LABELS.rejected} value={counts?.rejected} />
+        <div className="header-actions">
+          <button type="button" className="btn" onClick={() => navigate("/internships")}>Import from feed</button>
+          <button type="button" className="btn primary" onClick={() => navigate("/applications")}>
+            <PlusIcon /> Add application
+          </button>
+        </div>
       </div>
 
       {reminders.length > 0 && (
-        <div className="card">
-          <h2>Reminders</h2>
+        <div className="reminders">
+          <span className="eyebrow">Due soon</span>
           {reminders.map((r) => (
-            <div className="reminder-row" key={r.key}>
-              <span className={`badge ${r.kind === "interview" ? "interview" : "oa"}`}>{r.title}</span>
-              <span>{r.detail}</span>
-            </div>
+            <span className="rem" key={r.key}><i /><b>{r.title}</b><span>{r.detail}</span></span>
           ))}
         </div>
       )}
 
-      <div className="card">
-        <div className="row-between">
-          <h2 className="mb-0">This week's strategy</h2>
-          <button type="button" className="secondary small" onClick={loadStrategy} disabled={loadingStrategy}>
-            {loadingStrategy ? "Thinking…" : strategy ? "Refresh" : "Generate"}
-          </button>
-        </div>
-        {strategy ? (
-          <div className="mt-md">
-            {strategy.headline && <p className="strategy">{strategy.headline}</p>}
-            <ul className="prep-list">
-              {strategy.recommendations.map((r, i) => <li key={i}>{r}</li>)}
-            </ul>
-            <span className={`badge ${strategy.source === "openai" ? "offer" : "interested"}`}>
-              {strategy.source === "openai" ? "OpenAI" : "Offline strategy"}
-            </span>
+      {/* ============ PIPELINE (hero) ============ */}
+      <div className="card pipeline">
+        <div className="card-head">
+          <div>
+            <h2>Pipeline</h2>
+            <p className="sub">{c.total} tracked roles. Percentages show how many carry from one stage to the next.</p>
           </div>
-        ) : (
-          <p className="hint">Generate an AI-backed action plan based on your current funnel.</p>
-        )}
+          <button type="button" className="btn small" onClick={() => navigate("/applications")}>Open applications</button>
+        </div>
+        <div className="stages">
+          {STAGE_META.map((s, i) => {
+            const n = c[s.k];
+            const next = STAGE_META[i + 1];
+            const conv = next ? (n > 0 ? Math.round((c[next.k] / n) * 100) : null) : undefined;
+            return (
+              <StageAndConv
+                key={s.k}
+                n={n}
+                label={s.lb}
+                fill={(n / stageMax) * 100}
+                colorVar={s.v}
+                conv={conv}
+              />
+            );
+          })}
+        </div>
+        <div className="pipeline-foot">
+          <span className="closed">
+            <span className="dot" />Closed out: <b>{c.rejected}</b> rejected{c.total ? ` of ${c.total}` : ""}
+          </span>
+          <span className="note">{pipelineNote(c)}</span>
+        </div>
       </div>
 
-      <div className="card">
-        <h2>Status breakdown</h2>
-        {!counts || counts.total === 0 ? (
-          <div className="empty">No applications yet.</div>
-        ) : (
-          STATUSES.map((s) => (
-            <div className="funnel-row" key={s}>
-              <span className="funnel-label">{STATUS_LABELS[s]}</span>
-              <div className="bar-track">
-                <div className={`bar-fill ${s}`} style={{ width: `${(counts[s] / maxStatusCount) * 100}%` }} />
-              </div>
-              <span className="funnel-count">{counts[s]}</span>
+      {/* ============ ROW: actions + strategy ============ */}
+      <div className="grid-2" style={{ marginBottom: 16 }}>
+        <div className="card">
+          <div className="card-head">
+            <div><h2>Next best actions</h2><p className="sub">Ordered by what closes soonest, not by what's newest.</p></div>
+          </div>
+          {actionsLoading ? (
+            <p className="hint">Prioritizing your day…</p>
+          ) : actions.length === 0 ? (
+            <div className="empty">
+              <b>You're all caught up</b>
+              <p>Nothing is waiting on you today. Connect the feed to keep suggestions coming.</p>
+              <button type="button" className="btn small primary" onClick={() => navigate("/internships")}>Connect the feed</button>
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            <ul className="nba-list">
+              {actions.map((a) => (
+                <li className="nba" key={a.key}>
+                  <span className={`nba-dot ${nbaGroup(a.kind)}`}>{NBA_ICON[nbaGroup(a.kind)]}</span>
+                  <span className="nba-body"><b>{a.title}</b><span>{a.detail}</span></span>
+                  <button type="button" className="btn small" onClick={() => navigate(a.href)}>Go</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-      <div className="card">
-        <h2>Applications per week</h2>
-        {weekly.every((w) => w.count === 0) ? (
-          <div className="empty">No application dates recorded yet.</div>
-        ) : (
-          <div className="col-chart">
-            {weekly.map((w, i) => (
-              <div className="col" key={i}>
-                <span className="col-val">{w.count || ""}</span>
-                <div className="col-bar" style={{ height: `${(w.count / maxWeek) * 100}%` }} />
-                <span className="col-label">{w.label}</span>
-              </div>
-            ))}
+        <div className="card">
+          <div className="card-head">
+            <div><h2>This week's strategy</h2></div>
+            <button type="button" className="btn small" onClick={loadStrategy} disabled={loadingStrategy}>
+              {loadingStrategy ? "Thinking…" : strategy ? "Refresh" : "Generate"}
+            </button>
           </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h2>Conversion rates</h2>
-        <div className="metric-grid mb-0">
-          <Metric label="Response rate" value={pct(rates?.responseRate)} />
-          <Metric label="OA rate" value={pct(rates?.oaRate)} />
-          <Metric label="Interview rate" value={pct(rates?.interviewRate)} />
-          <Metric label="Offer rate" value={pct(rates?.offerRate)} />
-          <Metric label="Referral rate" value={pct(referral?.rate)} />
-          <Metric label="Referred" value={referral?.referred} />
+          {strategy ? (
+            <>
+              {strategy.headline && <p className="strategy-head">{strategy.headline}</p>}
+              <ul className="prep-list">
+                {strategy.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+              <span className={`badge ${strategy.source === "openai" ? "" : "offline"}`}>
+                {strategy.source === "openai" ? "AI-generated" : "Offline strategy"}
+              </span>
+            </>
+          ) : (
+            <div className="empty" style={{ textAlign: "left", padding: "16px 0", border: "none", background: "none" }}>
+              <b>No plan yet this week</b>
+              <p style={{ marginInline: 0 }}>Reads your funnel and tells you the one thing to change — more volume, better targeting, or a résumé swap.</p>
+              <button type="button" className="btn small primary" onClick={loadStrategy} disabled={loadingStrategy}>
+                {loadingStrategy ? "Thinking…" : "Generate plan"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="card">
-        <h2>Resume version performance</h2>
-        {perf.length === 0 ? (
-          <div className="empty">Add resume versions and assign them to applications to compare performance.</div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Version</th>
-                <th>Apps</th>
-                <th>OA rate</th>
-                <th>Interview rate</th>
-                <th>Offers</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perf.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td>{p.total}</td>
-                  <td><RateBar value={p.reachedOa} total={p.total} variant="oa" /></td>
-                  <td><RateBar value={p.reachedInterview} total={p.total} variant="interview" /></td>
-                  <td>{p.offers}</td>
-                </tr>
+      {/* ============ ROW: weekly + rates ============ */}
+      <div className="grid-2" style={{ marginBottom: 16 }}>
+        <div className="card">
+          <div className="card-head">
+            <div><h2>Applications per week</h2><p className="sub">Last 8 weeks against your goal of {WEEKLY_GOAL} a week.</p></div>
+          </div>
+          {weekly.length === 0 ? (
+            <p className="hint">No application dates recorded yet.</p>
+          ) : (
+            <div className="chart">
+              <div className="goal" style={{ bottom: (WEEKLY_GOAL / maxWeek) * 118 + 28 }}><span>Goal {WEEKLY_GOAL}</span></div>
+              {weekly.map((w, i) => (
+                <div className={`col${i === weekly.length - 1 ? " now" : ""}`} key={i}>
+                  <span className={`v${w.count === 0 ? " zero" : ""}`}>{w.count}</span>
+                  <div className={`b${w.count === 0 ? " empty" : ""}`} style={{ height: Math.max(3, (w.count / maxWeek) * 118) }} />
+                  <span className="l">{w.label}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        )}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-head"><div><h2>Conversion rates</h2><p className="sub">Measured against {appliedDenom} application{appliedDenom === 1 ? "" : "s"}.</p></div></div>
+          {appliedDenom < 5 && (
+            <p className="hint" style={{ marginBottom: 12 }}>Rates get meaningful around 10 applications. These are directional for now.</p>
+          )}
+          <ul className="rates">
+            {RATES.map((r) => (
+              <li className="rate" key={r.lb}>
+                <span className="lb">{r.lb}<small>{r.sub}</small></span>
+                <span className="track"><i style={{ ["--w" as string]: `${r.v}%`, ["--c" as string]: r.c }} /></span>
+                <span className={`val${r.v === 0 ? " zero" : ""}`}>{r.v}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
-      <div className="card">
-        <h2>Recent applications</h2>
-        {recent.length === 0 ? (
-          <div className="empty">
-            No applications yet. Head to <strong>Applications</strong> to add your first one.
+      {/* ============ ROW: résumé perf + recent ============ */}
+      <div className="grid-2">
+        <div className="card">
+          <div className="card-head">
+            <div><h2>Résumé version performance</h2></div>
+            {perf.length > 0 && <button type="button" className="btn small" onClick={() => navigate("/resumes")}>Résumé center</button>}
           </div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Saved</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.company_name ?? <span className="muted">—</span>}</td>
-                  <td>{a.role_title}</td>
-                  <td><StatusBadge status={a.status} /></td>
-                  <td className="muted">{a.date_saved?.slice(0, 10)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+          {perf.length === 0 ? (
+            <div className="empty">
+              <b>Nothing to compare yet</b>
+              <p>Assign a résumé version to each application and this table shows which one actually gets replies.</p>
+              <button type="button" className="btn small" onClick={() => navigate("/resumes")}>Add a version</button>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr><th>Version</th><th>Apps</th><th>Assessment</th><th>Interview</th><th style={{ textAlign: "right" }}>Offers</th></tr>
+              </thead>
+              <tbody>
+                {perf.map((p) => {
+                  const oaRate = p.total > 0 ? Math.round((p.reachedOa / p.total) * 100) : 0;
+                  const ivRate = p.total > 0 ? Math.round((p.reachedInterview / p.total) * 100) : 0;
+                  return (
+                    <tr key={p.id}>
+                      <td><b style={{ fontWeight: 600 }}>{p.name}</b>{p.id === bestId && <span className="best">Best</span>}</td>
+                      <td className="num-cell">{p.total}</td>
+                      <td><PerfRate rate={oaRate} colorVar="--s-oa" /></td>
+                      <td><PerfRate rate={ivRate} colorVar="--s-interview" /></td>
+                      <td className="num-cell" style={{ textAlign: "right" }}>{p.offers || <span className="muted">0</span>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-head"><div><h2>Recent activity</h2></div><button type="button" className="btn small" onClick={() => navigate("/applications")}>View all</button></div>
+          {recent.length === 0 ? (
+            <div className="empty">
+              <b>No applications yet</b>
+              <p>Add your first application or import one from the feed to start tracking.</p>
+              <button type="button" className="btn small primary" onClick={() => navigate("/applications")}>Add application</button>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr><th>Company</th><th>Status</th><th style={{ textAlign: "right" }}>Updated</th></tr>
+              </thead>
+              <tbody>
+                {recent.map((a) => {
+                  const name = a.company_name ?? "—";
+                  const date = (a.date_applied ?? a.date_saved)?.slice(5, 10) ?? "";
+                  return (
+                    <tr key={a.id}>
+                      <td>
+                        <span className="co"><i style={{ background: avatarColor(name) }}>{initial(name)}</i>{name}</span>
+                        <span style={{ display: "block", fontSize: 12, color: "var(--slate)", marginLeft: 31, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "26ch" }}>{a.role_title}</span>
+                      </td>
+                      <td><span className={`status ${a.status}`}><i />{PILL_LABEL[a.status]}</span></td>
+                      <td className="num-cell muted" style={{ textAlign: "right", fontSize: 12 }}>{date}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function StageAndConv({ n, label, fill, colorVar, conv }: { n: number; label: string; fill: number; colorVar: string; conv?: number | null }) {
+  return (
+    <>
+      <div className="stage">
+        <div className="bar" style={{ ["--c" as string]: `var(${colorVar})` }}><i style={{ ["--fill" as string]: `${fill}%` }} /></div>
+        <span className={`n${n === 0 ? " zero" : ""}`}>{n}</span>
+        <span className="lb">{label}</span>
+      </div>
+      {conv !== undefined && (
+        <div className="conv">
+          <b className={conv === null || conv === 0 ? "dim" : ""}>{conv === null ? "—" : `${conv}%`}</b>
+          <ArrowIcon />
+        </div>
+      )}
     </>
   );
 }
 
-function Metric({ label, value, accent }: { label: string; value?: number | string; accent?: boolean }) {
+function PerfRate({ rate, colorVar }: { rate: number; colorVar: string }) {
   return (
-    <div className="metric">
-      <div className="label">{label}</div>
-      <div className={"value" + (accent ? " accent" : "")}>{value ?? "—"}</div>
-    </div>
-  );
-}
-
-function RateBar({ value, total, variant }: { value: number; total: number; variant: Status }) {
-  const rate = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <div className="perf-rate">
-      <div className="bar-track">
-        <div className={`bar-fill ${variant}`} style={{ width: `${rate}%` }} />
-      </div>
+    <span className="perf-rate">
+      <span className="track"><i style={{ ["--w" as string]: `${rate}%`, ["--c" as string]: `var(${colorVar})` }} /></span>
       <span>{rate}%</span>
-    </div>
+    </span>
   );
 }
 
-function pct(n?: number) {
-  return n === undefined ? undefined : `${n}%`;
+/** Map the engine's fine-grained action kinds to the four visual groups. */
+function nbaGroup(kind: ActionKind): "apply" | "followup" | "prep" | "network" {
+  switch (kind) {
+    case "apply": return "apply";
+    case "followup": case "outcome": return "followup";
+    case "oa": case "interview": case "profile": return "prep";
+    case "referral": case "thankyou": return "network";
+  }
+}
+
+function pipelineNote(c: StatusCounts): string {
+  if (c.applied === 0) return "Nothing applied yet — the funnel starts filling once you send your first application.";
+  if (c.offer > 0) return "One offer in hand. Keep the funnel warm until you sign.";
+  if (c.interview > 0) return "Interviews are the bottleneck to watch this month.";
+  return "No interviews yet. Volume at the top usually fixes this before résumé edits do.";
+}
+
+function avatarColor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function initial(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || "?";
+}
+
+const NBA_ICON: Record<"apply" | "followup" | "prep" | "network", ReactNode> = {
+  apply: <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z" /></svg>,
+  followup: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8.5" /></svg>,
+  prep: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5.5A2.5 2.5 0 016.5 3H19v15H6.5A2.5 2.5 0 004 20.5z" /></svg>,
+  network: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><circle cx="9" cy="8" r="3" /><path d="M3.5 19a5.5 5.5 0 0111 0" /><circle cx="18" cy="9" r="2.2" /></svg>,
+};
+
+function PlusIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>;
+}
+function ArrowIcon() {
+  return <svg width="15" height="10" viewBox="0 0 15 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M1 5h11M9 2l3.5 3L9 8" /></svg>;
 }
