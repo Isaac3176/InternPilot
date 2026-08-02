@@ -30,6 +30,7 @@ import {
   setSimplifyUrl,
 } from "../listings/config";
 import { probeSources, type SourceProbe } from "../listings/sources";
+import { isLogosOn, setLogosOn } from "../listings/logo";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -53,6 +54,7 @@ export default function Settings() {
   const [simplifyUrl, setSimplifyUrlState] = useState(getSimplifyUrl());
   const [autoOn, setAutoOnState] = useState(isAutoOn());
   const [autoUrl, setAutoUrlState] = useState(getAutoUrl());
+  const [logosOn, setLogosOnState] = useState(isLogosOn());
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
 
@@ -227,6 +229,21 @@ export default function Settings() {
           </label>
           <input aria-label="Automated engine URL" value={autoUrl} onChange={(e) => setAutoUrlState(e.target.value)} placeholder={DEFAULT_AUTO_URL} />
           {probe && <p className="hint">{sourceStatus(probe.auto)}</p>}
+        </div>
+
+        <div className="field">
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={logosOn}
+              onChange={(e) => { setLogosOnState(e.target.checked); setLogosOn(e.target.checked); }}
+            />
+            <span>Show company logos</span>
+          </label>
+          <p className="hint">
+            Loads each company's logo from Clearbit (guessed from the name). Turning this off keeps everything
+            local — listings show a colored monogram instead, with no third-party image requests.
+          </p>
         </div>
 
         <div className="actions">

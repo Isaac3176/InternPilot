@@ -13,6 +13,7 @@ import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Profile, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
+import CompanyLogo from "../components/CompanyLogo";
 
 const MAX_SHOWN = 200;
 const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
@@ -22,7 +23,6 @@ const STAGES = ["Saved", "Applied", "Assessment", "Interview", "Offer"];
 const STATUS_STAGE: Record<Status, number> = {
   interested: 0, applied: 1, oa: 2, interview: 3, offer: 4, rejected: 1,
 };
-const LOGO_COLORS = ["#1A1A1A", "#4B4FD6", "#2E9E3E", "#D6455E", "#E0761A", "#33383D", "#0E8F63", "#8A5300"];
 
 function jobTypeOf(title: string): JobType {
   const t = title.toLowerCase();
@@ -38,11 +38,6 @@ function postedAgo(datePosted?: number): string {
   if (hours < 24) return `Posted ${Math.floor(hours)}h ago`;
   if (hours < 48) return "Posted yesterday";
   return `Posted ${Math.floor(hours / 24)} days ago`;
-}
-function logoColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return LOGO_COLORS[h % LOGO_COLORS.length];
 }
 function initials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
@@ -255,7 +250,7 @@ export default function Internships() {
             ) : filtered.map((l) => (
               <button type="button" key={l.id} className={"job" + (selected?.id === l.id ? " on" : "")} onClick={() => setSelectedId(l.id)}>
                 <div className="job-top">
-                  <div className="logo" style={{ background: logoColor(l.company) }}>{initials(l.company)}</div>
+                  <CompanyLogo company={l.company} />
                   <div className="job-org">
                     <div className="nm">{l.company}</div>
                     <div className="lbl">{jobTypeOf(l.title)}{l.isNew ? " · New" : ""}</div>
@@ -297,7 +292,7 @@ export default function Internships() {
                 <div className="sub">{selected.company} · {postedAgo(selected.datePosted)}</div>
 
                 <div className="orgcard">
-                  <div className="logo" style={{ background: logoColor(selected.company) }}>{initials(selected.company)}</div>
+                  <CompanyLogo company={selected.company} />
                   <div>
                     <div className="nm">{selected.company}</div>
                     <div className="meta">{jobTypeOf(selected.title)}{selected.locations[0] ? ` · ${selected.locations[0]}` : ""}</div>
