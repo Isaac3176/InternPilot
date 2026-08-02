@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getProfile } from "../db/profile";
 import { createApplication } from "../db/applications";
+import { WORK_AUTH_LABELS, type WorkAuth } from "../db/types";
 import { notify } from "../lib/notify";
 
 const TOKEN_KEY = "internpilot.bridge.token";
@@ -44,7 +45,7 @@ async function buildAutofill(): Promise<Record<string, string>> {
     gpa: s(p.gpa),
     graduationDate: s(p.graduation_date),
     gradYear: s(p.grad_year),
-    workAuthorization: s(p.work_auth),
+    workAuthorization: p.work_auth ? WORK_AUTH_LABELS[p.work_auth as WorkAuth] : "",
     authorizedToWork: s(p.authorized_us),
     requiresSponsorship: s(p.requires_sponsorship),
     gender: s(p.gender),
