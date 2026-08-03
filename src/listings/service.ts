@@ -39,7 +39,7 @@ function roleKeywords(role: string): { tokens: string[]; phrases: string[] } {
 }
 
 /** 0..1 best match of the title against any of the user's target roles. */
-function roleScore(title: string, roles: string[]): number {
+export function roleScore(title: string, roles: string[]): number {
   const t = title.toLowerCase();
   let best = 0;
   for (const role of roles) {
@@ -56,20 +56,20 @@ function roleScore(title: string, roles: string[]): number {
 }
 
 // Titles that are not internships to apply to (courses, tutoring, talent pools…).
-const NON_ROLE =
+export const NON_ROLE =
   /\b(train(ing|ee)|bootcamp|boot camp|academy|course|certificat\w*|tutor\w*|teaching|instructor|mentorship|ambassador|volunteer|scholarship|workshop|seminar|talent (community|network|pool)|general application|expression of interest)\b/i;
 
 // Signals that a title is a software-engineering role.
-const ENG_SIGNAL =
+export const ENG_SIGNAL =
   /engineer|developer|\bswe\b|\bsde\b|software|programmer|full[\s-]?stack|front[\s-]?end|back[\s-]?end|data scien|machine learning|\bml\b|\bai\b|devops|\bsre\b|embedded|firmware|mobile|\bios\b|android|infrastructure|platform|systems|security|\bqa\b|test/i;
 
 /** Whether the user is broadly targeting software-engineering roles. */
-function isGenericSwe(roles: string[]): boolean {
+export function isGenericSwe(roles: string[]): boolean {
   return roles.some((r) => /software|full[\s-]?stack|front[\s-]?end|back[\s-]?end|swe|sde|developer|engineer/i.test(r));
 }
 
 /** Whether a listing is a real role matching the user's target roles. */
-function matchesTargetRoles(title: string, roles: string[]): boolean {
+export function matchesTargetRoles(title: string, roles: string[]): boolean {
   if (NON_ROLE.test(title)) return false;
   if (!roles.length) return true;
   if (roleScore(title, roles) >= 0.5) return true;
