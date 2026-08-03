@@ -31,6 +31,7 @@ import {
 } from "../listings/config";
 import { probeSources, type SourceProbe } from "../listings/sources";
 import { isLogosOn, setLogosOn } from "../listings/logo";
+import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -55,6 +56,30 @@ export default function Settings() {
   const [autoOn, setAutoOnState] = useState(isAutoOn());
   const [autoUrl, setAutoUrlState] = useState(getAutoUrl());
   const [logosOn, setLogosOnState] = useState(isLogosOn());
+
+  // Ranking & alert preferences
+  const [prefs, setPrefs] = useState<RankingPrefs>(getPrefs());
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  function updPref<K extends keyof RankingPrefs>(k: K, v: RankingPrefs[K]) {
+    setPrefs((p) => ({ ...p, [k]: v }));
+    setPrefsSaved(false);
+  }
+  function num(v: string, fallback: number): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  function csv(v: string): string[] {
+    return v.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  function saveRankingPrefs() {
+    savePrefs(prefs);
+    setPrefsSaved(true);
+  }
+  function resetRankingPrefs() {
+    setPrefs({ ...DEFAULT_PREFS });
+    savePrefs(DEFAULT_PREFS);
+    setPrefsSaved(true);
+  }
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
 
@@ -249,6 +274,70 @@ export default function Settings() {
         <div className="actions">
           <button type="button" onClick={saveAndTestSources} disabled={probing}>{probing ? "Testing…" : "Save & test"}</button>
           <button type="button" className="secondary" onClick={resetSources}>Reset to defaults</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Ranking &amp; alerts</h2>
+        <p className="hint mb-md">
+          Controls the Fast Apply queue and desktop notifications. A job is alerted only when it's both new and
+          valuable to you. Manage which companies matter on the <strong>Watchlist</strong> page.
+        </p>
+
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="rp-grad">Graduation year</label>
+            <input id="rp-grad" type="number" value={prefs.graduationYear} onChange={(e) => updPref("graduationYear", num(e.target.value, DEFAULT_PREFS.graduationYear))} />
+          </div>
+          <div className="field">
+            <label htmlFor="rp-fresh">Hide postings older than (days)</label>
+            <input id="rp-fresh" type="number" value={prefs.freshnessDays} onChange={(e) => updPref("freshnessDays", num(e.target.value, DEFAULT_PREFS.freshnessDays))} />
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="rp-roles">Target roles (comma-separated)</label>
+          <textarea id="rp-roles" value={prefs.targetRoles.join(", ")} onChange={(e) => updPref("targetRoles", csv(e.target.value))} />
+        </div>
+        <div className="field">
+          <label htmlFor="rp-blocked">Blocked roles (never shown)</label>
+          <textarea id="rp-blocked" value={prefs.blockedRoles.join(", ")} onChange={(e) => updPref("blockedRoles", csv(e.target.value))} />
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="rp-instant">Instant alert score ≥</label>
+            <input id="rp-instant" type="number" value={prefs.instantMin} onChange={(e) => updPref("instantMin", num(e.target.value, DEFAULT_PREFS.instantMin))} />
+          </div>
+          <div className="field">
+            <label htmlFor="rp-standard">Standard notify score ≥</label>
+            <input id="rp-standard" type="number" value={prefs.standardMin} onChange={(e) => updPref("standardMin", num(e.target.value, DEFAULT_PREFS.standardMin))} />
+          </div>
+          <div className="field">
+            <label htmlFor="rp-digest">Digest score ≥</label>
+            <input id="rp-digest" type="number" value={prefs.digestMin} onChange={(e) => updPref("digestMin", num(e.target.value, DEFAULT_PREFS.digestMin))} />
+          </div>
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="rp-max">Max instant alerts / day</label>
+            <input id="rp-max" type="number" value={prefs.maxInstantPerDay} onChange={(e) => updPref("maxInstantPerDay", num(e.target.value, DEFAULT_PREFS.maxInstantPerDay))} />
+          </div>
+          <div className="field">
+            <label htmlFor="rp-qs">Quiet hours start</label>
+            <input id="rp-qs" type="number" min={0} max={23} value={prefs.quietStart} onChange={(e) => updPref("quietStart", num(e.target.value, DEFAULT_PREFS.quietStart))} />
+          </div>
+          <div className="field">
+            <label htmlFor="rp-qe">Quiet hours end</label>
+            <input id="rp-qe" type="number" min={0} max={23} value={prefs.quietEnd} onChange={(e) => updPref("quietEnd", num(e.target.value, DEFAULT_PREFS.quietEnd))} />
+          </div>
+        </div>
+
+        <div className="actions">
+          <button type="button" onClick={saveRankingPrefs}>Save preferences</button>
+          <button type="button" className="secondary" onClick={resetRankingPrefs}>Reset to defaults</button>
+          {prefsSaved && <span className="hint" style={{ alignSelf: "center" }}>Saved ✓</span>}
         </div>
       </div>
 
