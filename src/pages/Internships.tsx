@@ -89,6 +89,12 @@ export default function Internships() {
       const [feed, profile, cts] = await Promise.all([getFeed(), getProfile(), listContacts()]);
       setListings(feed.listings);
       setTotal(feed.listings.length);
+      // Honor a hand-off from Fast Apply's "Prepare" so we open that exact role.
+      const pending = localStorage.getItem("internpilot.pendingSelect");
+      if (pending) {
+        localStorage.removeItem("internpilot.pendingSelect");
+        if (feed.listings.some((l) => l.id === pending)) setSelectedId(pending);
+      }
       setContacts(cts);
       setProfile(profile);
       const preferredId = profile?.preferred_resume_id ?? null;

@@ -4,6 +4,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import AuthGate from "./components/AuthGate";
 import "./App.css";
+import Queue from "./pages/Queue";
+import Watchlist from "./pages/Watchlist";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Internships from "./pages/Internships";
@@ -23,9 +25,11 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <Dashboard /> },
+      { index: true, element: <Queue /> },
+      { path: "dashboard", element: <Dashboard /> },
       { path: "applications", element: <Applications /> },
       { path: "internships", element: <Internships /> },
+      { path: "watchlist", element: <Watchlist /> },
       { path: "resumes", element: <ResumeCenter /> },
       { path: "bullets", element: <Bullets /> },
       { path: "networking", element: <Networking /> },

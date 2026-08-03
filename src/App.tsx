@@ -8,9 +8,11 @@ import "./App.css";
 let startupRan = false;
 
 const NAV = [
-  { to: "/", label: "Dashboard", icon: "▣", end: true },
+  { to: "/", label: "Fast Apply", icon: "⚡", end: true },
+  { to: "/dashboard", label: "Dashboard", icon: "▣", end: false },
   { to: "/applications", label: "Applications", icon: "▤", end: false },
   { to: "/internships", label: "Internships", icon: "◆", end: false },
+  { to: "/watchlist", label: "Watchlist", icon: "★", end: false },
   { to: "/resumes", label: "Resume Center", icon: "▦", end: false },
   { to: "/bullets", label: "Bullet Library", icon: "✎", end: false },
   { to: "/networking", label: "Networking", icon: "⚇", end: false },
