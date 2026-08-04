@@ -210,15 +210,122 @@ function collectTargets(profile) {
   return targets;
 }
 
-function guessJob() {
-  const meta = (p) =>
+function metaContent(p) {
+  return (
     (document.querySelector(`meta[property="${p}"]`) || {}).content ||
     (document.querySelector(`meta[name="${p}"]`) || {}).content ||
-    "";
-  const company = meta("og:site_name") || location.hostname.replace(/^www\./, "").split(".")[0];
+    ""
+  );
+}
+
+// Generic host/path tokens that are NOT company names.
+const GENERIC = /^(jobs?|careers?|boards?|apply|job-boards|greenhouse|lever|ashby|ashbyhq|myworkdayjobs|wd\d+|smartrecruiters|icims|workday|recruiting|talent|app|www|secure|external|en|us)$/i;
+const titleCase = (s) => (s || "").replace(/[-_.]+/g, " ").replace(/\s+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Which ATS this page is (for the popup's source chip). */
+function detectAts() {
+  const h = location.hostname;
+  if (/greenhouse\.io/.test(h)) return "Greenhouse";
+  if (/lever\.co/.test(h)) return "Lever";
+  if (/myworkdayjobs\.com|\.workday\./.test(h)) return "Workday";
+  if (/ashbyhq\.com/.test(h)) return "Ashby";
+  if (/icims\.com/.test(h)) return "iCIMS";
+  if (/smartrecruiters\.com/.test(h)) return "SmartRecruiters";
+  if (/bamboohr\.com/.test(h)) return "BambooHR";
+  if (/workable\.com/.test(h)) return "Workable";
+  if (/jobvite\.com/.test(h)) return "Jobvite";
+  return "";
+}
+
+/** Best-effort company name — ATS-aware, so we don't return "jobs"/"boards". */
+function guessCompany() {
+  const host = location.hostname.replace(/^www\./, "");
+  const parts = location.pathname.split("/").filter(Boolean);
+
+  // ATS path-based: greenhouse/lever/ashby/smartrecruiters put the company first.
+  if (/(greenhouse\.io|lever\.co|ashbyhq\.com|smartrecruiters\.com|jobvite\.com)$/.test(host) && parts[0] && !GENERIC.test(parts[0])) {
+    return titleCase(parts[0]);
+  }
+  // Workday / iCIMS: company is a subdomain.
+  const wd = host.match(/^([a-z0-9-]+)\.(?:wd\d+\.)?myworkdayjobs\.com$/i);
+  if (wd && !GENERIC.test(wd[1])) return titleCase(wd[1]);
+  const icims = host.match(/^(?:careers-)?([a-z0-9-]+)\.icims\.com$/i);
+  if (icims && !GENERIC.test(icims[1])) return titleCase(icims[1]);
+
+  // og:site_name if it isn't a generic ATS word.
+  const site = metaContent("og:site_name");
+  if (site && !GENERIC.test(site.replace(/\s+/g, ""))) return site.trim();
+
+  // "Role at Company" / "Company - Role" from the title.
+  const t = metaContent("og:title") || document.title || "";
+  const atM = t.match(/\bat\s+([A-Z][\w.&' ]{1,40})$/);
+  if (atM) return atM[1].trim();
+
+  // First non-generic subdomain, else the registrable domain label.
+  const labels = host.split(".");
+  const sub = labels[0];
+  if (!GENERIC.test(sub) && labels.length > 2) return titleCase(sub);
+  const second = labels.length >= 2 ? labels[labels.length - 2] : sub;
+  return titleCase(second);
+}
+
+function guessJob() {
   const h1 = document.querySelector("h1");
-  const title = meta("og:title") || (h1 && h1.innerText.trim()) || document.title;
+  let title = metaContent("og:title") || (h1 && h1.innerText.trim()) || document.title;
+  const company = guessCompany();
+  // Strip a trailing " at Company" / " - Company" from the title if present.
+  if (company) {
+    title = title.replace(new RegExp(`\\s*[-–—|]?\\s*(at\\s+)?${company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i"), "").trim();
+  }
   return { company, title: (title || "").slice(0, 140), url: location.href };
+}
+
+/** Snapshot for the popup: ATS, fillable-field count, and whether a form exists. */
+async function scanPage() {
+  let count = 0;
+  try { count = collectTargets(await getProfile()).length; } catch { /* not connected */ }
+  const inputs = document.querySelectorAll(
+    'input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea, [role="combobox"]',
+  ).length;
+  const ats = detectAts();
+  const job = guessJob();
+  return { ats, count, formLikely: count > 0 || !!ats || inputs >= 6, ...job };
+}
+
+// Essay-style questions we can't answer from a flat profile.
+const ESSAY_Q = /why|describe|tell us|cover letter|interest|challeng|experience|about you|motivat|passion|contribute|strength/i;
+
+/** After filling, list what still needs the student's attention. */
+function buildReview() {
+  const items = [];
+  const seen = new Set();
+  const add = (kind, label) => {
+    const k = norm(label);
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    items.push({ kind, label: label.split("\n")[0].trim().slice(0, 72) });
+  };
+  document.querySelectorAll("textarea").forEach((t) => {
+    if (t.value && t.value.trim()) return;
+    const q = labelText(t);
+    if (ESSAY_Q.test(q)) add("write", q || "Open-ended response");
+  });
+  document.querySelectorAll("input, select, [role=combobox], fieldset").forEach((el) => {
+    const q = labelText(el) || (el.tagName === "FIELDSET" ? (el.querySelector("legend")?.innerText ?? "") : "");
+    if (/sponsor|authoriz/i.test(q)) add("guess", q);
+    else if (/salary|compensation|hourly|pay expect/i.test(q) && !(el.value && el.value.trim())) add("blank", q);
+  });
+  return items.slice(0, 6);
+}
+
+/** Fill everything, record the job, and report what happened (for the popup). */
+async function autofillPage() {
+  const profile = await getProfile();
+  const targets = collectTargets(profile);
+  let filled = 0;
+  for (const t of targets) { try { if (await t.apply()) filled++; } catch { /* keep going */ } }
+  await recordJob();
+  return { filled, total: targets.length, review: buildReview(), ats: detectAts() };
 }
 
 // True while this content script's extension context is still valid. After the
@@ -374,19 +481,19 @@ async function runAutofill() {
   }
 }
 
-// popup can still trigger autofill + record
+// Popup <-> page messages
 chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   if (msg.type === "autofill") {
     (async () => {
-      try {
-        const profile = await getProfile();
-        const targets = collectTargets(profile);
-        for (const t of targets) { try { await t.apply(); } catch { /* keep going */ } }
-        await recordJob();
-        sendResponse({ ok: true, filled: targets.length });
-      } catch (e) {
-        sendResponse({ ok: false, error: e && e.message ? e.message : String(e) });
-      }
+      try { sendResponse({ ok: true, ...(await autofillPage()) }); }
+      catch (e) { sendResponse({ ok: false, error: e && e.message ? e.message : String(e) }); }
+    })();
+    return true;
+  }
+  if (msg.type === "scan") {
+    (async () => {
+      try { sendResponse({ ok: true, ...(await scanPage()) }); }
+      catch (e) { sendResponse({ ok: false, error: e && e.message ? e.message : String(e) }); }
     })();
     return true;
   }

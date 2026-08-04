@@ -95,13 +95,14 @@ export async function startBridgeListener(onRecorded?: () => void): Promise<void
           return;
         }
       }
+      const status = p.status === "interested" ? "interested" : "applied";
       await createApplication({
         company_name: p.company ?? "",
         role_title: p.title || p.role || "Application",
         job_link: url,
         location: p.location || null,
-        status: "applied",
-        date_applied: new Date().toISOString().slice(0, 10),
+        status,
+        date_applied: status === "applied" ? new Date().toISOString().slice(0, 10) : null,
       });
       notify("Application recorded", `${p.company || "A company"} — ${p.title || "role"} added from the extension.`);
       window.dispatchEvent(new CustomEvent(APP_RECORDED_EVENT));
