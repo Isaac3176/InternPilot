@@ -3,48 +3,116 @@
   <head>
     <meta charset="utf-8" />
     <style>
-      body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; width: 300px; margin: 0; padding: 14px; color: #0f1b2d; font-size: 13px; }
-      h1 { font-size: 14px; margin: 0 0 2px; }
-      .sub { color: #6b7a8d; font-size: 11.5px; margin: 0 0 12px; }
-      .status { font-size: 12px; padding: 7px 9px; border-radius: 7px; background: #f1f4f8; color: #33445a; margin-bottom: 12px; }
-      .status.ok { background: #e4f3ee; color: #157f5f; }
-      .status.err { background: #fbeae6; color: #b03d2a; }
-      label { display: block; font-size: 11px; font-weight: 600; color: #6b7a8d; margin: 10px 0 4px; }
-      input { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #d5d9e0; border-radius: 7px; font: inherit; }
-      button { width: 100%; padding: 9px; border-radius: 8px; border: none; background: #1f6feb; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 8px; }
-      button.sec { background: #fff; color: #33445a; border: 1px solid #d5d9e0; }
-      .row { display: flex; gap: 8px; }
+      :root {
+        --ink: #0f1b2d; --ink-2: #33445a; --muted: #6b7a8d; --muted-2: #98a5b4;
+        --line: #e7ebf0; --line-soft: #eef1f5; --surface-2: #f7f9fb;
+        --accent: #1f6feb; --accent-hover: #1a5bc4; --accent-soft: #eef4fe;
+        --good: #157f5f; --good-soft: #e4f3ee; --bad: #b03d2a; --bad-soft: #fbeae6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+        width: 340px; margin: 0; padding: 0; color: var(--ink); font-size: 13px;
+        background: #fff; -webkit-font-smoothing: antialiased;
+      }
+      .head {
+        display: flex; align-items: center; gap: 11px; padding: 16px 16px 14px;
+        background: linear-gradient(135deg, #f4f8ff, #fff);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .badge {
+        width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center;
+        background: linear-gradient(155deg, #3b85f5, #1a5bc4); box-shadow: 0 3px 10px rgba(31,111,235,.35);
+      }
+      .head h1 { font-size: 14.5px; margin: 0; font-weight: 700; letter-spacing: -.02em; }
+      .head p { font-size: 11.5px; margin: 1px 0 0; color: var(--muted); }
+      .body { padding: 14px 16px 16px; }
+
+      .status {
+        display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500;
+        padding: 9px 11px; border-radius: 9px; background: var(--surface-2); color: var(--ink-2);
+        margin-bottom: 13px; border: 1px solid var(--line-soft);
+      }
+      .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; }
+      .status.ok { background: var(--good-soft); color: var(--good); border-color: #cfeae0; }
+      .status.ok::before { background: var(--good); }
+      .status.err { background: var(--bad-soft); color: var(--bad); border-color: #f3d3cc; }
+      .status.err::before { background: var(--bad); }
+
+      button {
+        width: 100%; padding: 11px; border-radius: 10px; border: none; font: inherit;
+        font-weight: 600; font-size: 13px; cursor: pointer; transition: background .12s, border-color .12s, transform .05s;
+      }
+      button:active { transform: translateY(1px); }
+      .primary {
+        background: linear-gradient(135deg, #3b85f5, #1a5bc4); color: #fff;
+        box-shadow: 0 2px 8px rgba(31,111,235,.32); display: flex; align-items: center; justify-content: center; gap: 8px;
+      }
+      .primary:hover { background: linear-gradient(135deg, #2f79ef, #164fac); }
+      .sec { background: #fff; color: var(--ink-2); border: 1px solid var(--line); box-shadow: none; }
+      .sec:hover { background: var(--surface-2); border-color: #d3dae2; }
+
+      .divider { display: flex; align-items: center; gap: 10px; margin: 16px 0 13px; color: var(--muted-2); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      .divider::before, .divider::after { content: ""; height: 1px; background: var(--line-soft); flex: 1; }
+
+      label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin: 11px 0 5px; letter-spacing: .01em; }
+      input {
+        width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font: inherit;
+        color: var(--ink); background: #fff; transition: border-color .12s, box-shadow .12s;
+      }
+      input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+      .field-first { margin-top: 0; }
+
+      details { margin-top: 14px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+      summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; list-style: none; user-select: none; }
+      summary::-webkit-details-marker { display: none; }
+      summary::before { content: "▸ "; color: var(--muted-2); }
+      details[open] summary::before { content: "▾ "; }
+      .row { display: flex; gap: 8px; margin-top: 8px; }
       .row > * { flex: 1; }
-      details { margin-top: 12px; }
-      summary { cursor: pointer; color: #6b7a8d; font-size: 12px; }
-      hr { border: none; border-top: 1px solid #eef1f5; margin: 12px 0; }
     </style>
   </head>
   <body>
-    <h1>InternPilot Autofill</h1>
-    <p class="sub">Fill this application and record it to the app.</p>
-    <div id="status" class="status">Checking connection…</div>
-
-    <button id="autofill">Autofill this page</button>
-
-    <hr />
-    <label for="company">Company</label>
-    <input id="company" placeholder="Company" />
-    <label for="title">Role</label>
-    <input id="title" placeholder="Role title" />
-    <button id="save-job" class="sec">Save to InternPilot</button>
-
-    <details>
-      <summary>Connection settings</summary>
-      <label for="token">Token (from app Settings → Browser extension)</label>
-      <input id="token" placeholder="paste token" />
-      <label for="port">Port</label>
-      <input id="port" value="8765" />
-      <div class="row">
-        <button id="save-settings" class="sec">Save</button>
-        <button id="test" class="sec">Test</button>
+    <div class="head">
+      <span class="badge">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+          <path d="M4.6 25.4 16 14l11.4 11.4" stroke="#fff" stroke-opacity=".5" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.4 9.6 16 4l5.6 5.6" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div>
+        <h1>InternPilot Autofill</h1>
+        <p>Fill this application and record it to the app.</p>
       </div>
-    </details>
+    </div>
+
+    <div class="body">
+      <div id="status" class="status">Checking connection…</div>
+
+      <button id="autofill" class="primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
+        Autofill this page
+      </button>
+
+      <div class="divider">Add this job</div>
+      <label class="field-first" for="company">Company</label>
+      <input id="company" placeholder="Company" />
+      <label for="title">Role</label>
+      <input id="title" placeholder="Role title" />
+      <button id="save-job" class="sec" style="margin-top:10px">Save to InternPilot</button>
+
+      <details>
+        <summary>Connection settings</summary>
+        <label for="token">Token (app → Settings → Browser extension)</label>
+        <input id="token" placeholder="paste token" />
+        <label for="port">Port</label>
+        <input id="port" value="8765" />
+        <div class="row">
+          <button id="save-settings" class="sec">Save</button>
+          <button id="test" class="sec">Test</button>
+        </div>
+      </details>
+    </div>
 
     <script src="popup.js"></script>
   </body>

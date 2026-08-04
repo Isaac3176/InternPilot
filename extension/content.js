@@ -184,36 +184,65 @@ function ensureUI() {
   host.id = "internpilot-host";
   host.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:2147483647;";
   const root = host.attachShadow({ mode: "open" });
+  const CHEV = `<svg viewBox="0 0 32 32" fill="none"><path d="M4.6 25.4 16 14l11.4 11.4" stroke="#fff" stroke-opacity=".5" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.4 9.6 16 4l5.6 5.6" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   root.innerHTML = `
     <style>
-      *{box-sizing:border-box;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
-      .launch{width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;
-        background:linear-gradient(155deg,#3b85f5,#1a5bc4);color:#fff;font-weight:700;font-size:14px;
-        box-shadow:0 6px 20px rgba(31,111,235,.4)}
-      .panel{width:320px;max-height:72vh;overflow-y:auto;background:#fff;border:1px solid #e3e7ed;
-        border-radius:14px;box-shadow:0 16px 40px rgba(15,27,45,.22);padding:16px;color:#0f1b2d;display:none}
+      *{box-sizing:border-box;font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif}
+      .launch{width:52px;height:52px;border-radius:16px;border:none;cursor:pointer;padding:13px;
+        background:linear-gradient(155deg,#3b85f5,#1a5bc4);box-shadow:0 8px 24px rgba(31,111,235,.42);
+        transition:transform .12s, box-shadow .12s}
+      .launch:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(31,111,235,.5)}
+      .launch svg{width:100%;height:100%;display:block}
+      .panel{width:340px;max-height:76vh;overflow-y:auto;background:#fff;border:1px solid #e7ebf0;
+        border-radius:18px;box-shadow:0 20px 50px rgba(15,27,45,.26);color:#0f1b2d;display:none;overflow:hidden}
       .panel.open{display:block}
-      .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-      .hdr b{font-size:14px}
-      .x{border:none;background:none;cursor:pointer;color:#6b7a8d;font-size:16px}
-      .status{font-size:12px;color:#6b7a8d;margin-bottom:10px}
-      .status.ok{color:#157f5f}.status.err{color:#b03d2a}
-      .btn{width:100%;padding:10px;border:none;border-radius:9px;background:#1f6feb;color:#fff;
-        font-weight:600;font-size:13px;cursor:pointer;margin-bottom:10px}
+      .hdr{display:flex;align-items:center;gap:11px;padding:15px 16px 13px;
+        background:linear-gradient(135deg,#f4f8ff,#fff);border-bottom:1px solid #eef1f5}
+      .mark{width:32px;height:32px;border-radius:9px;flex:none;padding:7px;
+        background:linear-gradient(155deg,#3b85f5,#1a5bc4);box-shadow:0 3px 9px rgba(31,111,235,.35)}
+      .mark svg{width:100%;height:100%;display:block}
+      .hdr .t{flex:1}
+      .hdr b{font-size:14px;font-weight:700;letter-spacing:-.02em;display:block}
+      .hdr span{font-size:11px;color:#6b7a8d}
+      .x{border:none;background:none;cursor:pointer;color:#98a5b4;font-size:17px;line-height:1;padding:2px 4px;border-radius:6px}
+      .x:hover{background:#f1f4f8;color:#33445a}
+      .inner{padding:14px 16px 16px}
+      .status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:#33445a;
+        background:#f7f9fb;border:1px solid #eef1f5;border-radius:9px;padding:9px 11px;margin-bottom:12px}
+      .status::before{content:"";width:8px;height:8px;border-radius:50%;background:#98a5b4;flex:none}
+      .status.ok{background:#e4f3ee;color:#157f5f;border-color:#cfeae0}.status.ok::before{background:#157f5f}
+      .status.err{background:#fbeae6;color:#b03d2a;border-color:#f3d3cc}.status.err::before{background:#b03d2a}
+      .btn{width:100%;padding:11px;border:none;border-radius:11px;cursor:pointer;font-weight:600;font-size:13px;
+        color:#fff;background:linear-gradient(135deg,#3b85f5,#1a5bc4);box-shadow:0 2px 8px rgba(31,111,235,.32);
+        display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .05s}
+      .btn:active{transform:translateY(1px)}
       .btn:disabled{opacity:.6;cursor:default}
-      .bar{height:6px;border-radius:3px;background:#eef1f5;overflow:hidden;margin-bottom:10px;display:none}
-      .bar.on{display:block}.bar i{display:block;height:100%;background:#1f6feb;width:0;transition:width .2s}
-      ul{list-style:none;margin:0;padding:0}
-      li{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:4px 0;color:#33445a}
-      .ck{color:#16a34a;flex:none}
+      .btn svg{width:15px;height:15px}
+      .bar{height:7px;border-radius:5px;background:#eef1f5;overflow:hidden;margin:12px 0 4px;display:none}
+      .bar.on{display:block}
+      .bar i{display:block;height:100%;width:0;border-radius:5px;
+        background:linear-gradient(90deg,#3b85f5,#1a5bc4);transition:width .25s cubic-bezier(.4,0,.2,1)}
+      ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+      li{display:flex;gap:9px;align-items:center;font-size:12.5px;padding:5px 0;color:#33445a}
+      .ck{width:18px;height:18px;border-radius:50%;background:#e4f3ee;color:#157f5f;flex:none;
+        display:grid;place-items:center;font-size:11px;font-weight:700}
     </style>
-    <button class="launch" title="InternPilot autofill">IP</button>
+    <button class="launch" title="InternPilot autofill">${CHEV}</button>
     <div class="panel">
-      <div class="hdr"><b>InternPilot Autofill</b><button class="x">✕</button></div>
-      <div class="status" id="st">Ready.</div>
-      <button class="btn" id="run">Autofill this page</button>
-      <div class="bar" id="bar"><i id="fill"></i></div>
-      <ul id="list"></ul>
+      <div class="hdr">
+        <span class="mark">${CHEV}</span>
+        <div class="t"><b>InternPilot Autofill</b><span>Fill &amp; record this application</span></div>
+        <button class="x" title="Close">✕</button>
+      </div>
+      <div class="inner">
+        <div class="status" id="st">Ready.</div>
+        <button class="btn" id="run">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
+          Autofill this page
+        </button>
+        <div class="bar" id="bar"><i id="fill"></i></div>
+        <ul id="list"></ul>
+      </div>
     </div>`;
   document.documentElement.appendChild(host);
   const $ = (s) => root.querySelector(s);
