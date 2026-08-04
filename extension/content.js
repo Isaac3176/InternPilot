@@ -500,8 +500,51 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   if (msg.type === "guessJob") sendResponse({ ok: true, job: guessJob() });
 });
 
-// inject the launcher (skip inside iframes)
+// Only show the launcher on pages that look like a job application — not on
+// YouTube, Gmail, etc. Signals: a known ATS host, or application-specific field
+// labels (resume/work-auth/cover-letter/EEO) alongside basic contact fields.
+const STRONG_APP = [
+  /resume|curriculum vitae|\bcv\b/, /cover letter/, /work authoriz|legally authorized/,
+  /sponsor/, /desired salary|expected salary/, /veteran status/, /disabilit/,
+  /voluntary self-?identif|eeo/, /graduation (date|year)/,
+];
+const BASIC_APP = [/first name/, /last name/, /\bemail\b/, /\bphone\b/, /linkedin/, /\bcity\b/, /\bstate\b/];
+
+function looksLikeApplication() {
+  if (detectAts()) return true;
+  const hay = [...document.querySelectorAll("label, legend, h1, h2")]
+    .map((e) => (e.innerText || "").toLowerCase()).join("  ");
+  const strong = STRONG_APP.filter((re) => re.test(hay)).length;
+  const basic = BASIC_APP.filter((re) => re.test(hay)).length;
+  const hasFileInput = !!document.querySelector('input[type="file"]');
+  if (strong >= 1 && strong + basic >= 2) return true; // application-specific + something else
+  if (hasFileInput && basic >= 2) return true; // resume upload + contact fields
+  return false;
+}
+
+let ipInjected = false;
+function maybeInjectLauncher() {
+  if (ipInjected || !document.body) return;
+  if (looksLikeApplication()) { ipInjected = true; ensureUI(); }
+}
+
+// Only inject in the top frame, and only when it's an application page. Poll for
+// a while so late-rendering (SPA) forms still get the launcher; re-arm on SPA
+// navigation (Workday etc.) without ever removing an already-shown launcher.
 if (window.top === window) {
-  if (document.body) ensureUI();
-  else window.addEventListener("DOMContentLoaded", ensureUI);
+  const armPolling = (durationMs) => {
+    const start = Date.now();
+    const iv = setInterval(() => {
+      maybeInjectLauncher();
+      if (ipInjected || Date.now() - start > durationMs) clearInterval(iv);
+    }, 700);
+  };
+  armPolling(15000);
+  let lastUrl = location.href;
+  setInterval(() => {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      if (!ipInjected) armPolling(10000);
+    }
+  }, 1500);
 }
