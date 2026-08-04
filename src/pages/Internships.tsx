@@ -286,6 +286,7 @@ export default function Internships() {
                 <div className="tabs"><button type="button" className="on">Overview</button></div>
                 <div className="actions">
                   <button type="button" className="secondary" onClick={() => addToTracker(selected)} disabled={appByUrl.has(selected.url)}>{appByUrl.has(selected.url) ? "Saved" : "Save"}</button>
+                  <button type="button" className="secondary" onClick={() => navigate(`/packet?job=${encodeURIComponent(selected.id)}`)}>Prepare</button>
                   <button type="button" onClick={() => apply(selected)}>⚡ Apply with autofill</button>
                 </div>
               </div>
