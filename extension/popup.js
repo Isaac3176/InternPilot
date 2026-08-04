@@ -12,15 +12,43 @@ async function activeTab() {
   return tab;
 }
 
+function renderInfo(p) {
+  const rows = [
+    ["Name", [p.firstName, p.lastName].filter(Boolean).join(" ") || p.fullName],
+    ["Email", p.email],
+    ["Phone", p.phone],
+    ["Location", [p.city, p.state].filter(Boolean).join(", ")],
+    ["School", p.school],
+    ["Work auth", p.workAuthorization],
+  ];
+  $("info").innerHTML = rows
+    .map(([k, v]) => `<li><span class="k">${k}</span><span class="v${v ? "" : " empty"}">${v ? escapeHtml(v) : "—"}</span></li>`)
+    .join("");
+  if (p.resumeName) {
+    $("resume-name").textContent = p.resumeName;
+    $("resume").classList.remove("hidden");
+  }
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
 async function init() {
   const { token = "", port = 8765 } = await chrome.storage.local.get(["token", "port"]);
   $("token").value = token;
   $("port").value = port;
 
-  // Connection check
+  // Connection check + profile preview
   const ping = await chrome.runtime.sendMessage({ type: "ping" });
-  if (ping && ping.ok) status("Connected to InternPilot ✓", "ok");
-  else status("Not connected. Open the app and set the token below.", "err");
+  if (ping && ping.ok) {
+    status("Connected to InternPilot ✓", "ok");
+    const pr = await chrome.runtime.sendMessage({ type: "getProfile" });
+    if (pr && pr.ok && pr.data) renderInfo(pr.data);
+    else $("info").innerHTML = `<li><span class="k">No profile found — open the app.</span></li>`;
+  } else {
+    status("Not connected. Open the app and set the token below.", "err");
+    $("info").innerHTML = `<li><span class="k">Connect to see your info.</span></li>`;
+  }
 
   // Guess job from the page
   try {

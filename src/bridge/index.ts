@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getProfile } from "../db/profile";
 import { createApplication, listApplications } from "../db/applications";
+import { getResumeVersion } from "../db/resumes";
 import { WORK_AUTH_LABELS, type WorkAuth } from "../db/types";
 import { notify } from "../lib/notify";
 
@@ -59,6 +60,8 @@ async function buildAutofill(): Promise<Record<string, string>> {
     desiredSalary: s(p.desired_salary),
     willingToRelocate: s(p.willing_to_relocate),
     startDate: s(p.earliest_start_date),
+    // Display-only (not used for form fills): shown in the extension popup.
+    resumeName: p.preferred_resume_id ? (await getResumeVersion(p.preferred_resume_id))?.name ?? "" : "",
   };
 }
 

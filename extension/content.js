@@ -2,36 +2,38 @@
 // shows an on-page progress panel, and records the job to InternPilot.
 
 // Field -> profile-key mapping, tested against each field's identifying text.
+// First match wins, so keep specific patterns above generic ones (fullName last).
 const MAP = [
-  { key: "firstName", test: /first.?name|given.?name|\bfname\b/ },
-  { key: "lastName", test: /last.?name|family.?name|surname|\blname\b/ },
+  { key: "firstName", test: /first.?name|given.?name|legal first|\bfname\b|preferred.?(first.?)?name|nickname/ },
+  { key: "lastName", test: /last.?name|family.?name|surname|legal last|\blname\b/ },
   { key: "email", test: /e-?mail/ },
-  { key: "phone", test: /phone|mobile|\btel\b/ },
-  { key: "linkedin", test: /linkedin/ },
-  { key: "github", test: /github/ },
-  { key: "portfolio", test: /portfolio|personal.?(site|website)|website/ },
-  { key: "school", test: /school|university|college|institution/ },
-  { key: "degree", test: /degree/ },
-  { key: "major", test: /major|field.?of.?study|discipline/ },
+  { key: "phone", test: /phone|mobile|\btel\b|\bcell\b/ },
+  { key: "linkedin", test: /linked.?in/ },
+  { key: "github", test: /git.?hub/ },
+  { key: "portfolio", test: /portfolio|personal.?(site|website)|\bwebsite\b|personal url|other url/ },
+  { key: "school", test: /school|university|college|institution|alma mater|educational/ },
+  { key: "degree", test: /degree|qualification level|level of education/ },
+  { key: "major", test: /major|field.?of.?study|discipline|concentration|course of study|area of study/ },
+  { key: "minor", test: /\bminor\b/ },
   { key: "gpa", test: /\bgpa\b|grade.?point/ },
-  { key: "graduationDate", test: /grad(uation)?.?(date|month)|expected.?grad/ },
-  { key: "gradYear", test: /grad(uation)?.?year|class.?of/ },
-  { key: "address", test: /street|address(?!.*email)/ },
-  { key: "city", test: /\bcity\b|\btown\b/ },
-  { key: "state", test: /\bstate\b|province|county/ },
-  { key: "country", test: /\bcountry\b/ },
-  { key: "workAuthorization", test: /work.?authoriz|legally.?authoriz/ },
-  { key: "authorizedToWork", test: /authorized.?to.?work|currently authorized/ },
-  { key: "requiresSponsorship", test: /sponsor/ },
-  { key: "gender", test: /\bgender\b/ },
+  { key: "graduationDate", test: /grad(uation)?.?(date|month|term)|expected.?grad|completion date|(school|education).*(end date)/ },
+  { key: "gradYear", test: /grad(uation)?.?year|class.?of|year of graduation|expected year/ },
+  { key: "address", test: /street|address(?!.*email)|address line 1|mailing address/ },
+  { key: "city", test: /\bcity\b|\btown\b|city\/town/ },
+  { key: "state", test: /\bstate\b|province|region|\bcounty\b|state\/province/ },
+  { key: "country", test: /\bcountry\b|country\/region|country of residence/ },
+  { key: "authorizedToWork", test: /authorized to work|currently authorized|legally (eligible|authorized)|eligible to work|are you (legally )?authorized|right to work/ },
+  { key: "requiresSponsorship", test: /sponsor|require.*visa|need.*visa|visa sponsorship/ },
+  { key: "workAuthorization", test: /work.?authoriz|legally.?authoriz|employment.?authoriz|authorization status|work status|immigration status/ },
+  { key: "gender", test: /\bgender\b|gender identity/ },
   { key: "hispanicLatino", test: /hispanic|latino|latinx/ },
-  { key: "race", test: /\brace\b|ethnic/ },
-  { key: "veteranStatus", test: /veteran/ },
+  { key: "race", test: /\brace\b|ethnic|race\/ethnicity/ },
+  { key: "veteranStatus", test: /veteran|protected veteran|military status/ },
   { key: "disabilityStatus", test: /disab/ },
-  { key: "desiredSalary", test: /salary|expected.?(pay|comp)|compensation/ },
-  { key: "startDate", test: /start.?date|availab/ },
+  { key: "desiredSalary", test: /salary|expected.?(pay|comp)|compensation|desired.?pay|hourly rate|pay expectation/ },
+  { key: "startDate", test: /start.?date|availab|when can you (start|begin)|earliest.*start|available to start/ },
   { key: "willingToRelocate", test: /relocat/ },
-  { key: "fullName", test: /full.?name|your.?name|(^|\s)name(\s|$)/ },
+  { key: "fullName", test: /full.?name|your.?name|legal name|(^|\s)name(\s|$)/ },
 ];
 
 function keyFor(text) {
@@ -41,12 +43,18 @@ function keyFor(text) {
 }
 
 function labelText(el) {
-  const bits = [el.name, el.id, el.getAttribute("placeholder"), el.getAttribute("aria-label"), el.getAttribute("autocomplete")];
+  const bits = [
+    el.name, el.id, el.getAttribute("placeholder"), el.getAttribute("aria-label"),
+    el.getAttribute("autocomplete"), el.getAttribute("data-automation-id"),
+    el.getAttribute("data-qa"), el.getAttribute("data-testid"), el.getAttribute("title"),
+  ];
   if (el.labels && el.labels[0]) bits.push(el.labels[0].innerText);
   const wrap = el.closest("label");
   if (wrap) bits.push(wrap.innerText);
   const by = el.getAttribute("aria-labelledby");
-  if (by) { const l = document.getElementById(by); if (l) bits.push(l.innerText); }
+  if (by) by.split(/\s+/).forEach((id) => { const l = document.getElementById(id); if (l) bits.push(l.innerText); });
+  const desc = el.getAttribute("aria-describedby");
+  if (desc) { const l = document.getElementById(desc); if (l) bits.push(l.innerText); }
   return bits.filter(Boolean).join(" ");
 }
 
@@ -93,24 +101,71 @@ function optionMatches(optText, desired) {
   return o === d || o.startsWith(d) || o.includes(d) || (d.length > 4 && d.includes(o));
 }
 
-// Build the list of fills to apply (so we can animate progress).
+// ---- custom dropdowns / comboboxes (react-select, Workday, generic) ----
+function fireMouse(el, type) {
+  el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+}
+function visibleOptions() {
+  return [...document.querySelectorAll('[role="option"], .select__option, [class*="-option"], ul[role="listbox"] li')]
+    .filter((e) => e.offsetParent !== null && (e.textContent || "").trim());
+}
+function comboQuestion(ctrl) {
+  if (ctrl.getAttribute("aria-label")) return ctrl.getAttribute("aria-label");
+  const by = ctrl.getAttribute("aria-labelledby");
+  if (by) { const l = document.getElementById(by.split(/\s+/)[0]); if (l && l.innerText.trim()) return l.innerText; }
+  let node = ctrl.closest("[data-automation-id], .select__container, .field, div, fieldset");
+  for (let i = 0; i < 5 && node; i++) {
+    const q = node.querySelector("label, legend, .label, [class*='label']");
+    if (q && !q.contains(ctrl) && q.innerText.trim().length > 2) return q.innerText;
+    node = node.parentElement;
+  }
+  return ctrl.getAttribute("data-automation-id") || "";
+}
+async function pickCombo(ctrl, value) {
+  ctrl.scrollIntoView({ block: "center" });
+  fireMouse(ctrl, "mousedown"); fireMouse(ctrl, "mouseup");
+  if (ctrl.click) ctrl.click();
+  const input = ctrl.querySelector("input") || (ctrl.closest(".select__container") || document).querySelector("input");
+  await sleep(150);
+  let opts = visibleOptions();
+  if (opts.length === 0 && input) { nativeSet(input, value); await sleep(220); opts = visibleOptions(); }
+  const match = opts.find((o) => optionMatches(o.textContent, value)) ||
+    opts.find((o) => norm(o.textContent).includes(norm(value)));
+  if (match) {
+    match.scrollIntoView({ block: "center" });
+    fireMouse(match, "mousedown"); fireMouse(match, "mouseup");
+    if (match.click) match.click();
+    await sleep(60);
+    return true;
+  }
+  fireMouse(document.body, "mousedown"); // close the menu if we couldn't match
+  return false;
+}
+
+// Build the list of fills to apply (so we can animate progress). Each target's
+// apply() may be sync or async (custom dropdowns need to open + pick).
 function collectTargets(profile) {
   const targets = [];
   const seen = new Set();
+  const pushT = (rawLabel, apply) => {
+    const k = norm(rawLabel);
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    targets.push({ label: (rawLabel || "").split("\n")[0].trim().slice(0, 60) || k, apply });
+  };
 
+  // text inputs, textareas, and native <select>
   document.querySelectorAll("input, textarea, select").forEach((el) => {
     const type = (el.getAttribute("type") || "").toLowerCase();
-    if (["hidden", "password", "file", "checkbox", "radio", "submit", "button"].includes(type)) return;
+    if (["hidden", "password", "file", "checkbox", "radio", "submit", "button", "search"].includes(type)) return;
+    if (el.closest('.select__control, [role="combobox"], [role="listbox"]')) return; // custom widget, handled below
     if (el.value && el.value.trim()) return;
     const key = keyFor(labelText(el));
     if (!key) return;
     const value = profile[key];
     if (!value) return;
-    const label = (labelText(el).split("\n")[0] || key).trim().slice(0, 60);
-    targets.push({
-      label,
-      apply: () => (el.tagName === "SELECT" ? fillSelect(el, value) : (nativeSet(el, value), true)),
-    });
+    if (el.tagName === "SELECT") pushT(labelText(el), () => fillSelect(el, value));
+    else pushT(labelText(el), () => { nativeSet(el, value); return true; });
   });
 
   // radio groups (by name)
@@ -128,10 +183,28 @@ function collectTargets(profile) {
     if (!value) return;
     const match = radios.find((r) => optionMatches(radioOptionText(r), value));
     if (!match) return;
-    const label = norm(q).slice(0, 60) || key;
-    if (seen.has(label)) return;
-    seen.add(label);
-    targets.push({ label, apply: () => { match.click(); return true; } });
+    pushT(q || key, () => { match.click(); return true; });
+  });
+
+  // custom dropdowns (react-select / Workday / generic combobox)
+  document.querySelectorAll('.select__control, [role="combobox"]').forEach((ctrl) => {
+    const q = comboQuestion(ctrl);
+    const key = keyFor(q);
+    if (!key) return;
+    const value = profile[key];
+    if (!value) return;
+    pushT(q, () => pickCombo(ctrl, value));
+  });
+
+  // single yes/no checkboxes — only tick when the answer is affirmative
+  document.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    if (cb.checked) return;
+    const q = labelText(cb) || radioOptionText(cb);
+    const key = keyFor(q);
+    if (!key) return;
+    const v = norm(profile[key]);
+    if (v !== "yes" && v !== "true") return;
+    pushT(q, () => { cb.click(); return true; });
   });
 
   return targets;
@@ -272,7 +345,8 @@ async function runAutofill() {
       setStatus("No matching fields found on this page.", "err");
     } else {
       for (let i = 0; i < targets.length; i++) {
-        const ok = targets[i].apply();
+        let ok = false;
+        try { ok = await targets[i].apply(); } catch { ok = false; }
         u.$("#fill").style.width = `${Math.round(((i + 1) / targets.length) * 100)}%`;
         setStatus(`Autofilling… ${Math.round(((i + 1) / targets.length) * 100)}%`);
         if (ok) {
@@ -307,7 +381,7 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
       try {
         const profile = await getProfile();
         const targets = collectTargets(profile);
-        targets.forEach((t) => t.apply());
+        for (const t of targets) { try { await t.apply(); } catch { /* keep going */ } }
         await recordJob();
         sendResponse({ ok: true, filled: targets.length });
       } catch (e) {
