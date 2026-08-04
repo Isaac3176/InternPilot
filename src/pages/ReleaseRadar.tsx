@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useNavigate } from "react-router-dom";
 import { getReleaseRadar, type RadarEntry, type RadarState } from "../release/radar";
-import { confidenceLabel, REFERENCE_SEASON } from "../release/history";
+import { confidenceLabel } from "../release/history";
 import { getPrefs } from "../ranking/prefs";
 import { PRIORITY_LABEL } from "../ranking/companies";
 import CompanyLogo from "../components/CompanyLogo";
@@ -58,7 +58,7 @@ export default function ReleaseRadar() {
       </div>
 
       <p className="radar-disclaimer">
-        InternPilot can't know the exact release date. It estimates the most likely window from the {REFERENCE_SEASON} cycle,
+        InternPilot can't know the exact release date. It estimates the most likely window from several past cycles,
         flags public early signals, and helps you get ready before {targetSeason} roles open.
       </p>
 

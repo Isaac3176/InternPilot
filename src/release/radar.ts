@@ -9,7 +9,7 @@
 import { getFeed } from "../listings/service";
 import { getWatchlist, type CompanyPriority } from "../ranking/companies";
 import { getPrefs } from "../ranking/prefs";
-import { getForecasts, normName, type ReleaseForecast } from "./history";
+import { forecastForCompany, normName, type ReleaseForecast } from "./history";
 
 export type RadarState = "open" | "signal" | "forecast" | "none";
 
@@ -40,16 +40,6 @@ function probNext7(now: number, f: ReleaseForecast): number {
   return Math.max(0, Math.min(1, (hi - lo) / span));
 }
 
-function pickForecast(companyName: string, forecasts: ReleaseForecast[]): ReleaseForecast | null {
-  const key = normName(companyName);
-  const cands = forecasts.filter((f) =>
-    f.companyKey === key || (key.length >= 4 && (f.companyKey.includes(key) || key.includes(f.companyKey))));
-  if (cands.length === 0) return null;
-  const rank = (fam: string) => (fam === "software" ? 0 : fam === "ml-data" ? 1 : 2);
-  cands.sort((a, b) => rank(a.family) - rank(b.family) || b.sampleSize - a.sampleSize);
-  return cands[0];
-}
-
 function humanDate(ms: number): string {
   return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
@@ -58,7 +48,7 @@ function humanDate(ms: number): string {
 export async function getReleaseRadar(): Promise<RadarEntry[]> {
   const prefs = getPrefs();
   const year = seasonYear(prefs.targetSeason);
-  const [forecasts, feed] = await Promise.all([getForecasts(year), getFeed()]);
+  const feed = await getFeed();
   const now = Date.now();
 
   // Index live listings by normalized company for state detection.
@@ -73,7 +63,7 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
   const entries: RadarEntry[] = [];
   for (const c of getWatchlist()) {
     if (c.priority === "muted") continue;
-    const forecast = pickForecast(c.name, forecasts);
+    const forecast = forecastForCompany(c.name, year);
     const key = normName(c.name);
     const live = [...feedByCo.entries()]
       .filter(([k]) => k === key || (key.length >= 4 && (k.includes(key) || key.includes(k))))
@@ -105,7 +95,7 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
         : daysUntil != null && daysUntil > 0
           ? `Historical window begins in ~${daysUntil} days (${humanDate(forecast.windowStart)})`
           : `Typical opening was ${humanDate(forecast.typical)} (window may have passed)`);
-      reasons.push(`Based on ${forecast.sampleSize} role(s) from last cycle`);
+      reasons.push(`Based on ${forecast.cycleCount} past cycle${forecast.cycleCount === 1 ? "" : "s"} (${forecast.sampleSize} roles)`);
     } else {
       reasons.push("No historical data for this company yet — capturing this cycle");
     }

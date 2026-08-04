@@ -1,138 +1,108 @@
 /**
- * Release history: derive each company's *typical opening window* for a role
- * family from a prior recruiting cycle's dataset (SimplifyJobs carries a real
- * `date_posted` per role). We map last cycle's month/day onto the upcoming
- * cycle to forecast when a role is likely to open again.
+ * Release history: forecast a company's typical opening window for a role
+ * family from MULTIPLE past recruiting cycles.
  *
- * v1 uses one prior cycle (Summer 2026) — honest "limited evidence / likely
- * window" confidence. Multi-cycle depth (git-history crawl) is a later phase.
+ * The dataset (release-history.json) is precomputed offline by snapshot-sampling
+ * the SimplifyJobs repo's git history across cycles (see scripts/build-release-
+ * history.mjs) — each role carries a real date_posted, so we get the first-post
+ * date per company/family/season. We map each cycle's month/day onto the
+ * upcoming cycle; confidence rises with more cycles and tighter agreement.
  */
-import { httpFetch } from "../lib/http";
-
-const K_HISTORY_URL = "internpilot.release.historyUrl";
-const K_CACHE = "internpilot.release.forecastCache";
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-// Prior completed cycle (has real date_posted for Summer 2026 roles).
-export const DEFAULT_HISTORY_URL =
-  "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json";
-export const REFERENCE_SEASON = "Summer 2026";
-
-export function getHistoryUrl(): string {
-  return localStorage.getItem(K_HISTORY_URL) || DEFAULT_HISTORY_URL;
-}
-export function setHistoryUrl(v: string): void {
-  if (v) localStorage.setItem(K_HISTORY_URL, v);
-  else localStorage.removeItem(K_HISTORY_URL);
-}
+import bundle from "./release-history.json";
 
 export type RoleFamily = "software" | "ml-data" | "hardware" | "quant" | "other";
 
+interface CycleStat { e: number; n: number } // earliest posting (unix s), role count
+interface CompanyRecord { name: string; fam: Record<string, Record<string, CycleStat>> }
+interface Bundle { generatedAt: string; source: string; companies: Record<string, CompanyRecord> }
+
+const DATA = bundle as unknown as Bundle;
+export const HISTORY_GENERATED_AT = DATA.generatedAt;
+export const HISTORY_SOURCE = DATA.source;
+
 export interface ReleaseForecast {
-  companyKey: string; // normalized name
-  company: string; // display name
+  companyKey: string;
+  company: string;
   family: RoleFamily;
-  sampleSize: number;
-  typical: number; // predicted "typical opening" date (ms) in the upcoming cycle
-  windowStart: number; // 15th percentile (ms)
-  windowEnd: number; // 85th percentile (ms)
+  cycleCount: number; // number of past cycles observed
+  sampleSize: number; // total roles across cycles
+  typical: number; // predicted typical opening (ms) in the upcoming cycle
+  windowStart: number; // earliest observed, mapped to upcoming cycle (ms)
+  windowEnd: number; // latest observed, mapped (ms)
   earliest: number;
   latest: number;
   confidence: number; // 0-100
-}
-
-interface SimplifyRow {
-  company_name: string;
-  title: string;
-  category?: string;
-  date_posted?: number;
-  terms?: string[];
 }
 
 export function normName(s: string): string {
   return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-export function familyOf(category: string | undefined, title: string): RoleFamily {
-  const c = `${category ?? ""} ${title}`.toLowerCase();
-  if (/data|machine learning|\bml\b|\bai\b/.test(c)) return "ml-data";
-  if (/hardware|firmware|embedded|electrical|asic|fpga/.test(c)) return "hardware";
-  if (/quant/.test(c)) return "quant";
-  if (/software|full[\s-]?stack|back[\s-]?end|front[\s-]?end|devops|\bsre\b|infrastructure|platform|security|systems|engineer|developer/.test(c)) return "software";
-  return "other";
-}
+const DAY = 86_400_000;
 
 /** Map a historical timestamp to the same month/day in the upcoming cycle. */
-function toCycleDate(ts: number, targetYear: number): number {
-  const d = new Date(ts * 1000);
-  const m = d.getUTCMonth(); // 0-11
+function toCycleDate(tsSeconds: number, targetYear: number): number {
+  const d = new Date(tsSeconds * 1000);
+  const m = d.getUTCMonth();
   const day = d.getUTCDate();
   // Recruiting calendar: Aug–Dec belong to the year before the season.
   const yr = m >= 7 ? targetYear - 1 : targetYear;
   return Date.UTC(yr, m, day);
 }
 
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const i = Math.min(sorted.length - 1, Math.max(0, Math.round((p / 100) * (sorted.length - 1))));
-  return sorted[i];
+function median(sorted: number[]): number {
+  const n = sorted.length;
+  if (n === 0) return 0;
+  return n % 2 ? sorted[(n - 1) / 2] : Math.round((sorted[n / 2 - 1] + sorted[n / 2]) / 2);
+}
+function stdevDays(values: number[]): number {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const varr = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+  return Math.sqrt(varr) / DAY;
 }
 
-/** Build per-(company, family) forecasts for the upcoming cycle. */
-function computeForecasts(rows: SimplifyRow[], targetYear: number): ReleaseForecast[] {
-  const groups = new Map<string, { company: string; family: RoleFamily; dates: number[] }>();
-  for (const r of rows) {
-    if (!r.date_posted || !r.company_name) continue;
-    if (r.terms && !r.terms.some((t) => t.toLowerCase() === REFERENCE_SEASON.toLowerCase())) continue;
-    const family = familyOf(r.category, r.title);
-    const key = `${normName(r.company_name)}::${family}`;
-    const g = groups.get(key) ?? { company: r.company_name, family, dates: [] };
-    g.dates.push(toCycleDate(r.date_posted, targetYear));
-    groups.set(key, g);
-  }
+function forecastFor(rec: CompanyRecord, family: RoleFamily, targetYear: number): ReleaseForecast | null {
+  const seasons = rec.fam[family];
+  if (!seasons) return null;
+  const cycles = Object.values(seasons);
+  if (cycles.length === 0) return null;
 
-  const out: ReleaseForecast[] = [];
-  for (const [key, g] of groups) {
-    const dates = g.dates.sort((a, b) => a - b);
-    const n = dates.length;
-    const sampleConf = Math.min(n / 5, 1) * 45; // more samples → more confidence
-    out.push({
-      companyKey: key.split("::")[0],
-      company: g.company,
-      family: g.family,
-      sampleSize: n,
-      typical: percentile(dates, 50),
-      windowStart: percentile(dates, 15),
-      windowEnd: percentile(dates, 85),
-      earliest: dates[0],
-      latest: dates[n - 1],
-      // One cycle only → cap in the "limited evidence / likely window" band.
-      confidence: Math.round(Math.min(70, 22 + sampleConf)),
-    });
-  }
-  return out;
+  const mapped = cycles.map((c) => toCycleDate(c.e, targetYear)).sort((a, b) => a - b);
+  const cycleCount = mapped.length;
+  const sampleSize = cycles.reduce((s, c) => s + c.n, 0);
+
+  const spread = stdevDays(mapped);
+  const cyclesScore = Math.min(cycleCount / 4, 1) * 45;
+  const consistencyScore = (1 - Math.min(spread / 30, 1)) * 35;
+  const confidence = Math.round(Math.min(97, 12 + cyclesScore + consistencyScore));
+
+  return {
+    companyKey: normName(rec.name),
+    company: rec.name,
+    family,
+    cycleCount,
+    sampleSize,
+    typical: median(mapped),
+    windowStart: mapped[0],
+    windowEnd: mapped[mapped.length - 1],
+    earliest: mapped[0],
+    latest: mapped[mapped.length - 1],
+    confidence,
+  };
 }
 
-interface Cache { at: number; targetYear: number; forecasts: ReleaseForecast[] }
-
-/** Fetch + compute (cached 24h) forecasts for the upcoming cycle's year. */
-export async function getForecasts(targetYear: number): Promise<ReleaseForecast[]> {
-  try {
-    const raw = localStorage.getItem(K_CACHE);
-    if (raw) {
-      const c = JSON.parse(raw) as Cache;
-      if (c.targetYear === targetYear && Date.now() - c.at < CACHE_TTL_MS) return c.forecasts;
-    }
-  } catch { /* ignore */ }
-
-  const res = await httpFetch(getHistoryUrl());
-  if (!res.ok) throw new Error(`History source responded ${res.status}`);
-  const rows = (await res.json()) as SimplifyRow[];
-  const forecasts = computeForecasts(rows, targetYear);
-  try {
-    localStorage.setItem(K_CACHE, JSON.stringify({ at: Date.now(), targetYear, forecasts } satisfies Cache));
-  } catch { /* quota — skip caching */ }
-  return forecasts;
+/** Best forecast for a company name (prefers software, then ml-data). */
+export function forecastForCompany(companyName: string, targetYear: number): ReleaseForecast | null {
+  const key = normName(companyName);
+  let rec = DATA.companies[key];
+  if (!rec) {
+    const hit = Object.entries(DATA.companies).find(
+      ([k]) => key.length >= 4 && (k.includes(key) || key.includes(k)));
+    rec = hit?.[1] as CompanyRecord | undefined ?? undefined as unknown as CompanyRecord;
+  }
+  if (!rec) return null;
+  return forecastFor(rec, "software", targetYear) ?? forecastFor(rec, "ml-data", targetYear);
 }
 
 export function confidenceLabel(c: number): string {
