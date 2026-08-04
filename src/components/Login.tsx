@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login } from "../auth";
+import { AscentIcon } from "./Logo";
 
 export default function Login({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
@@ -23,7 +24,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div className="brand-lg"><span className="logo">IP</span> InternPilot AI</div>
+        <div className="brand-lg"><AscentIcon size={30} /> InternPilot AI</div>
         <h2>Welcome back</h2>
         <p className="hint mb-md">Log in to your local account.</p>
         <div className="field">

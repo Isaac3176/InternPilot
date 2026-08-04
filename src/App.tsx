@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { pushProfileToBridge, startBridgeListener } from "./bridge";
+import { AscentMark } from "./components/Logo";
 import "./App.css";
 
 // Run one-time startup tasks per app launch.
@@ -38,7 +39,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="logo">IP</span>
+          <AscentMark size={28} className="brand-mark" />
           <span>
             InternPilot AI
             <div className="sub">Career assistant</div>

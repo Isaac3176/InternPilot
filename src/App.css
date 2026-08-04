@@ -108,6 +108,7 @@ body {
   font-size: 12px; color: #fff; font-weight: 700;
   box-shadow: 0 2px 8px rgba(31, 111, 235, 0.35);
 }
+.brand .brand-mark { color: #4e93f5; flex: none; }
 .brand .sub { color: var(--nav-text); font-weight: 500; font-size: 11px; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }

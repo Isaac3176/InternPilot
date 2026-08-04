@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import { signup } from "../auth";
+import { AscentIcon } from "./Logo";
 import { PROFILE_SECTIONS, useProfileForm } from "./useProfileForm";
 import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { parseResume } from "../ai/resumeParse";
@@ -86,7 +87,7 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div className="brand-lg"><span className="logo">IP</span> InternPilot AI</div>
+        <div className="brand-lg"><AscentIcon size={30} /> InternPilot AI</div>
         <div className="wizard-progress">Step {step + 1} of {totalSteps}</div>
         <div className="wizard-bar">
           <div className="wizard-bar-fill" style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
