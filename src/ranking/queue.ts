@@ -41,10 +41,10 @@ export interface OpportunityQueue {
  * through hard filters + transparent scoring, minus dismissed/applied ones,
  * sorted by priority. This is what the Fast Apply home renders.
  */
-export async function getOpportunityQueue(): Promise<OpportunityQueue> {
+export async function getOpportunityQueue(force = false): Promise<OpportunityQueue> {
   ensureSeeded();
   const [{ listings }, profile, contacts, apps, resumes] = await Promise.all([
-    getFeed(),
+    getFeed(force),
     getProfile(),
     listContacts(),
     listApplications(),

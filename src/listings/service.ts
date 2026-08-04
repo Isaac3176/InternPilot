@@ -109,8 +109,8 @@ export interface Feed {
  * rank by relevance, flag brand-new postings (posted within the last few days),
  * and sort by best match then freshness.
  */
-export async function getFeed(): Promise<Feed> {
-  const [listings, profile] = await Promise.all([fetchAllListings(), getProfile()]);
+export async function getFeed(force = false): Promise<Feed> {
+  const [listings, profile] = await Promise.all([fetchAllListings(force), getProfile()]);
   const roles = splitCsv(profile?.target_roles);
   const freshCutoff = Date.now() / 1000 - 5 * 24 * 60 * 60; // posted within 5 days
 

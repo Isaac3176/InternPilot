@@ -126,8 +126,21 @@ function merge(a: Listing, b: Listing): Listing {
   };
 }
 
-/** Fetch every enabled source in parallel, normalize, and de-duplicate. */
-export async function fetchAllListings(): Promise<Listing[]> {
+// The sources are large (SimplifyJobs alone is ~11MB), so downloading + parsing
+// them on every page visit is the dominant page-load cost. Cache the merged
+// result in memory for the session; navigations reuse it, and an explicit
+// Refresh (or a Settings change) forces a re-fetch.
+let feedCache: { at: number; listings: Listing[] } | null = null;
+let inFlight: Promise<Listing[]> | null = null;
+const FEED_TTL_MS = 10 * 60 * 1000;
+
+/** Drop the cached feed (call when a source toggle/URL changes). */
+export function clearListingsCache(): void {
+  feedCache = null;
+  inFlight = null;
+}
+
+async function fetchAndMerge(): Promise<Listing[]> {
   const tasks: Promise<Listing[]>[] = [];
   if (isAutoOn()) tasks.push(fetchAuto()); // richer source first so its fields win merges
   if (isSimplifyOn()) tasks.push(fetchSimplify());
@@ -148,6 +161,24 @@ export async function fetchAllListings(): Promise<Listing[]> {
     map.set(k, prev ? merge(prev, l) : l);
   }
   return [...map.values()];
+}
+
+/**
+ * Fetch every enabled source in parallel, normalize, and de-duplicate.
+ * Cached in memory for the session; pass force=true to bypass the cache.
+ * Concurrent callers share one in-flight request.
+ */
+export async function fetchAllListings(force = false): Promise<Listing[]> {
+  if (!force && feedCache && Date.now() - feedCache.at < FEED_TTL_MS) return feedCache.listings;
+  if (!force && inFlight) return inFlight;
+
+  inFlight = fetchAndMerge()
+    .then((listings) => {
+      feedCache = { at: Date.now(), listings };
+      return listings;
+    })
+    .finally(() => { inFlight = null; });
+  return inFlight;
 }
 
 export interface SourceProbe {

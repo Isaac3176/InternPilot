@@ -22,9 +22,9 @@ export default function Queue() {
   const [loading, setLoading] = useState(true);
   const [showDigest, setShowDigest] = useState(false);
 
-  const load = useCallback(() => {
+  const load = useCallback((force = false) => {
     setLoading(true);
-    getOpportunityQueue()
+    getOpportunityQueue(force)
       .then(setQueue)
       .catch((e) => console.error("queue load failed", e))
       .finally(() => setLoading(false));
@@ -32,8 +32,9 @@ export default function Queue() {
 
   useEffect(() => {
     load();
-    window.addEventListener(APP_RECORDED_EVENT, load);
-    return () => window.removeEventListener(APP_RECORDED_EVENT, load);
+    const onRecorded = () => load();
+    window.addEventListener(APP_RECORDED_EVENT, onRecorded);
+    return () => window.removeEventListener(APP_RECORDED_EVENT, onRecorded);
   }, [load]);
 
   async function track(o: RankedOpportunity, status: Status) {
@@ -98,7 +99,7 @@ export default function Queue() {
         <div className="header-actions">
           <button type="button" className="btn" onClick={() => navigate("/internships")}>Browse all</button>
           <button type="button" className="btn" onClick={() => navigate("/watchlist")}>Watchlist</button>
-          <button type="button" className="btn" onClick={load}>Refresh</button>
+          <button type="button" className="btn" onClick={() => load(true)}>Refresh</button>
         </div>
       </div>
 

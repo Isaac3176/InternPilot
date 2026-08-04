@@ -82,11 +82,11 @@ export default function Internships() {
     setAppByUrl(map);
   }
 
-  async function load() {
+  async function load(force = false) {
     setLoading(true);
     setError("");
     try {
-      const [feed, profile, cts] = await Promise.all([getFeed(), getProfile(), listContacts()]);
+      const [feed, profile, cts] = await Promise.all([getFeed(force), getProfile(), listContacts()]);
       setListings(feed.listings);
       setTotal(feed.listings.length);
       // Honor a hand-off from Fast Apply's "Prepare" so we open that exact role.
@@ -231,7 +231,7 @@ export default function Internships() {
           <label className="opt-check"><input type="checkbox" checked={hideIneligible} onChange={(e) => setHideIneligible(e.target.checked)} />Hide likely ineligible</label>
         </FilterPill>
         {anyActive && <button type="button" className="pop-clear" onClick={clearAll}>Clear all</button>}
-        <button type="button" className="secondary" onClick={load} disabled={loading} style={{ marginLeft: "auto" }}>{loading ? "Loading…" : "Refresh"}</button>
+        <button type="button" className="secondary" onClick={() => load(true)} disabled={loading} style={{ marginLeft: "auto" }}>{loading ? "Loading…" : "Refresh"}</button>
       </div>
 
       {error && <p className="hint text-red">{error}</p>}

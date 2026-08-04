@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { pushProfileToBridge, startBridgeListener } from "./bridge";
@@ -57,7 +57,9 @@ export default function App() {
         <div className="sidebar-footer">Local-only · Beta</div>
       </aside>
       <main className="main">
-        <Outlet />
+        <Suspense fallback={<p className="hint" style={{ padding: "8px 2px" }}>Loading…</p>}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

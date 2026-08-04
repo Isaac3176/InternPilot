@@ -29,7 +29,7 @@ import {
   setSimplifyOn,
   setSimplifyUrl,
 } from "../listings/config";
-import { probeSources, type SourceProbe } from "../listings/sources";
+import { probeSources, clearListingsCache, type SourceProbe } from "../listings/sources";
 import { isLogosOn, setLogosOn } from "../listings/logo";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { getDb } from "../db";
@@ -88,6 +88,7 @@ export default function Settings() {
     setAutoOn(autoOn);
     setSimplifyUrl(simplifyUrl.trim());
     setAutoUrl(autoUrl.trim());
+    clearListingsCache(); // sources changed — drop the cached feed
     setProbing(true);
     try {
       setProbe(await probeSources());
@@ -107,6 +108,7 @@ export default function Settings() {
     setAutoOnState(true);
     setSimplifyOn(true);
     setAutoOn(true);
+    clearListingsCache();
     setProbe(null);
   }
 

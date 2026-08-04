@@ -1,25 +1,27 @@
-import React from "react";
+import React, { lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import AuthGate from "./components/AuthGate";
 import "./App.css";
-import Queue from "./pages/Queue";
-import Watchlist from "./pages/Watchlist";
-import ReleaseRadar from "./pages/ReleaseRadar";
-import Dashboard from "./pages/Dashboard";
-import Applications from "./pages/Applications";
-import Internships from "./pages/Internships";
-import ResumeCenter from "./pages/ResumeCenter";
-import Bullets from "./pages/Bullets";
-import Networking from "./pages/Networking";
-import InterviewPrep from "./pages/InterviewPrep";
-import Experiences from "./pages/Experiences";
-import ApplyAssist from "./pages/ApplyAssist";
-import Emails from "./pages/Emails";
-import Profile from "./pages/Profile";
-import AIChat from "./pages/AIChat";
-import Settings from "./pages/Settings";
+
+// Pages are code-split so the initial boot only loads what the first route needs.
+const Queue = lazy(() => import("./pages/Queue"));
+const Watchlist = lazy(() => import("./pages/Watchlist"));
+const ReleaseRadar = lazy(() => import("./pages/ReleaseRadar"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Applications = lazy(() => import("./pages/Applications"));
+const Internships = lazy(() => import("./pages/Internships"));
+const ResumeCenter = lazy(() => import("./pages/ResumeCenter"));
+const Bullets = lazy(() => import("./pages/Bullets"));
+const Networking = lazy(() => import("./pages/Networking"));
+const InterviewPrep = lazy(() => import("./pages/InterviewPrep"));
+const Experiences = lazy(() => import("./pages/Experiences"));
+const ApplyAssist = lazy(() => import("./pages/ApplyAssist"));
+const Emails = lazy(() => import("./pages/Emails"));
+const Profile = lazy(() => import("./pages/Profile"));
+const AIChat = lazy(() => import("./pages/AIChat"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 const router = createBrowserRouter([
   {
