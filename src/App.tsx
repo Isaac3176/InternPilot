@@ -14,6 +14,7 @@ const NAV = [
   { to: "/applications", label: "Applications", icon: "▤", end: false },
   { to: "/internships", label: "Internships", icon: "◆", end: false },
   { to: "/watchlist", label: "Watchlist", icon: "★", end: false },
+  { to: "/radar", label: "Release Radar", icon: "◉", end: false },
   { to: "/resumes", label: "Resume Center", icon: "▦", end: false },
   { to: "/bullets", label: "Bullet Library", icon: "✎", end: false },
   { to: "/networking", label: "Networking", icon: "⚇", end: false },

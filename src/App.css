@@ -988,3 +988,62 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .wl-x { border: none; background: none; cursor: pointer; color: var(--slate-2); font-size: 13px; padding: 2px 4px; }
 .wl-x:hover { color: var(--alert); }
 .watchlist .muted-note { color: var(--slate-2); font-size: 12.5px; margin: 0; }
+
+/* ================= Release Radar ================= */
+.radar { max-width: 1000px; margin: 0 auto; }
+.radar .btn { height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; box-shadow: none; }
+.radar .btn:hover { border-color: #cbd4de; background: var(--surface-2); }
+.radar .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.radar .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.radar-disclaimer {
+  font-size: 12.5px; color: var(--ink-2); background: var(--accent-soft); border: 1px solid var(--accent-line);
+  border-radius: 10px; padding: 11px 14px; margin: 0 0 20px;
+}
+.radar-section { margin-bottom: 26px; }
+.radar-sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.radar-sec-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+.radar-sec-head span { font-size: 12.5px; color: var(--slate); }
+.radar-list { display: flex; flex-direction: column; gap: 10px; }
+
+.radar-card { display: grid; grid-template-columns: 38px 1fr; gap: 13px; align-items: start; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 15px 17px; }
+.radar-card.state-open { border-left: 3px solid var(--beacon); }
+.radar-card.state-signal { border-left: 3px solid var(--warn); }
+.radar-card.state-forecast { border-left: 3px solid var(--accent); }
+.radar-card.state-none { border-left: 3px solid var(--line); }
+.radar-card .logo { width: 38px; height: 38px; }
+
+.radar-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.radar-co { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--ink); flex-wrap: wrap; }
+.rstate { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+.rstate.open { background: var(--beacon-soft); color: var(--beacon); }
+.rstate.signal { background: var(--warn-soft); color: var(--warn); }
+.rstate.forecast { background: var(--accent-soft); color: var(--accent-ink); }
+.rstate.none { background: #f0f3f6; color: var(--slate); }
+.radar-prob { text-align: right; flex: none; }
+.radar-prob b { font-family: var(--mono); font-size: 20px; font-weight: 700; letter-spacing: -.03em; color: var(--ink); }
+.radar-prob span { display: block; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--slate-2); }
+
+.radar-window { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 7px; font-size: 12.5px; color: var(--slate); }
+.radar-window b { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+.radar-window .mon { font-family: var(--mono); font-size: 11px; color: var(--accent-ink); }
+
+.radar-why, .radar-prep { margin-top: 9px; }
+.radar-why summary, .radar-prep summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); list-style: none; }
+.radar-why summary::-webkit-details-marker, .radar-prep summary::-webkit-details-marker { display: none; }
+.radar-why summary::before, .radar-prep summary::before { content: "▸ "; color: var(--slate-2); }
+.radar-why[open] summary::before, .radar-prep[open] summary::before { content: "▾ "; }
+.radar-why ul { list-style: none; margin: 8px 0 2px; padding: 9px 12px; background: var(--surface-2); border-radius: 8px; }
+.radar-why li { font-size: 12.5px; color: var(--ink-2); padding: 2px 0; }
+
+.prep-check { list-style: none; margin: 9px 0 2px; padding: 0; }
+.prep-check li { padding: 3px 0; }
+.prep-check label { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; font-weight: 400; margin: 0; }
+.prep-check input { width: auto; }
+.prep-check .checked { text-decoration: line-through; color: var(--slate-2); }
+
+.radar-actions { display: flex; gap: 8px; margin-top: 13px; flex-wrap: wrap; }
+.radar .muted-note { color: var(--slate-2); font-size: 12.5px; margin: 0; }
+.radar .prio { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+.radar .prio.instant { background: var(--beacon-soft); color: var(--beacon); }
+.radar .prio.high { background: var(--accent-soft); color: var(--accent-ink); }

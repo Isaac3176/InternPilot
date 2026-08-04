@@ -6,6 +6,7 @@ import AuthGate from "./components/AuthGate";
 import "./App.css";
 import Queue from "./pages/Queue";
 import Watchlist from "./pages/Watchlist";
+import ReleaseRadar from "./pages/ReleaseRadar";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Internships from "./pages/Internships";
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: "applications", element: <Applications /> },
       { path: "internships", element: <Internships /> },
       { path: "watchlist", element: <Watchlist /> },
+      { path: "radar", element: <ReleaseRadar /> },
       { path: "resumes", element: <ResumeCenter /> },
       { path: "bullets", element: <Bullets /> },
       { path: "networking", element: <Networking /> },
