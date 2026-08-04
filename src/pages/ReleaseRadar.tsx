@@ -5,6 +5,7 @@ import { getReleaseRadar, type RadarEntry, type RadarState } from "../release/ra
 import { confidenceLabel } from "../release/history";
 import { getPrefs } from "../ranking/prefs";
 import { PRIORITY_LABEL } from "../ranking/companies";
+import { createApplication } from "../db/applications";
 import CompanyLogo from "../components/CompanyLogo";
 
 const STATE_LABEL: Record<RadarState, string> = {
@@ -44,6 +45,18 @@ export default function ReleaseRadar() {
     );
   }
 
+  async function applyOpen(e: RadarEntry) {
+    const ol = e.openListing;
+    if (!ol) return;
+    try {
+      await createApplication({
+        company_name: e.company, role_title: ol.title, job_link: ol.url,
+        location: ol.location, status: "applied", date_applied: new Date().toISOString().slice(0, 10),
+      });
+    } catch (err) { console.error(err); }
+    openUrl(ol.url).catch(console.error);
+  }
+
   const open = entries.filter((e) => e.state === "open");
   const soon = entries.filter((e) => e.state !== "open" && (e.state === "signal" || (e.forecast && (e.probabilityNext7 > 0 || (e.daysUntilWindow != null && e.daysUntilWindow <= 45)))));
   const watching = entries.filter((e) => !open.includes(e) && !soon.includes(e));
@@ -64,16 +77,16 @@ export default function ReleaseRadar() {
 
       <Section title="Already open" hint="A target-season role is posted right now.">
         {open.length === 0 ? <Empty text="Nothing from your watchlist is open yet." /> :
-          open.map((e) => <RadarCard key={e.company} e={e} onApply={(url) => openUrl(url).catch(console.error)} navigate={navigate} />)}
+          open.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} />)}
       </Section>
 
       <Section title="Opening soon" hint="Inside or approaching the historical window, or already showing early signals.">
         {soon.length === 0 ? <Empty text="No companies are in their opening window right now." /> :
-          soon.map((e) => <RadarCard key={e.company} e={e} onApply={(url) => openUrl(url).catch(console.error)} navigate={navigate} />)}
+          soon.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} />)}
       </Section>
 
       <Section title="On the radar" hint="Forecasted further out, or awaiting first-cycle data.">
-        {watching.map((e) => <RadarCard key={e.company} e={e} onApply={(url) => openUrl(url).catch(console.error)} navigate={navigate} />)}
+        {watching.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} />)}
       </Section>
     </div>
   );
@@ -100,7 +113,7 @@ const PREP_ITEMS = [
   "Set notifications to instant",
 ];
 
-function RadarCard({ e, onApply, navigate }: { e: RadarEntry; onApply: (url: string) => void; navigate: (p: string) => void }) {
+function RadarCard({ e, onApply, navigate }: { e: RadarEntry; onApply: (e: RadarEntry) => void; navigate: (p: string) => void }) {
   const f = e.forecast;
   return (
     <article className={`radar-card state-${e.state}`}>
@@ -140,10 +153,10 @@ function RadarCard({ e, onApply, navigate }: { e: RadarEntry; onApply: (url: str
         )}
 
         <div className="radar-actions">
-          {e.state === "open" && e.openListingUrl ? (
+          {e.state === "open" && e.openListing ? (
             <>
-              <button type="button" className="btn small primary" onClick={() => onApply(e.openListingUrl!)}>Open posting</button>
-              <button type="button" className="btn small" onClick={() => navigate("/")}>Go to Fast Apply</button>
+              <button type="button" className="btn small primary" onClick={() => onApply(e)}>Apply &amp; record</button>
+              <button type="button" className="btn small" onClick={() => navigate(`/packet?job=${encodeURIComponent(e.openListing!.id)}`)}>Prepare</button>
             </>
           ) : (
             <>

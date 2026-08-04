@@ -22,6 +22,7 @@ export interface RadarEntry {
   daysUntilWindow: number | null; // to window start; negative if inside/after
   monitoring: "High" | "Medium" | "Low" | "—";
   openListingUrl?: string;
+  openListing?: { id: string; title: string; url: string; location: string | null };
   reasons: string[];
 }
 
@@ -52,11 +53,11 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
   const now = Date.now();
 
   // Index live listings by normalized company for state detection.
-  const feedByCo = new Map<string, { season?: string; title: string; url: string; datePosted?: number }[]>();
+  const feedByCo = new Map<string, { id: string; season?: string; title: string; url: string; location: string | null; datePosted?: number }[]>();
   for (const l of feed.listings) {
     const k = normName(l.company);
     const arr = feedByCo.get(k) ?? [];
-    arr.push({ season: l.season, title: l.title, url: l.url, datePosted: l.datePosted });
+    arr.push({ id: l.id, season: l.season, title: l.title, url: l.url, location: l.locations[0] ?? null, datePosted: l.datePosted });
     feedByCo.set(k, arr);
   }
 
@@ -111,6 +112,7 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
       daysUntilWindow: daysUntil,
       monitoring,
       openListingUrl: openMatch?.url,
+      openListing: openMatch ? { id: openMatch.id, title: openMatch.title, url: openMatch.url, location: openMatch.location } : undefined,
       reasons,
     });
   }
