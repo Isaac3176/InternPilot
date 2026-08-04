@@ -15,7 +15,7 @@ function normName(s: string): string {
 }
 
 /** Recommend the résumé version whose focus best matches the role family. */
-export function recommendResume(o: RankedOpportunity, resumes: ResumeVersion[]): ResumeVersion | null {
+export function recommendResume(o: { title: string; skills?: string[] }, resumes: ResumeVersion[]): ResumeVersion | null {
   if (!resumes.length) return null;
   const hay = `${o.title} ${(o.skills ?? []).join(" ")}`.toLowerCase();
   const family = /security|infosec|appsec/.test(hay) ? "security"

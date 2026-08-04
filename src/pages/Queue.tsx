@@ -10,8 +10,6 @@ import type { ResumeVersion, Status } from "../db/types";
 import { APP_RECORDED_EVENT } from "../bridge";
 import CompanyLogo from "../components/CompanyLogo";
 
-const PENDING_SELECT = "internpilot.pendingSelect";
-
 function scoreColor(v: number): string {
   return v >= 85 ? "var(--beacon)" : v >= 70 ? "var(--accent)" : v >= 55 ? "var(--warn)" : "var(--slate)";
 }
@@ -60,10 +58,8 @@ export default function Queue() {
   async function saveForLater(o: RankedOpportunity) {
     try { await track(o, "interested"); load(); } catch (e) { console.error(e); }
   }
-  async function prepare(o: RankedOpportunity) {
-    try { await track(o, "interested"); } catch (e) { console.error(e); }
-    localStorage.setItem(PENDING_SELECT, o.id);
-    navigate("/internships");
+  function prepare(o: RankedOpportunity) {
+    navigate(`/packet?job=${encodeURIComponent(o.id)}`);
   }
   function askReferral() {
     navigate("/networking");
