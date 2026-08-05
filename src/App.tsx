@@ -16,6 +16,7 @@ const NAV = [
   { to: "/watchlist", label: "Watchlist", icon: "★", end: false },
   { to: "/radar", label: "Release Radar", icon: "◉", end: false },
   { to: "/resumes", label: "Resume Center", icon: "▦", end: false },
+  { to: "/resume-lab", label: "Résumé Lab", icon: "⚗", end: false },
   { to: "/bullets", label: "Bullet Library", icon: "✎", end: false },
   { to: "/networking", label: "Networking", icon: "⚇", end: false },
   { to: "/prep", label: "Interview Prep", icon: "◎", end: false },
