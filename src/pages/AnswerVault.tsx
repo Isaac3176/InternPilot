@@ -7,6 +7,8 @@ import {
   updateAnswer,
   type ApplicationAnswer,
 } from "../apply/answers";
+import { draftAnswer } from "../ai/answerDraft";
+import { hasApiKey } from "../ai/settings";
 import { pushAnswersToBridge } from "../bridge";
 
 export default function AnswerVault() {
@@ -22,6 +24,19 @@ export default function AnswerVault() {
   }, [answers]);
 
   const approvedCount = answers.filter((a) => a.approved && a.answer.trim()).length;
+  const [bulkDrafting, setBulkDrafting] = useState(false);
+
+  async function draftAllEmpty() {
+    const targets = getAnswers().filter((a) => a.question.trim() && !a.answer.trim());
+    if (targets.length === 0) return;
+    setBulkDrafting(true);
+    for (const a of targets) {
+      try { const r = await draftAnswer(a.question); updateAnswer(a.id, { answer: r.text }); }
+      catch (e) { console.error("draft failed", e); }
+    }
+    setBulkDrafting(false);
+    reload();
+  }
 
   return (
     <div className="vault">
@@ -31,13 +46,14 @@ export default function AnswerVault() {
           <p>Reviewed answers to the questions you keep getting. {approvedCount} ready to reuse in the packet and autofill.</p>
         </div>
         <div className="header-actions">
+          <button type="button" className="btn" onClick={draftAllEmpty} disabled={bulkDrafting}>{bulkDrafting ? "Drafting…" : "✨ Draft all empty"}</button>
           <button type="button" className="btn" onClick={() => { addAnswer({ category: "Custom", question: "" }); reload(); }}>+ Add answer</button>
         </div>
       </div>
 
       <p className="vault-note">
         Only answers you mark <b>Approved for reuse</b> are dropped into forms — everything is reviewed by you first.
-        AI can help draft, but you always have the final word.
+        Drafts are grounded in your résumé bullets &amp; profile{hasApiKey() ? "" : " (offline templates — add an OpenAI key in Settings for tailored drafts)"}.
       </p>
 
       {Object.entries(grouped).map(([category, items]) => (
@@ -56,11 +72,20 @@ function AnswerCard({ a, onChange }: { a: ApplicationAnswer; onChange: () => voi
   const [question, setQuestion] = useState(a.question);
   const [answer, setAnswer] = useState(a.answer);
   const [approved, setApproved] = useState(a.approved);
+  const [drafting, setDrafting] = useState(false);
   const dirty = question !== a.question || answer !== a.answer || approved !== a.approved;
 
   function save() {
     updateAnswer(a.id, { question, answer, approved });
     onChange();
+  }
+
+  async function draft() {
+    if (!question.trim()) return;
+    setDrafting(true);
+    try { const r = await draftAnswer(question); setAnswer(r.text); }
+    catch (e) { alert(e instanceof Error ? e.message : String(e)); }
+    finally { setDrafting(false); }
   }
 
   return (
@@ -85,6 +110,7 @@ function AnswerCard({ a, onChange }: { a: ApplicationAnswer; onChange: () => voi
         </label>
         {a.lastReviewedAt && <span className="answer-rev">Reviewed {a.lastReviewedAt.slice(0, 10)}</span>}
         <div className="answer-actions">
+          <button type="button" className="btn small" onClick={draft} disabled={drafting || !question.trim()}>{drafting ? "Drafting…" : "✨ Draft"}</button>
           <button type="button" className="btn small" onClick={save} disabled={!dirty}>{dirty ? "Save" : "Saved"}</button>
           <button type="button" className="btn small ghost" onClick={() => { removeAnswer(a.id); onChange(); }}>Delete</button>
         </div>

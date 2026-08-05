@@ -85,7 +85,7 @@ export function updateAnswer(id: string, patch: Partial<ApplicationAnswer>): voi
   if (i < 0) return;
   const next = { ...list[i], ...patch };
   if (patch.question && !patch.pattern && !list[i].pattern) next.pattern = patternFromQuestion(patch.question);
-  if (patch.answer !== undefined || patch.approved) next.lastReviewedAt = new Date().toISOString();
+  if (patch.approved) next.lastReviewedAt = new Date().toISOString(); // reviewed = you approved it
   list[i] = next;
   saveAnswers(list);
 }
