@@ -12,6 +12,7 @@ const DB_URL: &str = "sqlite:internpilot.db";
 struct BridgeState {
     token: Option<String>,
     profile_json: Option<String>,
+    answers_json: Option<String>,
 }
 type SharedBridge = Arc<Mutex<BridgeState>>;
 
@@ -20,6 +21,13 @@ fn bridge_set_profile(state: tauri::State<SharedBridge>, token: String, profile:
     let mut s = state.lock().unwrap();
     s.token = Some(token);
     s.profile_json = Some(profile);
+}
+
+#[tauri::command]
+fn bridge_set_answers(state: tauri::State<SharedBridge>, token: String, answers: String) {
+    let mut s = state.lock().unwrap();
+    s.token = Some(token);
+    s.answers_json = Some(answers);
 }
 
 fn cors_headers() -> Vec<Header> {
@@ -87,6 +95,10 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
             }
 
             match (method, path.as_str()) {
+                (Method::Get, "/answers") => {
+                    let body = shared.lock().unwrap().answers_json.clone().unwrap_or_else(|| "[]".into());
+                    respond(request, 200, &body);
+                }
                 (Method::Get, "/profile") => {
                     let body = shared.lock().unwrap().profile_json.clone().unwrap_or_else(|| "{}".into());
                     respond(request, 200, &body);
@@ -351,7 +363,7 @@ pub fn run() {
                 .build(),
         )
         .manage(bridge.clone())
-        .invoke_handler(tauri::generate_handler![bridge_set_profile])
+        .invoke_handler(tauri::generate_handler![bridge_set_profile, bridge_set_answers])
         .setup(move |app| {
             start_bridge(app.handle().clone(), bridge.clone());
             Ok(())

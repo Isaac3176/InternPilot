@@ -144,7 +144,7 @@ async function pickCombo(ctrl, value) {
 
 // Build the list of fills to apply (so we can animate progress). Each target's
 // apply() may be sync or async (custom dropdowns need to open + pick).
-function collectTargets(profile) {
+function collectTargets(profile, answers = []) {
   const targets = [];
   const seen = new Set();
   const pushT = (rawLabel, apply) => {
@@ -205,6 +205,16 @@ function collectTargets(profile) {
     const v = norm(profile[key]);
     if (v !== "yes" && v !== "true") return;
     pushT(q, () => { cb.click(); return true; });
+  });
+
+  // essay / long-answer textareas — fill from the reviewed answer vault
+  document.querySelectorAll("textarea").forEach((t) => {
+    if (t.value && t.value.trim()) return;
+    if (t.closest('.select__control, [role="combobox"]')) return;
+    const q = labelText(t);
+    const ans = matchAnswerJS(q, answers);
+    if (!ans) return;
+    pushT(q, () => { nativeSet(t, ans.answer); return true; });
   });
 
   return targets;
@@ -321,7 +331,8 @@ function buildReview() {
 /** Fill everything, record the job, and report what happened (for the popup). */
 async function autofillPage() {
   const profile = await getProfile();
-  const targets = collectTargets(profile);
+  const answers = await getAnswers();
+  const targets = collectTargets(profile, answers);
   let filled = 0;
   for (const t of targets) { try { if (await t.apply()) filled++; } catch { /* keep going */ } }
   await recordJob();
@@ -351,6 +362,25 @@ async function getProfile() {
   const r = await sendBg({ type: "getProfile" });
   if (!r || !r.ok) throw new Error(r && r.error ? r.error : "Could not load profile");
   return r.data || {};
+}
+async function getAnswers() {
+  try {
+    const r = await sendBg({ type: "getAnswers" });
+    return r && r.ok && Array.isArray(r.data) ? r.data : [];
+  } catch { return []; }
+}
+/** Best reusable answer whose pattern matches a form question. */
+function matchAnswerJS(question, answers) {
+  const q = (question || "").toLowerCase();
+  if (!q || !answers || !answers.length) return null;
+  let best = null;
+  for (const a of answers) {
+    if (!a.pattern || !a.answer) continue;
+    try {
+      if (new RegExp(a.pattern, "i").test(q) && (!best || a.pattern.length > best.pattern.length)) best = a;
+    } catch { /* bad regex */ }
+  }
+  return best;
 }
 async function recordJob() {
   return sendBg({ type: "recordApplication", payload: guessJob() });
@@ -447,7 +477,8 @@ async function runAutofill() {
   setStatus("Loading your profile…");
   try {
     const profile = await getProfile();
-    const targets = collectTargets(profile);
+    const answers = await getAnswers();
+    const targets = collectTargets(profile, answers);
     if (targets.length === 0) {
       setStatus("No matching fields found on this page.", "err");
     } else {

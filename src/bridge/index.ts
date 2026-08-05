@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getProfile } from "../db/profile";
 import { createApplication, listApplications } from "../db/applications";
 import { getResumeVersion } from "../db/resumes";
+import { getReusableAnswers } from "../apply/answers";
 import { WORK_AUTH_LABELS, type WorkAuth } from "../db/types";
 import { notify } from "../lib/notify";
 
@@ -72,6 +73,18 @@ export async function pushProfileToBridge(): Promise<void> {
     await invoke("bridge_set_profile", { token: getBridgeToken(), profile: JSON.stringify(data) });
   } catch (e) {
     console.error("bridge push failed", e);
+  }
+}
+
+/** Push approved answer-vault entries so the extension can fill essay fields. */
+export async function pushAnswersToBridge(): Promise<void> {
+  try {
+    const data = getReusableAnswers().map((a) => ({
+      pattern: a.pattern, answer: a.answer, question: a.question, category: a.category,
+    }));
+    await invoke("bridge_set_answers", { token: getBridgeToken(), answers: JSON.stringify(data) });
+  } catch (e) {
+    console.error("bridge answers push failed", e);
   }
 }
 

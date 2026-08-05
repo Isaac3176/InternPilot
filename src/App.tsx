@@ -1,7 +1,7 @@
 import { Suspense, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
-import { pushProfileToBridge, startBridgeListener } from "./bridge";
+import { pushProfileToBridge, pushAnswersToBridge, startBridgeListener } from "./bridge";
 import { AscentMark } from "./components/Logo";
 import "./App.css";
 
@@ -21,6 +21,7 @@ const NAV = [
   { to: "/prep", label: "Interview Prep", icon: "◎", end: false },
   { to: "/experiences", label: "Experiences", icon: "❝", end: false },
   { to: "/apply", label: "Apply Assist", icon: "➤", end: false },
+  { to: "/answers", label: "Answer Vault", icon: "✍", end: false },
   { to: "/emails", label: "Email Inbox", icon: "✉", end: false },
   { to: "/chat", label: "AI Chat", icon: "✦", end: false },
   { to: "/profile", label: "Profile", icon: "◍", end: false },
@@ -33,6 +34,7 @@ export default function App() {
     startupRan = true;
     checkNewListingsAndNotify();
     pushProfileToBridge();
+    pushAnswersToBridge();
     startBridgeListener();
   }, []);
 

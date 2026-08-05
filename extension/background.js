@@ -22,6 +22,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     try {
       if (msg.type === "ping") sendResponse({ ok: true, data: await bridge("/ping", "GET") });
       else if (msg.type === "getProfile") sendResponse({ ok: true, data: await bridge("/profile", "GET") });
+      else if (msg.type === "getAnswers") sendResponse({ ok: true, data: await bridge("/answers", "GET") });
       else if (msg.type === "recordApplication") sendResponse({ ok: true, data: await bridge("/application", "POST", msg.payload) });
       else sendResponse({ ok: false, error: "unknown message" });
     } catch (e) {

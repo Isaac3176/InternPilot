@@ -10,6 +10,7 @@ const Queue = lazy(() => import("./pages/Queue"));
 const Watchlist = lazy(() => import("./pages/Watchlist"));
 const ReleaseRadar = lazy(() => import("./pages/ReleaseRadar"));
 const Packet = lazy(() => import("./pages/Packet"));
+const AnswerVault = lazy(() => import("./pages/AnswerVault"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Applications = lazy(() => import("./pages/Applications"));
 const Internships = lazy(() => import("./pages/Internships"));
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
       { path: "watchlist", element: <Watchlist /> },
       { path: "radar", element: <ReleaseRadar /> },
       { path: "packet", element: <Packet /> },
+      { path: "answers", element: <AnswerVault /> },
       { path: "resumes", element: <ResumeCenter /> },
       { path: "bullets", element: <Bullets /> },
       { path: "networking", element: <Networking /> },

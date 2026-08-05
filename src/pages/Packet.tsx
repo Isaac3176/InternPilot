@@ -4,6 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getFeed } from "../listings/service";
 import { createApplication } from "../db/applications";
 import { buildPacket, getChecklist, setChecklistItem, PACKET_CHECKLIST, type ApplicationPacket } from "../apply/packet";
+import { getReusableAnswers, type ApplicationAnswer } from "../apply/answers";
 import type { Status } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
 
@@ -77,6 +78,8 @@ export default function Packet() {
 
   const l = packet.listing;
   const m = packet.match;
+  const answers = getReusableAnswers();
+  const copy = (text: string) => { navigator.clipboard?.writeText(text).catch(() => {}); setStatus("Copied answer to clipboard."); };
 
   return (
     <div className="packet">
@@ -156,6 +159,23 @@ export default function Packet() {
               ))}
             </ul>
             <a className="pk-link" href={l.url} onClick={(e) => { e.preventDefault(); openUrl(l.url).catch(console.error); }}>Open original posting ↗</a>
+          </section>
+
+          {/* Saved answers */}
+          <section className="pk-card">
+            <h2>Saved answers</h2>
+            {answers.length === 0 ? (
+              <p className="hint">No reusable answers yet. <button type="button" className="linklike" onClick={() => navigate("/answers")}>Build your answer vault</button> so long-answer questions autofill.</p>
+            ) : (
+              <ul className="pk-answers">
+                {answers.map((a: ApplicationAnswer) => (
+                  <li key={a.id}>
+                    <div className="pk-ans-h"><b>{a.question}</b><button type="button" className="btn small" onClick={() => copy(a.answer)}>Copy</button></div>
+                    <p>{a.answer.length > 180 ? a.answer.slice(0, 180) + "…" : a.answer}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           {/* JD snapshot */}
