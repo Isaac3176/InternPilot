@@ -1,4 +1,4 @@
-import { getDb } from "./index";
+import { getDb, validFk } from "./index";
 import type { InterviewRow, InterviewType, PrepStatus } from "./types";
 
 export interface InterviewInput {
@@ -23,7 +23,7 @@ export async function createInterview(input: InterviewInput): Promise<number | n
   const db = await getDb();
   const res = await db.execute(
     "INSERT INTO interviews (application_id, type, date, notes, prep_status) VALUES (?, ?, ?, ?, 'not_started')",
-    [input.application_id, input.type, input.date ?? null, input.notes ?? null],
+    [await validFk("applications", input.application_id), input.type, input.date ?? null, input.notes ?? null],
   );
   return res.lastInsertId ?? null;
 }

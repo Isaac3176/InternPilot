@@ -1,5 +1,15 @@
-import { getDb } from "./index";
+import { getDb, validFk } from "./index";
 import type { ReferralRow, ReferralStatus, Status } from "./types";
+
+/** Null out any foreign-key id that no longer references a live row. */
+async function withValidFks(input: ReferralInput): Promise<ReferralInput> {
+  return {
+    ...input,
+    contact_id: await validFk("contacts", input.contact_id),
+    application_id: await validFk("applications", input.application_id),
+    company_id: await validFk("companies", input.company_id),
+  };
+}
 
 export interface ReferralInput {
   contact_id: number | null;
@@ -50,7 +60,7 @@ export async function createReferral(input: ReferralInput): Promise<number | nul
        (contact_id, application_id, company_id, status, first_contacted, last_interaction,
         next_follow_up, confirmation_note, referral_link, thank_you_sent, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    params(input),
+    params(await withValidFks(input)),
   );
   return res.lastInsertId ?? null;
 }
@@ -63,7 +73,7 @@ export async function updateReferral(id: number, input: ReferralInput): Promise<
        last_interaction = ?, next_follow_up = ?, confirmation_note = ?, referral_link = ?,
        thank_you_sent = ?, notes = ?, updated_at = datetime('now')
      WHERE id = ?`,
-    [...params(input), id],
+    [...params(await withValidFks(input)), id],
   );
 }
 

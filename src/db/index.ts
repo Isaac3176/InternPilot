@@ -15,3 +15,15 @@ export function getDb(): Promise<Database> {
   }
   return dbPromise;
 }
+
+/**
+ * Return `id` only if a row with that id still exists in `table`, else null.
+ * Use for nullable foreign-key columns so a stale/wrong id can't trip a
+ * FOREIGN KEY constraint (SQLite 787). `table` is always a trusted literal.
+ */
+export async function validFk(table: string, id: number | null | undefined): Promise<number | null> {
+  if (id == null) return null;
+  const db = await getDb();
+  const rows = await db.select<{ x: number }[]>(`SELECT 1 AS x FROM ${table} WHERE id = ? LIMIT 1`, [id]);
+  return rows.length > 0 ? id : null;
+}

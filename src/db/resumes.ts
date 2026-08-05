@@ -38,6 +38,9 @@ export async function updateResumeVersion(id: number, input: ResumeVersionInput)
 
 export async function deleteResumeVersion(id: number): Promise<void> {
   const db = await getDb();
+  // profile.preferred_resume_id has no FK, so ON DELETE SET NULL won't fire —
+  // clear it here or it becomes a stale pointer that breaks later inserts.
+  await db.execute("UPDATE profile SET preferred_resume_id = NULL WHERE preferred_resume_id = ?", [id]);
   await db.execute("DELETE FROM resume_versions WHERE id = ?", [id]);
 }
 
