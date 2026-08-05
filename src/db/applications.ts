@@ -51,9 +51,19 @@ export async function getApplication(id: number): Promise<Application | null> {
   return rows[0] ?? null;
 }
 
+/** Return the id only if that résumé version still exists (else null), so a
+ *  stale preferred-résumé id can't trip the resume_version_id foreign key. */
+async function validResumeId(id: number | null | undefined): Promise<number | null> {
+  if (id == null) return null;
+  const db = await getDb();
+  const rows = await db.select<{ id: number }[]>("SELECT id FROM resume_versions WHERE id = ? LIMIT 1", [id]);
+  return rows.length > 0 ? id : null;
+}
+
 export async function createApplication(input: ApplicationInput): Promise<number | null> {
   const db = await getDb();
   const companyId = await upsertCompany(input.company_name);
+  const resumeId = await validResumeId(input.resume_version_id);
   const res = await db.execute(
     `INSERT INTO applications
        (company_id, role_title, job_link, location, status, date_applied,
@@ -66,7 +76,7 @@ export async function createApplication(input: ApplicationInput): Promise<number
       input.location ?? null,
       input.status,
       input.date_applied ?? null,
-      input.resume_version_id ?? null,
+      resumeId,
       input.job_description ?? null,
       input.notes ?? null,
       input.referral ?? null,
@@ -78,6 +88,7 @@ export async function createApplication(input: ApplicationInput): Promise<number
 export async function updateApplication(id: number, input: ApplicationInput): Promise<void> {
   const db = await getDb();
   const companyId = await upsertCompany(input.company_name);
+  const resumeId = await validResumeId(input.resume_version_id);
   await db.execute(
     `UPDATE applications SET
        company_id = ?, role_title = ?, job_link = ?, location = ?, status = ?,
@@ -90,7 +101,7 @@ export async function updateApplication(id: number, input: ApplicationInput): Pr
       input.location ?? null,
       input.status,
       input.date_applied ?? null,
-      input.resume_version_id ?? null,
+      resumeId,
       input.job_description ?? null,
       input.notes ?? null,
       input.referral ?? null,
