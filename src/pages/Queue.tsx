@@ -4,8 +4,11 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { createApplication } from "../db/applications";
 import { getOpportunityQueue, recommendResume, type OpportunityQueue } from "../ranking/queue";
 import { dismiss, mutePattern, similarPhrase } from "../ranking/feedback";
+import { recordFeedback, recordApplySignal, type FeedbackKind } from "../ranking/learning";
 import { PRIORITY_LABEL } from "../ranking/companies";
 import type { RankedOpportunity } from "../ranking/types";
+
+type FeedbackAction = FeedbackKind | "dismiss" | "mute";
 import type { ResumeVersion, Status } from "../db/types";
 import { APP_RECORDED_EVENT } from "../bridge";
 import CompanyLogo from "../components/CompanyLogo";
@@ -49,6 +52,7 @@ export default function Queue() {
   async function applyNow(o: RankedOpportunity) {
     try {
       await track(o, "applied");
+      recordApplySignal(o); // applying is a strong positive signal
       openUrl(o.url).catch((e) => console.error("open posting failed", e));
       load();
     } catch (e) {
@@ -64,8 +68,15 @@ export default function Queue() {
   function askReferral() {
     navigate("/networking");
   }
-  function onDismiss(o: RankedOpportunity) { dismiss(o.id); load(); }
-  function onMute(o: RankedOpportunity) { mutePattern(similarPhrase(o.title)); load(); }
+  async function onFeedback(o: RankedOpportunity, kind: FeedbackAction) {
+    if (kind === "good") { recordFeedback(o, "good"); load(); return; }
+    if (kind === "mute") { mutePattern(similarPhrase(o.title)); dismiss(o.id); load(); return; }
+    if (kind === "dismiss") { dismiss(o.id); load(); return; }
+    recordFeedback(o, kind);
+    if (kind === "already_applied") { try { await track(o, "applied"); } catch (e) { console.error(e); } }
+    dismiss(o.id);
+    load();
+  }
 
   if (loading && !queue) {
     return (
@@ -120,7 +131,7 @@ export default function Queue() {
             <QueueCard
               key={o.id} o={o} rank={i + 1} resume={recommendResume(o, resumes)}
               onApply={applyNow} onPrepare={prepare} onReferral={askReferral}
-              onSave={saveForLater} onDismiss={onDismiss} onMute={onMute}
+              onSave={saveForLater} onFeedback={onFeedback}
             />
           ))}
         </div>
@@ -137,7 +148,7 @@ export default function Queue() {
                 <QueueCard
                   key={o.id} o={o} rank={today.length + i + 1} resume={recommendResume(o, resumes)}
                   onApply={applyNow} onPrepare={prepare} onReferral={askReferral}
-                  onSave={saveForLater} onDismiss={onDismiss} onMute={onMute}
+                  onSave={saveForLater} onFeedback={onFeedback}
                 />
               ))}
             </div>
@@ -156,11 +167,10 @@ interface CardProps {
   onPrepare: (o: RankedOpportunity) => void;
   onReferral: (o: RankedOpportunity) => void;
   onSave: (o: RankedOpportunity) => void;
-  onDismiss: (o: RankedOpportunity) => void;
-  onMute: (o: RankedOpportunity) => void;
+  onFeedback: (o: RankedOpportunity, kind: FeedbackAction) => void;
 }
 
-function QueueCard({ o, rank, resume, onApply, onPrepare, onReferral, onSave, onDismiss, onMute }: CardProps) {
+function QueueCard({ o, rank, resume, onApply, onPrepare, onReferral, onSave, onFeedback }: CardProps) {
   return (
     <article className={`qcard tier-${o.tier}`}>
       <div className="qrank">{rank}</div>
@@ -209,8 +219,21 @@ function QueueCard({ o, rank, resume, onApply, onPrepare, onReferral, onSave, on
           <button type="button" className="btn small" onClick={() => onPrepare(o)}>Prepare</button>
           <button type="button" className="btn small" onClick={() => onReferral(o)}>Ask for referral</button>
           <button type="button" className="btn small" onClick={() => onSave(o)}>Save for later</button>
-          <button type="button" className="btn small ghost" onClick={() => onDismiss(o)}>Dismiss</button>
-          <button type="button" className="btn small ghost" onClick={() => onMute(o)}>Mute similar</button>
+        </div>
+        <div className="qfeedback">
+          <button type="button" className="btn small ghost good" onClick={() => onFeedback(o, "good")}>👍 Good fit</button>
+          <details className="fb">
+            <summary className="btn small ghost">Not a fit ▾</summary>
+            <div className="fb-menu">
+              <button type="button" onClick={() => onFeedback(o, "wrong_role")}>Wrong role</button>
+              <button type="button" onClick={() => onFeedback(o, "wrong_company")}>Wrong company</button>
+              <button type="button" onClick={() => onFeedback(o, "not_interested")}>Not interested</button>
+              <button type="button" onClick={() => onFeedback(o, "not_eligible")}>Not eligible</button>
+              <button type="button" onClick={() => onFeedback(o, "too_old")}>Too old</button>
+              <button type="button" onClick={() => onFeedback(o, "already_applied")}>Already applied</button>
+              <button type="button" onClick={() => onFeedback(o, "mute")}>Mute similar</button>
+            </div>
+          </details>
         </div>
       </div>
     </article>

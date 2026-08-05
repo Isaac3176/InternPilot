@@ -1136,3 +1136,19 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .pk-ans-h { display: flex; align-items: center; gap: 10px; }
 .pk-ans-h b { flex: 1; font-size: 12.5px; font-weight: 600; }
 .pk-answers p { margin: 5px 0 0; font-size: 12px; color: var(--slate); line-height: 1.5; }
+
+/* ================= Adaptive feedback ================= */
+.qfeedback { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.qfeedback .good.btn { color: var(--beacon); }
+.qfeedback .good.btn:hover { background: var(--beacon-soft); }
+.fb { position: relative; }
+.fb > summary { list-style: none; cursor: pointer; }
+.fb > summary::-webkit-details-marker { display: none; }
+.fb-menu { position: absolute; z-index: 40; bottom: calc(100% + 6px); left: 0; min-width: 170px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px rgba(15,27,45,.18); padding: 5px; display: flex; flex-direction: column; }
+.fb-menu button { text-align: left; font: inherit; font-size: 12.5px; color: var(--ink-2); background: none; border: none; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+.fb-menu button:hover { background: var(--surface-2); }
+
+.learn-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+.learn-tag { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
+.learn-tag.up { background: var(--beacon-soft); color: var(--beacon); }
+.learn-tag.down { background: var(--alert-soft); color: var(--alert); }

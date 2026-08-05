@@ -4,6 +4,7 @@ import { assessEligibility } from "../listings/eligibility";
 import { roleScore, matchesTargetRoles, isGenericSwe, ENG_SIGNAL, NON_ROLE } from "../listings/service";
 import { matchCompany, PRIORITY_WEIGHT } from "./companies";
 import { getMutedPatterns } from "./feedback";
+import { learningAdjustment } from "./learning";
 import type { RankingPrefs } from "./prefs";
 import type { RankedOpportunity, RankTier, ScoreReason } from "./types";
 
@@ -149,6 +150,9 @@ export function scoreOpportunity(l: RankedListing, ctx: RankContext): RankedOppo
   if (elig.level === "review" && needsSponsorship(ctx.profile)) add("Sponsorship unclear", -5);
   if (STAFFING.test(l.company)) add("Staffing agency", -30);
   if (!matchesTargetRoles(l.title, prefs.targetRoles)) add("Unrelated role family", -40);
+
+  // ---- learned preferences (from your feedback) ----
+  for (const r of learningAdjustment(l).reasons) add(r.label, r.delta);
 
   const raw = reasons.reduce((s, r) => s + r.delta, 0);
   const priority = Math.max(0, Math.min(100, raw));

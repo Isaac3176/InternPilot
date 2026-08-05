@@ -32,6 +32,7 @@ import {
 import { probeSources, clearListingsCache, type SourceProbe } from "../listings/sources";
 import { isLogosOn, setLogosOn } from "../listings/logo";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
+import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -80,6 +81,10 @@ export default function Settings() {
     savePrefs(DEFAULT_PREFS);
     setPrefsSaved(true);
   }
+
+  // Learned preferences (adaptive)
+  const [learn, setLearn] = useState<LearnSummary>(learnSummary());
+  function resetLearned() { resetLearning(); setLearn(learnSummary()); }
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
 
@@ -341,6 +346,29 @@ export default function Settings() {
           <button type="button" className="secondary" onClick={resetRankingPrefs}>Reset to defaults</button>
           {prefsSaved && <span className="hint" style={{ alignSelf: "center" }}>Saved ✓</span>}
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Learned preferences</h2>
+        <p className="hint mb-md">
+          InternPilot nudges your ranking from repeated feedback on the Fast Apply queue (Good fit / Not a fit).
+          One signal barely moves anything — patterns build over time. {learn.events} signal{learn.events === 1 ? "" : "s"} so far.
+        </p>
+        {learn.roles.length === 0 && learn.companies.length === 0 ? (
+          <p className="muted-note">Nothing learned yet. Use 👍 Good fit / Not a fit on the queue and preferences will show here.</p>
+        ) : (
+          <div className="learn-tags">
+            {learn.roles.map((r) => (
+              <span key={`r-${r.key}`} className={`learn-tag ${r.weight > 0 ? "up" : "down"}`}>{r.key} {r.weight > 0 ? "▲" : "▼"}</span>
+            ))}
+            {learn.companies.map((c) => (
+              <span key={`c-${c.key}`} className={`learn-tag ${c.weight > 0 ? "up" : "down"}`}>{c.key} {c.weight > 0 ? "▲" : "▼"}</span>
+            ))}
+          </div>
+        )}
+        {(learn.roles.length > 0 || learn.companies.length > 0) && (
+          <div className="actions"><button type="button" className="secondary" onClick={resetLearned}>Reset learned preferences</button></div>
+        )}
       </div>
 
       <div className="card">
