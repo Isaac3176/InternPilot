@@ -1180,3 +1180,11 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .lab-scan .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .lab-scan .chip { font-size: 11.5px; background: var(--alert-soft); color: var(--alert); border-radius: 6px; padding: 2px 9px; font-weight: 500; }
 .lab .badge.offline { background: #f1f4f8; color: var(--slate); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+
+/* ================= Bullet quantifier + packet cold email ================= */
+.quantify { margin-top: 10px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 8px; padding: 10px 12px; }
+.quantify-q { margin: 0 0 8px; font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.quantify-in { display: flex; gap: 8px; }
+.quantify-in input { flex: 1; }
+.quantify-in button { flex: none; }
+.pk-email { width: 100%; font-size: 12.5px; line-height: 1.55; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical; background: var(--surface-2); margin-bottom: 8px; font-family: inherit; }

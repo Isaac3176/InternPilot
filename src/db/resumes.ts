@@ -71,3 +71,8 @@ export async function deleteResumeBullet(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM resume_bullets WHERE id = ?", [id]);
 }
+
+export async function updateResumeBulletText(id: number, improvedText: string): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE resume_bullets SET improved_text = ? WHERE id = ?", [improvedText, id]);
+}

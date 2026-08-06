@@ -5,6 +5,7 @@ import { getFeed } from "../listings/service";
 import { createApplication } from "../db/applications";
 import { buildPacket, getChecklist, setChecklistItem, PACKET_CHECKLIST, type ApplicationPacket } from "../apply/packet";
 import { getReusableAnswers, type ApplicationAnswer } from "../apply/answers";
+import { coldEmail } from "../ai/coldEmail";
 import type { Status } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
 
@@ -20,6 +21,8 @@ export default function Packet() {
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [status, setStatus] = useState("");
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [email, setEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -79,7 +82,21 @@ export default function Packet() {
   const l = packet.listing;
   const m = packet.match;
   const answers = getReusableAnswers();
-  const copy = (text: string) => { navigator.clipboard?.writeText(text).catch(() => {}); setStatus("Copied answer to clipboard."); };
+  const copy = (text: string) => { navigator.clipboard?.writeText(text).catch(() => {}); setStatus("Copied to clipboard."); };
+
+  async function genColdEmail() {
+    const pk = packet;
+    if (!pk) return;
+    setEmailBusy(true);
+    try {
+      const r = await coldEmail({
+        company: pk.listing.company, role: pk.listing.title, jd: pk.jdOk ? pk.jd : undefined,
+        resume: pk.resume?.content ?? undefined, contactName: pk.contacts[0]?.name,
+      });
+      setEmail(r.text);
+    } catch (e) { setStatus(e instanceof Error ? e.message : String(e)); }
+    finally { setEmailBusy(false); }
+  }
 
   return (
     <div className="packet">
@@ -150,6 +167,22 @@ export default function Packet() {
         </div>
 
         <div className="pk-col">
+          {/* Cold email */}
+          <section className="pk-card">
+            <div className="pk-ans-h" style={{ marginBottom: 10 }}>
+              <h2 style={{ margin: 0 }}>Cold email</h2>
+              <button type="button" className="btn small" onClick={genColdEmail} disabled={emailBusy}>{emailBusy ? "Writing…" : email ? "Regenerate" : "✨ Draft outreach"}</button>
+            </div>
+            {email ? (
+              <>
+                <textarea className="pk-email" value={email} onChange={(e) => setEmail(e.target.value)} rows={8} />
+                <button type="button" className="btn small" onClick={() => copy(email)}>Copy</button>
+              </>
+            ) : (
+              <p className="hint">A 4-line note to the hiring manager — grounded in your résumé and this posting{packet.contacts[0] ? `, addressed to ${packet.contacts[0].name}` : ""}.</p>
+            )}
+          </section>
+
           {/* Checklist */}
           <section className="pk-card">
             <h2>Checklist</h2>
