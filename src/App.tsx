@@ -2,6 +2,7 @@ import { Suspense, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { pushProfileToBridge, pushAnswersToBridge, startBridgeListener } from "./bridge";
+import { pushSnapshotToBridge, startMobileBridge } from "./mobile/sync";
 import { AscentMark } from "./components/Logo";
 import "./App.css";
 
@@ -38,6 +39,13 @@ export default function App() {
     pushProfileToBridge();
     pushAnswersToBridge();
     startBridgeListener();
+    startMobileBridge();
+    pushSnapshotToBridge();
+    // Keep the phone's snapshot fresh while the app is open.
+    const iv = window.setInterval(pushSnapshotToBridge, 15000);
+    const onRec = () => pushSnapshotToBridge();
+    window.addEventListener("internpilot:application-recorded", onRec);
+    return () => { window.clearInterval(iv); window.removeEventListener("internpilot:application-recorded", onRec); };
   }, []);
 
   return (

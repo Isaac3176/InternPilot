@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0E1621">
+<title>InternPilot</title>
+<style>
+:root{
+  --bg:#F6F7F9; --surface:#FFF; --line:#E3E7ED; --line-soft:#EEF1F5;
+  --ink:#0F1B2D; --ink-2:#33445A; --muted:#6B7A8D; --muted-2:#98A5B4;
+  --accent:#1F6FEB; --accent-soft:#EAF2FE; --accent-line:#C4D9FA; --accent-ink:#12509E;
+  --good:#157F5F; --good-soft:#E4F3EE; --warn:#A9761C; --warn-soft:#FAF1DE; --warn-line:#EBDCBA;
+  --risk:#B03D2A; --risk-soft:#FBEAE6; --nav:#0E1621;
+  --s-interested:#8A98A8; --s-applied:#1F6FEB; --s-oa:#7A5AF8; --s-interview:#A9761C; --s-offer:#157F5F;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+.eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:78px}
+.head{padding:calc(env(safe-area-inset-top) + 14px) 20px 10px;display:flex;align-items:center;gap:12px}
+.head h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.03em}
+.head .sub{font-size:13px;color:var(--muted)}
+.avatar{width:34px;height:34px;border-radius:50%;margin-left:auto;display:grid;place-items:center;background:linear-gradient(150deg,#3B85F5,#1A5BC4);color:#fff;font-family:var(--mono);font-size:12px;font-weight:600}
+.scroll{flex:1;padding:0 20px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 9px}
+.sechead h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.02em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card + .card{margin-top:11px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:14px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.good{background:var(--good);border-color:var(--good);color:#fff}
+.btn.full{width:100%}
+.btn.sm{min-height:34px;padding:0 12px;font-size:12.5px;border-radius:9px}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+.today{background:linear-gradient(158deg,#173A6B,#0E1621);color:#fff;border-radius:18px;padding:17px 18px;border:none}
+.today .eyebrow{color:#7FA9E8}
+.today h3{margin:7px 0 5px;font-size:17px;font-weight:600;letter-spacing:-.02em}
+.today p{margin:0 0 14px;font-size:13px;color:#A9BDD6}
+.today .acts{display:flex;gap:9px}
+.today .acts .btn{flex:1;min-height:40px;font-size:13.5px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.16);color:#fff}
+.today .acts .btn.primary{background:#3B85F5;border-color:#3B85F5}
+
+.pipe{display:flex;gap:5px}
+.pipe .st{flex:1;min-width:0}
+.pipe .st i{display:block;height:5px;border-radius:3px;background:var(--c);margin-bottom:8px}
+.pipe .st b{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-.04em;display:block;line-height:1}
+.pipe .st span{display:block;font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.due{display:flex;align-items:center;gap:12px;padding:11px 0}
+.due + .due{border-top:1px solid var(--line-soft)}
+.due .when{width:44px;flex:none;text-align:center;border-radius:10px;padding:5px 0;background:var(--warn-soft);border:1px solid var(--warn-line)}
+.due .when b{display:block;font-family:var(--mono);font-size:15px;font-weight:600;color:#7C5A18;line-height:1}
+.due .when span{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);margin-top:2px}
+.due .when.soon{background:var(--risk-soft);border-color:#F0CFC7}
+.due .when.soon b{color:#8E2F1F}
+.due .tx b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.due .tx span{display:block;font-size:12.5px;color:var(--muted)}
+
+.job{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:11px}
+.job-top{display:flex;align-items:center;gap:11px;margin-bottom:9px}
+.logo{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:600;overflow:hidden}
+.logo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.job-top .org b{display:block;font-size:13.5px;font-weight:600}
+.job-top .org span{display:block;font-size:11.5px;color:var(--muted)}
+.job h4{margin:0 0 10px;font-size:15px;font-weight:600;letter-spacing:-.02em;line-height:1.3}
+.facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.fact{font-size:12px;font-weight:500;color:var(--ink-2);background:#F1F4F8;border-radius:7px;padding:4px 9px}
+.fact.pay{background:var(--good-soft);color:var(--good)}
+.job-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.posted{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2)}
+.matchpill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;font-weight:600;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:3px 10px 3px 7px}
+.matchpill i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+
+.grouplabel{display:flex;align-items:center;gap:9px;padding:16px 0 8px}
+.grouplabel i{flex:1;height:1px;background:var(--line)}
+.grouplabel b{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted)}
+.appcard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;position:relative;overflow:hidden;margin-bottom:9px}
+.appcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.appcard .logo{width:32px;height:32px;font-size:13px}
+.appcard .tx{flex:1;min-width:0}
+.appcard .tx b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appcard .tx span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appcard .age{font-family:var(--mono);font-size:10px;color:var(--muted-2);flex:none;text-align:right}
+.appcard .age b{display:block;font-size:12px;color:var(--ink-2);font-weight:600}
+.appcard .age.warn b{color:var(--warn)}
+
+.coachcard{background:linear-gradient(158deg,#1B3E72,#0E1621);color:#fff;border-radius:18px;padding:18px}
+.coachcard .eyebrow{color:#7FA9E8}
+.coachcard h3{margin:8px 0 12px;font-size:16.5px;font-weight:600;letter-spacing:-.02em;line-height:1.35}
+.coachcard ul{list-style:none;margin:0;padding:0}
+.coachcard li{position:relative;padding-left:19px;margin-bottom:9px;font-size:13.5px;color:#C3D3E6;line-height:1.45}
+.coachcard li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;border:1.6px solid #5B9BF6}
+
+.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;display:flex;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 6px calc(env(safe-area-inset-bottom) + 8px)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted-2)}
+.tab span{font-size:10px;font-weight:600}
+.tab.on{color:var(--accent)}
+.tab.on svg{stroke:var(--accent)}
+
+.connect{max-width:420px;margin:0 auto;padding:60px 26px;text-align:center}
+.connect .logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(150deg,#3B85F5,#1A5BC4);margin:0 auto 18px;display:grid;place-items:center}
+.connect h1{font-size:22px;margin:0 0 6px;letter-spacing:-.03em}
+.connect p{color:var(--muted);font-size:13.5px;margin:0 0 20px}
+.connect input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font:inherit;margin-bottom:12px}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--nav);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:12px;z-index:50;opacity:0;transition:opacity .2s;max-width:88%}
+.toast.show{opacity:1}
+.empty{border:1px dashed var(--line);border-radius:14px;background:var(--surface);padding:26px 18px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast" class="toast"></div>
+<script>
+const TOKEN_KEY = "internpilot.mobile.token";
+const AV = ["#1A1A1A","#3E4C8C","#33383D","#4B4FD6","#D6455E","#157F5F","#B03D2A","#6B4A2F","#7A5AF8","#12509E"];
+function color(n){let h=0;for(const c of n||"?")h=(h*31+c.charCodeAt(0))>>>0;return AV[h%AV.length];}
+function initial(n){return (n||"?").trim().charAt(0).toUpperCase()||"?";}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function scoreColor(v){return v>=80?"var(--good)":v>=65?"var(--accent)":"var(--warn)";}
+
+function getToken(){
+  const m = location.hash.match(/t=([a-f0-9]+)/i);
+  if(m){ localStorage.setItem(TOKEN_KEY, m[1]); history.replaceState(null,"",location.pathname); return m[1]; }
+  return localStorage.getItem(TOKEN_KEY) || "";
+}
+let token = getToken();
+let data = null;
+let tab = "home";
+
+async function api(path, opts={}){
+  const res = await fetch(path, { ...opts, headers: { "Content-Type":"application/json", "X-IP-Token": token, ...(opts.headers||{}) } });
+  if(res.status===401) throw new Error("unauthorized");
+  return res.json();
+}
+async function loadData(){ data = await api("/data"); }
+async function act(payload){
+  await api("/action", { method:"POST", body: JSON.stringify(payload) });
+  toast(payload.label || "Sent to desktop ✓");
+}
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
+
+function logoHtml(company){
+  const dom = guessDomain(company);
+  if(dom) return `<span class="logo" style="background:#fff;border:1px solid var(--line)"><img src="https://icons.duckduckgo.com/ip3/${dom}.ico" onerror="this.parentNode.innerHTML='${initial(company)}';this.parentNode.style.background='${color(company)}';this.parentNode.style.color='#fff'"></span>`;
+  return `<span class="logo" style="background:${color(company)}">${initial(company)}</span>`;
+}
+function guessDomain(name){
+  const k=(name||"").toLowerCase();
+  const map={amazon:"amazon.com",google:"google.com",meta:"meta.com",microsoft:"microsoft.com","capital one":"capitalone.com",nvidia:"nvidia.com",stripe:"stripe.com",cloudflare:"cloudflare.com",datadog:"datadoghq.com"};
+  if(map[k]) return map[k];
+  if(/^[a-z0-9-]+\.(ai|io|com|co)$/.test(k)) return k;
+  const slug=k.replace(/&/g,"and").replace(/\b(inc|llc|labs|technologies|corp)\b/g,"").replace(/[^a-z0-9]/g,"");
+  return slug?`${slug}.com`:"";
+}
+
+// ---------- screens ----------
+function render(){
+  const root = document.getElementById("root");
+  if(!token){ root.innerHTML = connectScreen(); wireConnect(); return; }
+  if(!data){ root.innerHTML = `<div class="app"><div class="scroll"><p class="muted" style="padding:40px 0;text-align:center">Loading your search…</p></div></div>` + tabbar(); wireTabs(); return; }
+  root.innerHTML = `<div class="app">${screen()}</div>` + tabbar();
+  wireTabs(); wireScreen();
+}
+function screen(){
+  if(tab==="home") return homeScreen();
+  if(tab==="discover") return discoverScreen();
+  if(tab==="tracker") return trackerScreen();
+  if(tab==="coach") return coachScreen();
+  return meScreen();
+}
+
+function homeScreen(){
+  const p = data.pipeline||{}; const nba=(data.nba||[])[0];
+  const stages=[["interested","Saved","--s-interested"],["applied","Applied","--s-applied"],["oa","OA","--s-oa"],["interview","Interview","--s-interview"],["offer","Offer","--s-offer"]];
+  const due=(data.due||[]);
+  const maxW=Math.max(1,...(data.weekly||[]).map(w=>w.count));
+  return `
+  <div class="head"><div><h2>${greeting()}</h2><div class="sub">${p.applied||0} applications out</div></div><span class="avatar">${esc(data.initials||"IP")}</span></div>
+  <div class="scroll">
+    ${nba?`<div class="today"><span class="eyebrow">Do this first</span><h3>${esc(nba.title)}</h3><p>${esc(nba.detail||"")}</p><div class="acts"><button class="btn primary" data-go="coach">Open Coach</button></div></div>`:""}
+    <div class="sechead"><h3>Pipeline</h3></div>
+    <div class="card"><div class="pipe">${stages.map(([k,l,c])=>`<div class="st" style="--c:var(${c})"><i></i><b>${p[k]||0}</b><span>${l}</span></div>`).join("")}</div></div>
+    ${due.length?`<div class="sechead"><h3>Closing soon</h3></div><div class="card" style="padding:4px 16px">${due.map(d=>`<div class="due"><span class="when ${d.days<=1?"soon":""}"><b>${d.days}</b><span>${d.days===1?"day":"days"}</span></span><span class="tx"><b>${esc(d.title)}</b><span>${esc(d.detail||"")}</span></span></div>`).join("")}</div>`:""}
+    ${(data.weekly||[]).length?`<div class="sechead"><h3>Applications per week</h3></div><div class="card"><div style="display:flex;align-items:flex-end;gap:7px;height:74px">${data.weekly.map((w,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><div style="width:100%;max-width:26px;border-radius:5px 5px 3px 3px;background:${i===data.weekly.length-1?'linear-gradient(180deg,#0F4FB5,var(--accent))':w.count?'linear-gradient(180deg,var(--accent),#5C97F2)':'#E7EBF0'};height:${Math.max(4,w.count/maxW*100)}%"></div><span style="font-family:var(--mono);font-size:9px;color:var(--muted-2);margin-top:6px">${esc(w.label)}</span></div>`).join("")}</div></div>`:""}
+    <div style="height:20px"></div>
+  </div>`;
+}
+
+function discoverScreen(){
+  const items=data.discover||[];
+  return `
+  <div class="head"><div><h2>Discover</h2><div class="sub">${items.length} top matches</div></div></div>
+  <div class="scroll">
+    ${items.length?items.map(j=>`
+      <div class="job">
+        <div class="job-top">${logoHtml(j.company)}<span class="org" style="flex:1;min-width:0"><b>${esc(j.company)}</b><span>${esc((j.locations||[])[0]||"")}${j.season?" · "+esc(j.season):""}</span></span></div>
+        <h4>${esc(j.title)}</h4>
+        <div class="facts">${j.salary?`<span class="fact pay">${esc(j.salary)}</span>`:""}${j.sponsorshipOk?`<span class="fact">Sponsors</span>`:""}${j.posted?`<span class="fact">${esc(j.posted)}</span>`:""}</div>
+        <div class="job-foot"><span class="matchpill" style="--c:${scoreColor(j.score)}"><i></i>${j.score}</span>
+          <span style="display:flex;gap:8px"><button class="btn sm" data-open="${esc(j.url)}">Open</button><button class="btn sm primary" data-queue='${esc(JSON.stringify({id:j.id,company:j.company,title:j.title,url:j.url}))}'>Queue</button></span>
+        </div>
+      </div>`).join(""):`<div class="empty" style="margin-top:20px">No matches queued. Lower thresholds on desktop or check back.</div>`}
+    <div style="height:20px"></div>
+  </div>`;
+}
+
+function trackerScreen(){
+  const t=data.tracker||{};
+  const group=(label,arr)=> (arr&&arr.length)?`<div class="grouplabel"><span class="eyebrow">${label}</span><i></i><b>${arr.length}</b></div>${arr.map(a=>appCard(a)).join("")}`:"";
+  return `
+  <div class="head"><div><h2>Tracker</h2><div class="sub">${(t.counts&&t.counts.all)||0} roles${t.counts&&t.counts.offer?` · ${t.counts.offer} offer`:""}</div></div></div>
+  <div class="scroll">
+    ${group("Needs action",t.needsAction)}
+    ${group("Gone quiet",t.quiet)}
+    ${group("In flight",t.inFlight)}
+    ${(!t.needsAction||!t.needsAction.length)&&(!t.quiet||!t.quiet.length)&&(!t.inFlight||!t.inFlight.length)?`<div class="empty" style="margin-top:20px">No applications yet.</div>`:""}
+    <div style="height:20px"></div>
+  </div>`;
+}
+function appCard(a){
+  const c={oa:"--s-oa",interview:"--s-interview",applied:"--s-applied",offer:"--s-offer",interested:"--s-interested"}[a.status]||"--s-applied";
+  return `<div class="appcard" style="--c:var(${c})">${logoHtml(a.company)}<span class="tx"><b>${esc(a.company)}</b><span>${esc(a.title)}</span></span><span class="age ${a.warn?"warn":""}"><b>${esc(a.ageLabel||"")}</b>${esc(a.note||a.status)}</span></div>`;
+}
+
+function coachScreen(){
+  const s=data.strategy; const nba=data.nba||[];
+  return `
+  <div class="head"><div><h2>Coach</h2><div class="sub">Reads your funnel</div></div></div>
+  <div class="scroll">
+    ${s?`<div class="coachcard"><span class="eyebrow">This week</span><h3>${esc(s.headline)}</h3><ul>${(s.recommendations||[]).map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div>`:`<div class="empty" style="margin-top:20px">Generate a strategy on desktop and it'll show here.</div>`}
+    ${nba.length?`<div class="sechead"><h3>Next best actions</h3></div>${nba.map(a=>`<div class="card" style="display:flex;gap:11px;align-items:center;margin-bottom:9px"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(a.title)}</b><div class="muted" style="font-size:12.5px">${esc(a.detail||"")}</div></div></div>`).join(""):""}
+    <div style="height:20px"></div>
+  </div>`;
+}
+function meScreen(){
+  return `<div class="head"><div><h2>Me</h2><div class="sub">Connected to your desktop</div></div></div>
+  <div class="scroll"><div class="card"><b>Signed in via desktop bridge</b><p class="muted" style="font-size:12.5px;margin:6px 0 14px">Applications you queue here appear on your desktop to finish with autofill.</p><button class="btn full" id="refresh">Refresh</button><button class="btn full" id="disconnect" style="margin-top:9px">Disconnect</button></div></div>`;
+}
+
+function greeting(){ const d=new Date(); return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()]; }
+
+function tabbar(){
+  const t=(id,label,svg)=>`<button class="tab ${tab===id?"on":""}" data-tab="${id}">${svg}<span>${label}</span></button>`;
+  return `<nav class="tabbar">
+    ${t("home","Home",`<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#98A5B4" stroke-width="2" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1z"/></svg>`)}
+    ${t("discover","Discover",`<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#98A5B4" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>`)}
+    ${t("tracker","Tracker",`<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#98A5B4" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>`)}
+    ${t("coach","Coach",`<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#98A5B4" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.4 7.2L4 20.5l1.3-5.4A8 8 0 1121 12z"/></svg>`)}
+    ${t("me","Me",`<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#98A5B4" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg>`)}
+  </nav>`;
+}
+function connectScreen(){
+  return `<div class="connect"><div class="logo"><svg viewBox="0 0 32 32" width="26" height="26" fill="none"><path d="M4.6 25.4 16 14l11.4 11.4" stroke="#fff" stroke-opacity=".5" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.4 9.6 16 4l5.6 5.6" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h1>Connect to InternPilot</h1><p>Open Settings → Phone access on your desktop and scan the QR, or paste the token below.</p>
+    <input id="tok" placeholder="Paste token" autocapitalize="off" autocorrect="off"><button class="btn primary full" id="conn">Connect</button></div>`;
+}
+
+// ---------- wiring ----------
+function wireConnect(){
+  document.getElementById("conn").onclick=()=>{ const v=document.getElementById("tok").value.trim(); if(!v)return; localStorage.setItem(TOKEN_KEY,v); token=v; boot(); };
+}
+function wireTabs(){
+  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; render(); window.scrollTo(0,0); });
+}
+function wireScreen(){
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ tab=b.dataset.go; render(); });
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>window.open(b.dataset.open,"_blank"));
+  document.querySelectorAll("[data-queue]").forEach(b=>b.onclick=async()=>{
+    try{ const j=JSON.parse(b.dataset.queue); await act({type:"queue",...j,label:"Queued — finish on desktop ✓"}); b.textContent="Queued ✓"; b.disabled=true; }
+    catch(e){ toast("Couldn't queue — is the desktop app open?"); }
+  });
+  const r=document.getElementById("refresh"); if(r) r.onclick=boot;
+  const d=document.getElementById("disconnect"); if(d) d.onclick=()=>{ localStorage.removeItem(TOKEN_KEY); token=""; render(); };
+}
+
+async function boot(){
+  if(!token){ render(); return; }
+  try{ await loadData(); render(); }
+  catch(e){
+    if(String(e.message)==="unauthorized"){ localStorage.removeItem(TOKEN_KEY); token=""; toast("Token rejected — reconnect."); }
+    render();
+  }
+}
+boot();
+setInterval(()=>{ if(token && document.visibilityState==="visible") boot(); }, 20000);
+</script>
+</body>
+</html>

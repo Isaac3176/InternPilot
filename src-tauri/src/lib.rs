@@ -13,6 +13,8 @@ struct BridgeState {
     token: Option<String>,
     profile_json: Option<String>,
     answers_json: Option<String>,
+    snapshot_json: Option<String>,
+    port: u16,
 }
 type SharedBridge = Arc<Mutex<BridgeState>>;
 
@@ -29,6 +31,31 @@ fn bridge_set_answers(state: tauri::State<SharedBridge>, token: String, answers:
     s.token = Some(token);
     s.answers_json = Some(answers);
 }
+
+#[tauri::command]
+fn bridge_set_snapshot(state: tauri::State<SharedBridge>, token: String, snapshot: String) {
+    let mut s = state.lock().unwrap();
+    s.token = Some(token);
+    s.snapshot_json = Some(snapshot);
+}
+
+/// Best-effort LAN IP (no packets are sent — just resolves the outbound iface).
+fn local_ip() -> Option<String> {
+    let sock = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    sock.connect("8.8.8.8:80").ok()?;
+    Some(sock.local_addr().ok()?.ip().to_string())
+}
+
+/// Where the phone should point (same Wi-Fi): { ip, port }.
+#[tauri::command]
+fn bridge_info(state: tauri::State<SharedBridge>) -> String {
+    let port = state.lock().unwrap().port;
+    let ip = local_ip().unwrap_or_else(|| "127.0.0.1".into());
+    format!("{{\"ip\":\"{}\",\"port\":{}}}", ip, port)
+}
+
+// The phone app is served straight from the bridge.
+const MOBILE_HTML: &str = include_str!("../mobile.html");
 
 fn cors_headers() -> Vec<Header> {
     [
@@ -58,10 +85,21 @@ fn header_value(request: &tiny_http::Request, name: &str) -> Option<String> {
         .map(|h| h.value.as_str().to_string())
 }
 
+fn respond_html(request: tiny_http::Request, body: &str) {
+    let mut resp = Response::from_string(body).with_status_code(200);
+    if let Ok(h) = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]) {
+        resp.add_header(h);
+    }
+    let _ = request.respond(resp);
+}
+
 fn start_bridge(app: AppHandle, shared: SharedBridge) {
+    // Bind to 0.0.0.0 so a phone on the same Wi-Fi can reach it (data routes
+    // stay token-protected). May trigger a one-time Windows Firewall prompt.
     let mut server = None;
     for port in 8765u16..8769 {
-        if let Ok(s) = Server::http(("127.0.0.1", port)) {
+        if let Ok(s) = Server::http(("0.0.0.0", port)) {
+            shared.lock().unwrap().port = port;
             server = Some(s);
             break;
         }
@@ -79,6 +117,11 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
             }
             if path == "/ping" {
                 respond(request, 200, "{\"ok\":true,\"app\":\"InternPilot\"}");
+                continue;
+            }
+            // The phone app shell is served unauthenticated; its data calls carry the token.
+            if method == Method::Get && (path == "/" || path == "/m") {
+                respond_html(request, MOBILE_HTML);
                 continue;
             }
 
@@ -102,6 +145,18 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
                 (Method::Get, "/profile") => {
                     let body = shared.lock().unwrap().profile_json.clone().unwrap_or_else(|| "{}".into());
                     respond(request, 200, &body);
+                }
+                (Method::Get, "/data") => {
+                    let body = shared.lock().unwrap().snapshot_json.clone().unwrap_or_else(|| "{}".into());
+                    respond(request, 200, &body);
+                }
+                (Method::Post, "/action") => {
+                    let mut body = String::new();
+                    let _ = request.as_reader().read_to_string(&mut body);
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
+                        let _ = app.emit("bridge://mobile-action", val);
+                    }
+                    respond(request, 200, "{\"ok\":true}");
                 }
                 (Method::Post, "/application") => {
                     let mut body = String::new();
@@ -363,7 +418,7 @@ pub fn run() {
                 .build(),
         )
         .manage(bridge.clone())
-        .invoke_handler(tauri::generate_handler![bridge_set_profile, bridge_set_answers])
+        .invoke_handler(tauri::generate_handler![bridge_set_profile, bridge_set_answers, bridge_set_snapshot, bridge_info])
         .setup(move |app| {
             start_bridge(app.handle().clone(), bridge.clone());
             Ok(())

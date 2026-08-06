@@ -33,6 +33,7 @@ import { probeSources, clearListingsCache, type SourceProbe } from "../listings/
 import { isLogosOn, setLogosOn } from "../listings/logo";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
+import { getPhoneAccess } from "../mobile/sync";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -85,6 +86,10 @@ export default function Settings() {
   // Learned preferences (adaptive)
   const [learn, setLearn] = useState<LearnSummary>(learnSummary());
   function resetLearned() { resetLearning(); setLearn(learnSummary()); }
+
+  // Phone access (LAN)
+  const [phone, setPhone] = useState<{ url: string; token: string }>({ url: "", token: "" });
+  useEffect(() => { getPhoneAccess().then(setPhone).catch(() => {}); }, []);
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
 
@@ -346,6 +351,28 @@ export default function Settings() {
           <button type="button" className="secondary" onClick={resetRankingPrefs}>Reset to defaults</button>
           {prefsSaved && <span className="hint" style={{ alignSelf: "center" }}>Saved ✓</span>}
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Phone access</h2>
+        <p className="hint mb-md">
+          Use InternPilot on your phone over the same Wi-Fi — browse and queue roles to finish here with autofill.
+          Keep this desktop app open. On your phone, open the address below in Safari, then <strong>Share → Add to Home Screen</strong>.
+        </p>
+        {phone.url ? (
+          <>
+            <div className="field">
+              <label htmlFor="phone-url">Open this on your phone</label>
+              <input id="phone-url" readOnly value={phone.url} onFocus={(e) => e.currentTarget.select()} />
+            </div>
+            <div className="actions">
+              <button type="button" onClick={() => navigator.clipboard?.writeText(phone.url).catch(() => {})}>Copy link</button>
+            </div>
+            <p className="hint">The link includes your access token. Treat it like a password — anyone on your Wi-Fi with it can see your search.</p>
+          </>
+        ) : (
+          <p className="hint">Determining your local network address… (the bridge server must be running).</p>
+        )}
       </div>
 
       <div className="card">
