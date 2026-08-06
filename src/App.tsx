@@ -10,6 +10,7 @@ let startupRan = false;
 
 const NAV = [
   { to: "/", label: "Fast Apply", icon: "⚡", end: true },
+  { to: "/focus", label: "Focus Session", icon: "⏱", end: false },
   { to: "/dashboard", label: "Dashboard", icon: "▣", end: false },
   { to: "/applications", label: "Applications", icon: "▤", end: false },
   { to: "/internships", label: "Internships", icon: "◆", end: false },
