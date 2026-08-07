@@ -90,21 +90,25 @@ export async function startMobileBridge(): Promise<void> {
     try {
       if (a.type === "queue") {
         const url = (a.url as string) || null;
+        const company = (a.company as string) ?? "";
+        const title = (a.title as string) || "Application";
         const existing = await listApplications();
-        if (!url || !existing.some((x) => x.job_link === url)) {
-          await createApplication({
-            company_name: (a.company as string) ?? "", role_title: (a.title as string) || "Application",
-            job_link: url, status: "interested",
-          });
+        // Dedupe by URL when present, otherwise by company+title so repeated taps
+        // on a url-less role don't pile up duplicates.
+        const dup = url
+          ? existing.some((x) => x.job_link === url)
+          : existing.some((x) => (x.company_name ?? "") === company && x.role_title === title);
+        if (!dup) {
+          await createApplication({ company_name: company, role_title: title, job_link: url, status: "interested" });
         }
       } else if (a.type === "status" && typeof a.appId === "number") {
         await setApplicationStatus(a.appId, a.status as Status);
       }
+      // App.tsx listens for this and re-pushes the snapshot — no direct push here.
       window.dispatchEvent(new CustomEvent(APP_RECORDED_EVENT));
     } catch (e) {
       console.error("mobile action failed", e);
     }
-    pushSnapshotToBridge();
   });
 }
 
@@ -113,6 +117,8 @@ export async function getPhoneAccess(): Promise<{ url: string; token: string }> 
   const token = getBridgeToken();
   try {
     const info = JSON.parse(await invoke<string>("bridge_info"));
+    // port 0 means the bridge failed to bind (all ports busy) — no usable URL.
+    if (!info.port) return { url: "", token };
     return { url: `http://${info.ip}:${info.port}/#t=${token}`, token };
   } catch {
     return { url: "", token };

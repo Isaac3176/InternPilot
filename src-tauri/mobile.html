@@ -99,7 +99,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;tex
 .coachcard li{position:relative;padding-left:19px;margin-bottom:9px;font-size:13.5px;color:#C3D3E6;line-height:1.45}
 .coachcard li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;border:1.6px solid #5B9BF6}
 
-.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;display:flex;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 6px calc(env(safe-area-inset-bottom) + 8px)}
+.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;display:flex;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 6px calc(env(safe-area-inset-bottom) + 8px)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted-2)}
 .tab span{font-size:10px;font-weight:600}
 .tab.on{color:var(--accent)}
@@ -123,7 +123,7 @@ const TOKEN_KEY = "internpilot.mobile.token";
 const AV = ["#1A1A1A","#3E4C8C","#33383D","#4B4FD6","#D6455E","#157F5F","#B03D2A","#6B4A2F","#7A5AF8","#12509E"];
 function color(n){let h=0;for(const c of n||"?")h=(h*31+c.charCodeAt(0))>>>0;return AV[h%AV.length];}
 function initial(n){return (n||"?").trim().charAt(0).toUpperCase()||"?";}
-function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function scoreColor(v){return v>=80?"var(--good)":v>=65?"var(--accent)":"var(--warn)";}
 
 function getToken(){
@@ -150,9 +150,17 @@ function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg
 
 function logoHtml(company){
   const dom = guessDomain(company);
-  if(dom) return `<span class="logo" style="background:#fff;border:1px solid var(--line)"><img src="https://icons.duckduckgo.com/ip3/${dom}.ico" onerror="this.parentNode.innerHTML='${initial(company)}';this.parentNode.style.background='${color(company)}';this.parentNode.style.color='#fff'"></span>`;
-  return `<span class="logo" style="background:${color(company)}">${initial(company)}</span>`;
+  const bg = color(company), ini = initial(company);
+  if(dom) return `<span class="logo" data-bg="${esc(bg)}" data-ini="${esc(ini)}" style="background:#fff;border:1px solid var(--line)"><img src="https://icons.duckduckgo.com/ip3/${encodeURIComponent(dom)}.ico" onerror="ipLogoFail(this)"></span>`;
+  return `<span class="logo" style="background:${esc(bg)}">${esc(ini)}</span>`;
 }
+// Safe logo fallback — sets text/colour from data-* (no company data in inline JS).
+window.ipLogoFail = function(img){
+  const s = img.parentNode; if(!s) return;
+  s.textContent = s.getAttribute("data-ini") || "?";
+  s.style.background = s.getAttribute("data-bg") || "#8A98A8";
+  s.style.color = "#fff";
+};
 function guessDomain(name){
   const k=(name||"").toLowerCase();
   const map={amazon:"amazon.com",google:"google.com",meta:"meta.com",microsoft:"microsoft.com","capital one":"capitalone.com",nvidia:"nvidia.com",stripe:"stripe.com",cloudflare:"cloudflare.com",datadog:"datadoghq.com"};
@@ -200,13 +208,13 @@ function discoverScreen(){
   return `
   <div class="head"><div><h2>Discover</h2><div class="sub">${items.length} top matches</div></div></div>
   <div class="scroll">
-    ${items.length?items.map(j=>`
+    ${items.length?items.map((j,i)=>`
       <div class="job">
         <div class="job-top">${logoHtml(j.company)}<span class="org" style="flex:1;min-width:0"><b>${esc(j.company)}</b><span>${esc((j.locations||[])[0]||"")}${j.season?" · "+esc(j.season):""}</span></span></div>
         <h4>${esc(j.title)}</h4>
         <div class="facts">${j.salary?`<span class="fact pay">${esc(j.salary)}</span>`:""}${j.sponsorshipOk?`<span class="fact">Sponsors</span>`:""}${j.posted?`<span class="fact">${esc(j.posted)}</span>`:""}</div>
         <div class="job-foot"><span class="matchpill" style="--c:${scoreColor(j.score)}"><i></i>${j.score}</span>
-          <span style="display:flex;gap:8px"><button class="btn sm" data-open="${esc(j.url)}">Open</button><button class="btn sm primary" data-queue='${esc(JSON.stringify({id:j.id,company:j.company,title:j.title,url:j.url}))}'>Queue</button></span>
+          <span style="display:flex;gap:8px"><button class="btn sm" data-open-idx="${i}">Open</button><button class="btn sm primary" data-queue-idx="${i}">Queue</button></span>
         </div>
       </div>`).join(""):`<div class="empty" style="margin-top:20px">No matches queued. Lower thresholds on desktop or check back.</div>`}
     <div style="height:20px"></div>
@@ -273,9 +281,12 @@ function wireTabs(){
 }
 function wireScreen(){
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ tab=b.dataset.go; render(); });
-  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>window.open(b.dataset.open,"_blank"));
-  document.querySelectorAll("[data-queue]").forEach(b=>b.onclick=async()=>{
-    try{ const j=JSON.parse(b.dataset.queue); await act({type:"queue",...j,label:"Queued — finish on desktop ✓"}); b.textContent="Queued ✓"; b.disabled=true; }
+  document.querySelectorAll("[data-open-idx]").forEach(b=>b.onclick=()=>{
+    const j=(data.discover||[])[+b.dataset.openIdx]; if(j&&j.url) window.open(j.url,"_blank");
+  });
+  document.querySelectorAll("[data-queue-idx]").forEach(b=>b.onclick=async()=>{
+    const j=(data.discover||[])[+b.dataset.queueIdx]; if(!j)return;
+    try{ await act({type:"queue",id:j.id,company:j.company,title:j.title,url:j.url,label:"Queued — finish on desktop ✓"}); b.textContent="Queued ✓"; b.disabled=true; }
     catch(e){ toast("Couldn't queue — is the desktop app open?"); }
   });
   const r=document.getElementById("refresh"); if(r) r.onclick=boot;

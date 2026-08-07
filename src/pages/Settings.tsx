@@ -368,7 +368,7 @@ export default function Settings() {
             <div className="actions">
               <button type="button" onClick={() => navigator.clipboard?.writeText(phone.url).catch(() => {})}>Copy link</button>
             </div>
-            <p className="hint">The link includes your access token. Treat it like a password — anyone on your Wi-Fi with it can see your search.</p>
+            <p className="hint">The link includes your access token — treat it like a password (anyone on your Wi-Fi with it can see your search snapshot; your full profile stays on this computer). If the address doesn't load on your phone (e.g. you're on a VPN), use this PC's Wi-Fi IPv4 address instead of the one shown.</p>
           </>
         ) : (
           <p className="hint">Determining your local network address… (the bridge server must be running).</p>

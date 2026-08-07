@@ -85,6 +85,28 @@ fn header_value(request: &tiny_http::Request, name: &str) -> Option<String> {
         .map(|h| h.value.as_str().to_string())
 }
 
+/// Constant-time string compare so token checks don't leak length-prefix timing.
+fn ct_eq(a: &str, b: &str) -> bool {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for i in 0..a.len() {
+        diff |= a[i] ^ b[i];
+    }
+    diff == 0
+}
+
+/// Requests originating from this machine (the browser extension talks to
+/// 127.0.0.1). Used to keep PII routes off the LAN even with a valid token.
+fn is_loopback(request: &tiny_http::Request) -> bool {
+    match request.remote_addr() {
+        Some(addr) => addr.ip().is_loopback(),
+        None => true,
+    }
+}
+
 fn respond_html(request: tiny_http::Request, body: &str) {
     let mut resp = Response::from_string(body).with_status_code(200);
     if let Ok(h) = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]) {
@@ -128,7 +150,7 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
             let token_ok = {
                 let s = shared.lock().unwrap();
                 match (&s.token, header_value(&request, "X-IP-Token")) {
-                    (Some(t), Some(h)) => !t.is_empty() && *t == h,
+                    (Some(t), Some(h)) => !t.is_empty() && ct_eq(t, &h),
                     _ => false,
                 }
             };
@@ -138,13 +160,20 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
             }
 
             match (method, path.as_str()) {
+                // /profile and /answers carry full autofill PII — keep them on
+                // localhost (the extension) even with a valid token; the LAN
+                // phone only ever needs the /data snapshot.
                 (Method::Get, "/answers") => {
-                    let body = shared.lock().unwrap().answers_json.clone().unwrap_or_else(|| "[]".into());
-                    respond(request, 200, &body);
+                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
+                        let body = shared.lock().unwrap().answers_json.clone().unwrap_or_else(|| "[]".into());
+                        respond(request, 200, &body);
+                    }
                 }
                 (Method::Get, "/profile") => {
-                    let body = shared.lock().unwrap().profile_json.clone().unwrap_or_else(|| "{}".into());
-                    respond(request, 200, &body);
+                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
+                        let body = shared.lock().unwrap().profile_json.clone().unwrap_or_else(|| "{}".into());
+                        respond(request, 200, &body);
+                    }
                 }
                 (Method::Get, "/data") => {
                     let body = shared.lock().unwrap().snapshot_json.clone().unwrap_or_else(|| "{}".into());
@@ -159,12 +188,14 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
                     respond(request, 200, "{\"ok\":true}");
                 }
                 (Method::Post, "/application") => {
-                    let mut body = String::new();
-                    let _ = request.as_reader().read_to_string(&mut body);
-                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
-                        let _ = app.emit("bridge://application", val);
+                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
+                        let mut body = String::new();
+                        let _ = request.as_reader().read_to_string(&mut body);
+                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
+                            let _ = app.emit("bridge://application", val);
+                        }
+                        respond(request, 200, "{\"ok\":true}");
                     }
-                    respond(request, 200, "{\"ok\":true}");
                 }
                 _ => respond(request, 404, "{\"error\":\"not found\"}"),
             }
