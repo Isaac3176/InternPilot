@@ -1,66 +1,59 @@
 name: Release
 
-# Build installers for all platforms and publish them to a GitHub Release
-# whenever a version tag (e.g. v0.1.0) is pushed.
+# Builds the desktop installers (Windows / macOS / Linux) and attaches them to a
+# GitHub Release. Trigger it by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+# (or run it manually from the Actions tab).
+
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  release:
-    permissions:
-      contents: write
+  build:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # Apple Silicon
-            args: "--target aarch64-apple-darwin"
-          - platform: "macos-latest" # Intel
-            args: "--target x86_64-apple-darwin"
-          - platform: "ubuntu-22.04"
-            args: ""
-          - platform: "windows-latest"
-            args: ""
-
+          - platform: windows-latest
+          - platform: macos-latest
+          - platform: ubuntu-22.04
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo
+      - name: Cache Rust build
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Install Linux dependencies
+      - name: Install Linux build deps
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf build-essential curl wget file libssl-dev libgtk-3-dev
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build and publish
+      - name: Build app + publish installers
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "InternPilot AI ${{ github.ref_name }}"
-          releaseBody: "Download the installer for your platform from the assets below."
+          releaseName: "InternPilot ${{ github.ref_name }}"
+          releaseBody: "Download the installer for your platform below, then sign in with your InternPilot account."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
