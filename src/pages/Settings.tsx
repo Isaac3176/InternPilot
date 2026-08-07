@@ -35,6 +35,8 @@ import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../rankin
 import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
 import { getPhoneAccess } from "../mobile/sync";
 import { QRCodeSVG } from "qrcode.react";
+import { cloudSignIn, cloudSignUp, cloudSignOut, cloudSession, onCloudAuth, cloudTestConnection } from "../cloud/auth";
+import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -91,6 +93,23 @@ export default function Settings() {
   // Phone access (LAN)
   const [phone, setPhone] = useState<{ url: string; token: string }>({ url: "", token: "" });
   useEffect(() => { getPhoneAccess().then(setPhone).catch(() => {}); }, []);
+
+  // Cloud sync (Supabase)
+  const [cloud, setCloud] = useState<Session | null>(null);
+  const [cEmail, setCEmail] = useState("");
+  const [cPass, setCPass] = useState("");
+  const [cMsg, setCMsg] = useState("");
+  const [cBusy, setCBusy] = useState(false);
+  useEffect(() => {
+    cloudSession().then(setCloud).catch(() => {});
+    return onCloudAuth(setCloud);
+  }, []);
+  async function cloudDo(fn: () => Promise<void>, ok: string) {
+    setCBusy(true); setCMsg("");
+    try { await fn(); setCMsg(ok); }
+    catch (e) { setCMsg(e instanceof Error ? e.message : String(e)); }
+    finally { setCBusy(false); }
+  }
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
 
@@ -352,6 +371,35 @@ export default function Settings() {
           <button type="button" className="secondary" onClick={resetRankingPrefs}>Reset to defaults</button>
           {prefsSaved && <span className="hint" style={{ alignSelf: "center" }}>Saved ✓</span>}
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Cloud sync <span className="badge interested">beta</span></h2>
+        <p className="hint mb-md">
+          Sign in to sync your data to the cloud so you can use InternPilot on your phone from any network.
+          Foundation step — data-layer sync and the hosted phone app come next.
+        </p>
+        {cloud ? (
+          <>
+            <p className="hint mb-md">Signed in as <strong>{cloud.user.email}</strong>.</p>
+            <div className="actions">
+              <button type="button" disabled={cBusy} onClick={() => cloudDo(cloudTestConnection, "Connection OK — schema + security are working ✓")}>Test connection</button>
+              <button type="button" className="secondary" disabled={cBusy} onClick={() => cloudDo(cloudSignOut, "Signed out.")}>Sign out</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="field-row">
+              <div className="field"><label htmlFor="c-email">Email</label><input id="c-email" type="email" value={cEmail} onChange={(e) => setCEmail(e.target.value)} autoComplete="username" /></div>
+              <div className="field"><label htmlFor="c-pass">Password</label><input id="c-pass" type="password" value={cPass} onChange={(e) => setCPass(e.target.value)} autoComplete="current-password" /></div>
+            </div>
+            <div className="actions">
+              <button type="button" disabled={cBusy || !cEmail || !cPass} onClick={() => cloudDo(() => cloudSignIn(cEmail, cPass), "Signed in ✓")}>Sign in</button>
+              <button type="button" className="secondary" disabled={cBusy || !cEmail || !cPass} onClick={() => cloudDo(() => cloudSignUp(cEmail, cPass), "Account created — you can sign in now.")}>Create account</button>
+            </div>
+          </>
+        )}
+        {cMsg && <p className="hint" style={{ marginTop: 10 }}>{cMsg}</p>}
       </div>
 
       <div className="card">

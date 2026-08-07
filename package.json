@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.0.0",
+    "@supabase/supabase-js": "^2.112.2",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-http": "^2.5.9",
     "@tauri-apps/plugin-notification": "^2.3.3",
