@@ -34,6 +34,7 @@ import { isLogosOn, setLogosOn } from "../listings/logo";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
 import { getPhoneAccess } from "../mobile/sync";
+import { QRCodeSVG } from "qrcode.react";
 import { getDb } from "../db";
 
 export default function Settings() {
@@ -361,12 +362,18 @@ export default function Settings() {
         </p>
         {phone.url ? (
           <>
-            <div className="field">
-              <label htmlFor="phone-url">Open this on your phone</label>
-              <input id="phone-url" readOnly value={phone.url} onFocus={(e) => e.currentTarget.select()} />
-            </div>
-            <div className="actions">
-              <button type="button" onClick={() => navigator.clipboard?.writeText(phone.url).catch(() => {})}>Copy link</button>
+            <div className="phone-connect">
+              <div className="qr">
+                <QRCodeSVG value={phone.url} size={168} marginSize={2} />
+              </div>
+              <div className="phone-connect-txt">
+                <p className="hint" style={{ marginTop: 0 }}>Point your iPhone camera at this code, then tap the banner. Or copy the link.</p>
+                <div className="field">
+                  <label htmlFor="phone-url">Or open this on your phone</label>
+                  <input id="phone-url" readOnly value={phone.url} onFocus={(e) => e.currentTarget.select()} />
+                </div>
+                <button type="button" onClick={() => navigator.clipboard?.writeText(phone.url).catch(() => {})}>Copy link</button>
+              </div>
             </div>
             <p className="hint">The link includes your access token — treat it like a password (anyone on your Wi-Fi with it can see your search snapshot; your full profile stays on this computer). If the address doesn't load on your phone (e.g. you're on a VPN), use this PC's Wi-Fi IPv4 address instead of the one shown.</p>
           </>
