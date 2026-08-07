@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { pushProfileToBridge, pushAnswersToBridge, startBridgeListener } from "./bridge";
 import { pushSnapshotToBridge, startMobileBridge } from "./mobile/sync";
+import { isTauri } from "./lib/env";
 import { AscentMark } from "./components/Logo";
 import "./App.css";
 
@@ -35,6 +36,9 @@ export default function App() {
   useEffect(() => {
     if (startupRan) return;
     startupRan = true;
+    // Bridge, notifications, and the LAN mobile server are desktop-only (Tauri).
+    // In a browser / the deployed web build, skip them entirely.
+    if (!isTauri()) return;
     checkNewListingsAndNotify();
     pushProfileToBridge();
     pushAnswersToBridge();

@@ -1,3 +1,4 @@
+import { isTauri } from "../lib/env";
 import { getDb, validFk } from "./index";
 import type { InterviewRow, InterviewType, PrepStatus } from "./types";
 
@@ -9,6 +10,7 @@ export interface InterviewInput {
 }
 
 export async function listInterviews(): Promise<InterviewRow[]> {
+  if (!isTauri()) return []; // not migrated to cloud yet — empty in the web build
   const db = await getDb();
   return db.select<InterviewRow[]>(
     `SELECT i.*, c.name AS company_name, a.role_title, a.job_description, a.resume_version_id

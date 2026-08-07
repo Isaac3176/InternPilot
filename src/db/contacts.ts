@@ -1,3 +1,4 @@
+import { isTauri } from "../lib/env";
 import { getDb } from "./index";
 import { upsertCompany } from "./companies";
 import type { ContactRow, RelationshipType } from "./types";
@@ -17,6 +18,7 @@ export interface ContactInput {
 }
 
 export async function listContacts(): Promise<ContactRow[]> {
+  if (!isTauri()) return []; // not migrated to cloud yet — empty in the web build
   const db = await getDb();
   return db.select<ContactRow[]>(
     `SELECT ct.*, c.name AS company_name

@@ -1,3 +1,4 @@
+import { isTauri } from "../lib/env";
 import { getDb, validFk } from "./index";
 import type { ReferralRow, ReferralStatus, Status } from "./types";
 
@@ -26,6 +27,7 @@ export interface ReferralInput {
 }
 
 export async function listReferrals(): Promise<ReferralRow[]> {
+  if (!isTauri()) return []; // not migrated to cloud yet — empty in the web build
   const db = await getDb();
   return db.select<ReferralRow[]>(
     `SELECT r.*, ct.name AS contact_name, c.name AS company_name, a.role_title
