@@ -7,9 +7,9 @@ import { parseResume } from "../ai/resumeParse";
 import { createResumeVersion } from "../db/resumes";
 import { ROLE_SUGGESTIONS } from "../data/roles";
 
-export default function SignupWizard({ onDone }: { onDone: () => void }) {
+export default function SignupWizard({ onDone, skipAccount = false }: { onDone: () => void; skipAccount?: boolean }) {
   const h = useProfileForm();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(skipAccount ? 1 : 0);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -68,14 +68,14 @@ export default function SignupWizard({ onDone }: { onDone: () => void }) {
 
   function back() {
     setError("");
-    setStep((x) => Math.max(0, x - 1));
+    setStep((x) => Math.max(skipAccount ? 1 : 0, x - 1));
   }
 
   async function finish() {
     setBusy(true);
     setError("");
     try {
-      await signup(email.trim().toLowerCase(), password);
+      if (!skipAccount) await signup(email.trim().toLowerCase(), password); // local desktop account (legacy)
       await h.save();
       onDone();
     } catch (e) {

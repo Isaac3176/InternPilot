@@ -1,42 +1,36 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { hasAccount, isLoggedIn } from "../auth";
-import { isTauri } from "../lib/env";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { cloudSession, onCloudAuth } from "../cloud/auth";
-import Login from "./Login";
+import { isOnboarded } from "../db/profile";
 import SignupWizard from "./SignupWizard";
 import CloudLogin from "./CloudLogin";
 
-type Mode = "loading" | "signup" | "login" | "cloudlogin" | "authed";
+type Mode = "loading" | "login" | "onboarding" | "authed";
 
 /**
- * Gates the app. In the Tauri desktop app it uses the local account (SQLite);
- * in a browser / the deployed phone build there's no local DB, so it gates on
- * a Supabase (cloud) session instead.
+ * One account everywhere. The app gates on a Supabase session on desktop, web,
+ * and phone — so signing in gives you the same cloud data on every device. New
+ * accounts go through profile onboarding (no separate local password).
  */
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<Mode>("loading");
 
-  useEffect(() => {
-    // Browser / web build → Supabase auth only.
-    if (!isTauri()) {
-      cloudSession().then((s) => setMode(s ? "authed" : "cloudlogin")).catch(() => setMode("cloudlogin"));
-      return onCloudAuth((s) => setMode(s ? "authed" : "cloudlogin"));
+  const evalSession = useCallback(async (session: Session | null) => {
+    if (!session) { setMode("login"); return; }
+    try {
+      setMode((await isOnboarded()) ? "authed" : "onboarding");
+    } catch {
+      setMode("authed"); // don't lock the user out if the profile check fails
     }
-    // Desktop → local account.
-    (async () => {
-      try {
-        if (!(await hasAccount())) setMode("signup");
-        else setMode(isLoggedIn() ? "authed" : "login");
-      } catch (e) {
-        console.error(e);
-        setMode(isLoggedIn() ? "authed" : "login");
-      }
-    })();
   }, []);
 
+  useEffect(() => {
+    cloudSession().then(evalSession).catch(() => setMode("login"));
+    return onCloudAuth(evalSession);
+  }, [evalSession]);
+
   if (mode === "loading") return null;
-  if (mode === "cloudlogin") return <CloudLogin onDone={() => setMode("authed")} />;
-  if (mode === "signup") return <SignupWizard onDone={() => setMode("authed")} />;
-  if (mode === "login") return <Login onDone={() => setMode("authed")} />;
+  if (mode === "login") return <CloudLogin onDone={() => cloudSession().then(evalSession)} />;
+  if (mode === "onboarding") return <SignupWizard skipAccount onDone={() => setMode("authed")} />;
   return <>{children}</>;
 }
