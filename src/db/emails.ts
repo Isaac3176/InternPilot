@@ -1,4 +1,5 @@
 import { getDb } from "./index";
+import { isTauri } from "../lib/env";
 import type { EmailCategory, EmailRow } from "./types";
 
 export interface EmailInput {
@@ -11,6 +12,7 @@ export interface EmailInput {
 }
 
 export async function listEmails(): Promise<EmailRow[]> {
+  if (!isTauri()) return []; // Gmail sync is desktop-only
   const db = await getDb();
   return db.select<EmailRow[]>(
     `SELECT e.*, c.name AS company_name, a.role_title
@@ -39,6 +41,7 @@ export async function createEmail(input: EmailInput): Promise<number | null> {
 
 /** Gmail message ids already stored, used to avoid re-importing on sync. */
 export async function getExistingGmailIds(): Promise<string[]> {
+  if (!isTauri()) return [];
   const db = await getDb();
   const rows = await db.select<{ gmail_id: string }[]>(
     "SELECT gmail_id FROM emails WHERE gmail_id IS NOT NULL",

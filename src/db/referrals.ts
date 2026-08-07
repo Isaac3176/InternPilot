@@ -1,16 +1,6 @@
-import { isTauri } from "../lib/env";
 import { getDb, validFk } from "./index";
+import { cloudMode, supabase } from "../cloud/supabase";
 import type { ReferralRow, ReferralStatus, Status } from "./types";
-
-/** Null out any foreign-key id that no longer references a live row. */
-async function withValidFks(input: ReferralInput): Promise<ReferralInput> {
-  return {
-    ...input,
-    contact_id: await validFk("contacts", input.contact_id),
-    application_id: await validFk("applications", input.application_id),
-    company_id: await validFk("companies", input.company_id),
-  };
-}
 
 export interface ReferralInput {
   contact_id: number | null;
@@ -26,8 +16,46 @@ export interface ReferralInput {
   notes?: string | null;
 }
 
+/** Null out any foreign-key id that no longer references a live row (SQLite). */
+async function withValidFks(input: ReferralInput): Promise<ReferralInput> {
+  return {
+    ...input,
+    contact_id: await validFk("contacts", input.contact_id),
+    application_id: await validFk("applications", input.application_id),
+    company_id: await validFk("companies", input.company_id),
+  };
+}
+
+function row(input: ReferralInput): Record<string, unknown> {
+  return {
+    contact_id: input.contact_id, application_id: input.application_id, company_id: input.company_id,
+    status: input.status, first_contacted: input.first_contacted ?? null, last_interaction: input.last_interaction ?? null,
+    next_follow_up: input.next_follow_up ?? null, confirmation_note: input.confirmation_note ?? null,
+    referral_link: input.referral_link ?? null, thank_you_sent: input.thank_you_sent ? 1 : 0, notes: input.notes ?? null,
+  };
+}
+function params(input: ReferralInput): unknown[] {
+  const r = row(input);
+  return [r.contact_id, r.application_id, r.company_id, r.status, r.first_contacted, r.last_interaction,
+    r.next_follow_up, r.confirmation_note, r.referral_link, r.thank_you_sent, r.notes];
+}
+
 export async function listReferrals(): Promise<ReferralRow[]> {
-  if (!isTauri()) return []; // not migrated to cloud yet — empty in the web build
+  if (cloudMode()) {
+    const { data } = await supabase.from("referrals")
+      .select("*, contacts(name, companies(name)), companies(name), applications(role_title)");
+    return (data ?? []).map((r) => {
+      const row = r as Record<string, unknown>;
+      const ct = row.contacts as { name?: string; companies?: { name?: string } } | null;
+      const co = row.companies as { name?: string } | null;
+      const app = row.applications as { role_title?: string } | null;
+      delete row.contacts; delete row.companies; delete row.applications;
+      return {
+        ...row, contact_name: ct?.name ?? null,
+        company_name: co?.name ?? ct?.companies?.name ?? null, role_title: app?.role_title ?? null,
+      } as ReferralRow;
+    });
+  }
   const db = await getDb();
   return db.select<ReferralRow[]>(
     `SELECT r.*, ct.name AS contact_name, c.name AS company_name, a.role_title
@@ -39,23 +67,12 @@ export async function listReferrals(): Promise<ReferralRow[]> {
   );
 }
 
-function params(input: ReferralInput): unknown[] {
-  return [
-    input.contact_id,
-    input.application_id,
-    input.company_id,
-    input.status,
-    input.first_contacted ?? null,
-    input.last_interaction ?? null,
-    input.next_follow_up ?? null,
-    input.confirmation_note ?? null,
-    input.referral_link ?? null,
-    input.thank_you_sent ? 1 : 0,
-    input.notes ?? null,
-  ];
-}
-
 export async function createReferral(input: ReferralInput): Promise<number | null> {
+  if (cloudMode()) {
+    const { data, error } = await supabase.from("referrals").insert(row(input)).select("id").single();
+    if (error) throw error;
+    return (data?.id as number) ?? null;
+  }
   const db = await getDb();
   const res = await db.execute(
     `INSERT INTO referrals
@@ -68,6 +85,11 @@ export async function createReferral(input: ReferralInput): Promise<number | nul
 }
 
 export async function updateReferral(id: number, input: ReferralInput): Promise<void> {
+  if (cloudMode()) {
+    const { error } = await supabase.from("referrals").update(row(input)).eq("id", id);
+    if (error) throw error;
+    return;
+  }
   const db = await getDb();
   await db.execute(
     `UPDATE referrals SET
@@ -80,6 +102,11 @@ export async function updateReferral(id: number, input: ReferralInput): Promise<
 }
 
 export async function setReferralStatus(id: number, status: ReferralStatus): Promise<void> {
+  if (cloudMode()) {
+    const { error } = await supabase.from("referrals").update({ status, last_interaction: new Date().toISOString() }).eq("id", id);
+    if (error) throw error;
+    return;
+  }
   const db = await getDb();
   await db.execute(
     "UPDATE referrals SET status = ?, last_interaction = datetime('now'), updated_at = datetime('now') WHERE id = ?",
@@ -88,6 +115,11 @@ export async function setReferralStatus(id: number, status: ReferralStatus): Pro
 }
 
 export async function deleteReferral(id: number): Promise<void> {
+  if (cloudMode()) {
+    const { error } = await supabase.from("referrals").delete().eq("id", id);
+    if (error) throw error;
+    return;
+  }
   const db = await getDb();
   await db.execute("DELETE FROM referrals WHERE id = ?", [id]);
 }
@@ -135,10 +167,21 @@ const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
  * Referral association is correlational, not causal.
  */
 export async function getNetworkingStats(): Promise<NetworkingStats> {
-  const db = await getDb();
-  const refs = await db.select<{ status: ReferralStatus; next_follow_up: string | null }[]>(
-    "SELECT status, next_follow_up FROM referrals",
-  );
+  let refs: { status: ReferralStatus; next_follow_up: string | null; application_id: number | null }[];
+  let apps: { id: number; status: Status }[];
+
+  if (cloudMode()) {
+    const [{ data: r }, { data: a }] = await Promise.all([
+      supabase.from("referrals").select("status, next_follow_up, application_id"),
+      supabase.from("applications").select("id, status"),
+    ]);
+    refs = (r ?? []) as typeof refs;
+    apps = (a ?? []) as typeof apps;
+  } else {
+    const db = await getDb();
+    refs = await db.select("SELECT status, next_follow_up, application_id FROM referrals");
+    apps = await db.select("SELECT id, status FROM applications");
+  }
 
   const inSet = (set: ReferralStatus[], s: ReferralStatus) => set.includes(s);
   const outreachSent = refs.filter((r) => inSet(SENT, r.status)).length;
@@ -152,11 +195,9 @@ export async function getNetworkingStats(): Promise<NetworkingStats> {
     (r) => r.next_follow_up && !inSet(TERMINAL, r.status) && new Date(r.next_follow_up) < today,
   ).length;
 
-  const quoted = AGREED.map((s) => `'${s}'`).join(",");
-  const appRows = await db.select<{ status: Status; has_referral: number }[]>(
-    `SELECT a.status,
-       EXISTS(SELECT 1 FROM referrals r WHERE r.application_id = a.id AND r.status IN (${quoted})) AS has_referral
-     FROM applications a`,
+  // Which applications have an agreed-or-better referral.
+  const referredApps = new Set(
+    refs.filter((r) => r.application_id != null && inSet(AGREED, r.status)).map((r) => r.application_id),
   );
 
   const rates = (rows: { status: Status }[]): OutcomeRates => {
@@ -167,16 +208,12 @@ export async function getNetworkingStats(): Promise<NetworkingStats> {
   };
 
   return {
-    totalPaths: refs.length,
-    outreachSent,
-    responded,
-    agreed,
-    confirmed,
+    totalPaths: refs.length, outreachSent, responded, agreed, confirmed,
     requestResponseRate: pct(responded, outreachSent),
     agreementRate: pct(agreed, outreachSent),
     confirmedRate: pct(confirmed, outreachSent),
     followUpsDue,
-    withReferral: rates(appRows.filter((r) => r.has_referral === 1)),
-    withoutReferral: rates(appRows.filter((r) => r.has_referral !== 1)),
+    withReferral: rates(apps.filter((a) => referredApps.has(a.id))),
+    withoutReferral: rates(apps.filter((a) => !referredApps.has(a.id))),
   };
 }

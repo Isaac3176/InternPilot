@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternal } from "../lib/open";
 import { createApplication, listApplications } from "../db/applications";
 import { listContacts } from "../db/contacts";
 import { getProfile } from "../db/profile";
@@ -168,7 +168,7 @@ export default function Internships() {
     try {
       const id = await addToTracker(l);
       // Opening the posting is best-effort — don't let it block adding + navigating.
-      openUrl(l.url).catch((e) => console.error("open posting failed", e));
+      openExternal(l.url).catch((e) => console.error("open posting failed", e));
       if (id) navigate(`/apply?app=${id}`);
       else setError("Couldn't add this application. Try again.");
     } catch (e) {
@@ -304,7 +304,7 @@ export default function Internships() {
                     <div className="nm">{selected.company}</div>
                     <div className="meta">{jobTypeOf(selected.title)}{selected.locations[0] ? ` · ${selected.locations[0]}` : ""}</div>
                   </div>
-                  <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>Open posting</button>
+                  <button type="button" className="secondary" onClick={() => openExternal(selected.url)}>Open posting</button>
                 </div>
 
                 <div className="rail">
@@ -355,7 +355,7 @@ export default function Internships() {
                     <p>We couldn't load the description automatically for this posting — open it on the company site to read the full details.</p>
                   </div>
                 )}
-                <button type="button" className="secondary" onClick={() => openUrl(selected.url)}>View full posting →</button>
+                <button type="button" className="secondary" onClick={() => openExternal(selected.url)}>View full posting →</button>
               </div>
             </>
           )}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternal } from "../lib/open";
 import { useNavigate } from "react-router-dom";
 import { getReleaseRadar, type RadarEntry, type RadarState } from "../release/radar";
 import { confidenceLabel } from "../release/history";
@@ -54,7 +54,7 @@ export default function ReleaseRadar() {
         location: ol.location, status: "applied", date_applied: new Date().toISOString().slice(0, 10),
       });
     } catch (err) { console.error(err); }
-    openUrl(ol.url).catch(console.error);
+    openExternal(ol.url).catch(console.error);
   }
 
   const open = entries.filter((e) => e.state === "open");

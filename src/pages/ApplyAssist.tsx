@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternal } from "../lib/open";
 import { listApplications } from "../db/applications";
 import { listResumeVersions } from "../db/resumes";
 import type { ApplicationRow, ResumeVersion } from "../db/types";
@@ -147,7 +147,7 @@ export default function ApplyAssist() {
                 {running ? "Generating…" : "Generate answers & checklist"}
               </button>
               {app.job_link && (
-                <button type="button" className="secondary" onClick={() => openUrl(app.job_link as string)}>
+                <button type="button" className="secondary" onClick={() => openExternal(app.job_link as string)}>
                   Open job posting
                 </button>
               )}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternal } from "../lib/open";
 import { createApplication } from "../db/applications";
 import { getOpportunityQueue, recommendResume, type OpportunityQueue } from "../ranking/queue";
 import { dismiss, mutePattern, similarPhrase } from "../ranking/feedback";
@@ -53,7 +53,7 @@ export default function Queue() {
     try {
       await track(o, "applied");
       recordApplySignal(o); // applying is a strong positive signal
-      openUrl(o.url).catch((e) => console.error("open posting failed", e));
+      openExternal(o.url).catch((e) => console.error("open posting failed", e));
       load();
     } catch (e) {
       console.error(e);

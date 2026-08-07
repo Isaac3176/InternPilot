@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternal } from "../lib/open";
 import { getFeed } from "../listings/service";
 import { createApplication } from "../db/applications";
 import { buildPacket, getChecklist, setChecklistItem, PACKET_CHECKLIST, type ApplicationPacket } from "../apply/packet";
@@ -57,7 +57,7 @@ export default function Packet() {
   async function applyNow() {
     try {
       await track("applied");
-      if (packet) openUrl(packet.listing.url).catch(console.error);
+      if (packet) openExternal(packet.listing.url).catch(console.error);
       setStatus("Recorded as applied and opened the posting. Finish the form in your browser.");
     } catch (e) { setStatus(e instanceof Error ? e.message : String(e)); }
   }
@@ -191,7 +191,7 @@ export default function Packet() {
                 <li key={i}><label><input type="checkbox" checked={checked.has(i)} onChange={() => toggle(i)} /><span className={checked.has(i) ? "done" : ""}>{item}</span></label></li>
               ))}
             </ul>
-            <a className="pk-link" href={l.url} onClick={(e) => { e.preventDefault(); openUrl(l.url).catch(console.error); }}>Open original posting ↗</a>
+            <a className="pk-link" href={l.url} onClick={(e) => { e.preventDefault(); openExternal(l.url).catch(console.error); }}>Open original posting ↗</a>
           </section>
 
           {/* Saved answers */}

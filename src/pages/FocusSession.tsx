@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternal } from "../lib/open";
 import { createApplication } from "../db/applications";
 import { getOpportunityQueue, recommendResume } from "../ranking/queue";
 import { recordApplySignal } from "../ranking/learning";
@@ -163,7 +163,7 @@ export default function FocusSession() {
         )}
 
         <div className="fc-actions">
-          <button type="button" className="btn primary" onClick={() => openUrl(o.url).catch(console.error)}>Open posting</button>
+          <button type="button" className="btn primary" onClick={() => openExternal(o.url).catch(console.error)}>Open posting</button>
           <button type="button" className="btn good" onClick={() => advance("applied", o)}>Applied — next ✓</button>
           <button type="button" className="btn" onClick={() => advance("saved", o)}>Save for later</button>
           <button type="button" className="btn ghost" onClick={() => advance("skipped")}>Skip</button>
