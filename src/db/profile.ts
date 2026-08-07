@@ -1,4 +1,5 @@
 import { getDb } from "./index";
+import { cloudMode, cloudUserId, supabase } from "../cloud/supabase";
 import type { Profile, RemotePref, WorkAuth } from "./types";
 
 /** Every writable profile column, in a fixed order used to build the upsert. */
@@ -19,6 +20,10 @@ export type ProfileInput = {
 } & Record<Exclude<(typeof PROFILE_COLUMNS)[number], "work_auth" | "remote_pref" | "preferred_resume_id">, string | null>;
 
 export async function getProfile(): Promise<Profile | null> {
+  if (cloudMode()) {
+    const { data } = await supabase.from("profiles").select("*").maybeSingle();
+    return data ? ({ id: 1, ...(data as Record<string, unknown>) } as unknown as Profile) : null;
+  }
   const db = await getDb();
   const rows = await db.select<Profile[]>("SELECT * FROM profile WHERE id = 1");
   return rows[0] ?? null;
@@ -31,6 +36,13 @@ export async function isOnboarded(): Promise<boolean> {
 
 /** Upsert the single profile row and mark it onboarded. */
 export async function saveProfile(input: ProfileInput): Promise<void> {
+  if (cloudMode()) {
+    const row: Record<string, unknown> = { user_id: cloudUserId(), onboarded: 1 };
+    for (const c of PROFILE_COLUMNS) row[c] = (input as Record<string, unknown>)[c] ?? null;
+    const { error } = await supabase.from("profiles").upsert(row, { onConflict: "user_id" });
+    if (error) throw error;
+    return;
+  }
   const db = await getDb();
   const cols = PROFILE_COLUMNS.join(", ");
   const placeholders = PROFILE_COLUMNS.map(() => "?").join(", ");

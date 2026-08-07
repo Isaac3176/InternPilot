@@ -1,16 +1,21 @@
 import { getDb } from "./index";
+import { cloudMode, supabase } from "../cloud/supabase";
 import { STATUSES, type Status } from "./types";
 
 export type StatusCounts = Record<Status, number> & { total: number };
 
 export async function getStatusCounts(): Promise<StatusCounts> {
+  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>;
+  let total = 0;
+  if (cloudMode()) {
+    const { data } = await supabase.from("applications").select("status");
+    for (const r of data ?? []) { const s = r.status as Status; if (s in counts) counts[s] += 1; total += 1; }
+    return { ...counts, total };
+  }
   const db = await getDb();
   const rows = await db.select<{ status: Status; count: number }[]>(
     "SELECT status, COUNT(*) AS count FROM applications GROUP BY status",
   );
-
-  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>;
-  let total = 0;
   for (const row of rows) {
     if (row.status in counts) counts[row.status] = row.count;
     total += row.count;
@@ -53,6 +58,12 @@ export interface ReferralStats {
 }
 
 export async function getReferralStats(): Promise<ReferralStats> {
+  if (cloudMode()) {
+    const { data } = await supabase.from("applications").select("referral");
+    let referred = 0; const total = (data ?? []).length;
+    for (const r of data ?? []) if (r.referral && String(r.referral).trim()) referred += 1;
+    return { referred, total, rate: total > 0 ? Math.round((referred / total) * 100) : 0 };
+  }
   const db = await getDb();
   const rows = await db.select<{ referred: number; total: number }[]>(
     `SELECT
@@ -76,6 +87,21 @@ export interface ResumeVersionPerf {
 
 /** Per-resume-version funnel performance, to answer "which resume works best?". */
 export async function getResumeVersionPerformance(): Promise<ResumeVersionPerf[]> {
+  if (cloudMode()) {
+    const [{ data: versions }, { data: apps }] = await Promise.all([
+      supabase.from("resume_versions").select("id, name"),
+      supabase.from("applications").select("resume_version_id, status"),
+    ]);
+    return (versions ?? []).map((v) => {
+      const rel = (apps ?? []).filter((a) => a.resume_version_id === v.id);
+      return {
+        id: v.id as number, name: v.name as string, total: rel.length,
+        reachedOa: rel.filter((a) => ["oa", "interview", "offer"].includes(a.status)).length,
+        reachedInterview: rel.filter((a) => ["interview", "offer"].includes(a.status)).length,
+        offers: rel.filter((a) => a.status === "offer").length,
+      };
+    }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  }
   const db = await getDb();
   const rows = await db.select<
     { id: number; name: string; total: number; reached_oa: number; reached_interview: number; offers: number }[]
@@ -115,10 +141,18 @@ function startOfWeek(d: Date): Date {
 
 /** Applications per week (by date applied, falling back to date saved) for the last N weeks. */
 export async function getWeeklyApplications(weeks = 8): Promise<WeekBucket[]> {
-  const db = await getDb();
-  const rows = await db.select<{ d: string }[]>(
-    "SELECT COALESCE(date_applied, date_saved) AS d FROM applications WHERE COALESCE(date_applied, date_saved) IS NOT NULL",
-  );
+  let rows: { d: string }[];
+  if (cloudMode()) {
+    const { data } = await supabase.from("applications").select("date_applied, date_saved");
+    rows = (data ?? [])
+      .map((r) => ({ d: (r.date_applied ?? r.date_saved) as string }))
+      .filter((r) => !!r.d);
+  } else {
+    const db = await getDb();
+    rows = await db.select<{ d: string }[]>(
+      "SELECT COALESCE(date_applied, date_saved) AS d FROM applications WHERE COALESCE(date_applied, date_saved) IS NOT NULL",
+    );
+  }
 
   const thisWeekStart = startOfWeek(new Date());
   const buckets: { start: number; label: string; count: number }[] = [];
