@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { pushProfileToBridge, pushAnswersToBridge, startBridgeListener } from "./bridge";
@@ -33,6 +33,7 @@ const NAV = [
 ];
 
 export default function App() {
+  const [navOpen, setNavOpen] = useState(false);
   useEffect(() => {
     if (startupRan) return;
     startupRan = true;
@@ -54,7 +55,17 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {/* Mobile-only top bar with a menu toggle (sidebar is off-canvas on phones). */}
+      <header className="mobile-topbar">
+        <button type="button" className="menu-btn" aria-label="Menu" onClick={() => setNavOpen(true)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <AscentMark size={22} className="brand-mark" />
+        <b>InternPilot</b>
+      </header>
+
+      {navOpen && <div className="nav-overlay" onClick={() => setNavOpen(false)} />}
+      <aside className={`sidebar${navOpen ? " open" : ""}`}>
         <div className="brand">
           <AscentMark size={28} className="brand-mark" />
           <span>
@@ -64,13 +75,13 @@ export default function App() {
         </div>
         <nav className="nav">
           {NAV.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end}>
+            <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setNavOpen(false)}>
               <span className="ico">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-footer">Local-only · Beta</div>
+        <div className="sidebar-footer">Beta</div>
       </aside>
       <main className="main">
         <Suspense fallback={<p className="hint" style={{ padding: "8px 2px" }}>Loading…</p>}>
