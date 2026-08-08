@@ -1289,6 +1289,10 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .ats-bar { height: 6px; border-radius: 3px; background: var(--line-2); overflow: hidden; margin: 4px 0 2px; }
 .ats-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
 .ats-note { font-size: 11px; color: var(--slate-2); }
+.ats-adjust { border-top: 1px dashed var(--line-2); padding-top: 8px; margin-top: 2px; }
+.ats-adjust .ats-cat-h span:first-child { color: var(--slate-2); }
+.ats-note.pos, .ats-cat-h b .pos { color: var(--beacon); }
+.ats-note.neg, .ats-cat-h b .neg { color: var(--warn); }
 .ats-fixes { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-2); }
 .ats-fixes ul { margin: 8px 0 0; padding-left: 18px; }
 .ats-fixes li { font-size: 13px; color: var(--ink-2); margin-bottom: 5px; }

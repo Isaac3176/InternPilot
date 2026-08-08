@@ -3,8 +3,8 @@ import { createResumeVersion, listResumeVersions } from "../db/resumes";
 import type { ResumeVersion } from "../db/types";
 import { hasApiKey } from "../ai/settings";
 import {
-  gapFinder, rewriteResume, redFlagScan, atsScore,
-  type GapResult, type RewriteResult, type RedFlagResult, type AtsResult,
+  gapFinder, rewriteResume, redFlagScan, hrRank,
+  type GapResult, type RewriteResult, type RedFlagResult, type RankResult,
 } from "../ai/resumeLab";
 
 export default function ResumeLab() {
@@ -15,7 +15,7 @@ export default function ResumeLab() {
   const [gap, setGap] = useState<GapResult | null>(null);
   const [rewrite, setRewrite] = useState<RewriteResult | null>(null);
   const [scan, setScan] = useState<RedFlagResult | null>(null);
-  const [ats, setAts] = useState<AtsResult | null>(null);
+  const [rank, setRank] = useState<RankResult | null>(null);
   const [busy, setBusy] = useState<"" | "gap" | "rewrite" | "scan" | "ats">("");
   const [err, setErr] = useState("");
   const [saveName, setSaveName] = useState("");
@@ -36,7 +36,7 @@ export default function ResumeLab() {
     try {
       if (tool === "gap") setGap(await gapFinder(resumeText, jd));
       else if (tool === "rewrite") { const r = await rewriteResume(resumeText, jd); setRewrite(r); setSaveName(`${selected?.name ?? "Résumé"} — tailored`); }
-      else if (tool === "ats") setAts(await atsScore(resumeText, jd || undefined));
+      else if (tool === "ats") setRank(await hrRank(resumeText, jd || undefined));
       else setScan(await redFlagScan(resumeText, jd || undefined));
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -83,34 +83,41 @@ export default function ResumeLab() {
         {err && <p className="hint text-red" style={{ marginTop: 10 }}>{err}</p>}
       </div>
 
-      {/* 0. ATS Score */}
+      {/* 0. HackerRank-style Rank */}
       <div className="card">
-        <div className="lab-head"><div><h2>ATS Score</h2><p className="sub">How a recruiter's ATS + a human are likely to rate this résumé, out of 100.</p></div>
-          <button type="button" onClick={() => run("ats")} disabled={busy !== "" || noText}>{busy === "ats" ? "Scoring…" : "Score my résumé"}</button>
+        <div className="lab-head"><div><h2>HackerRank Rank</h2><p className="sub">How HackerRank's intern screener would rank you — a faithful port of their public rubric. It rewards open-source &amp; shipped projects above all. Not an ATS check; scores are a band, not a grade.</p></div>
+          <button type="button" onClick={() => run("ats")} disabled={busy !== "" || noText}>{busy === "ats" ? "Ranking…" : "Rank my résumé"}</button>
         </div>
-        {ats && (
+        {rank && (
           <div className="ats">
             <div className="ats-top">
-              <div className="ats-ring" style={{ ["--v" as string]: `${ats.overall}`, ["--c" as string]: ats.overall >= 80 ? "var(--beacon)" : ats.overall >= 60 ? "var(--accent)" : "var(--warn)" }}>
-                <b>{ats.overall}</b><span>/100</span>
+              <div className="ats-ring" style={{ ["--v" as string]: `${Math.round(((rank.overall - rank.min) / (rank.max - rank.min)) * 100)}`, ["--c" as string]: rank.overall >= 80 ? "var(--beacon)" : rank.overall >= 45 ? "var(--accent)" : "var(--warn)" }}>
+                <b>{rank.overall}</b><span>of {rank.max}</span>
               </div>
               <ul className="ats-cats">
-                {ats.categories.map((c) => (
+                {rank.categories.map((c) => (
                   <li key={c.key}>
-                    <div className="ats-cat-h"><span>{c.name}</span><b>{c.score}/{c.max}</b></div>
+                    <div className="ats-cat-h"><span>{c.icon} {c.label}</span><b>{c.score}/{c.max}</b></div>
                     <div className="ats-bar"><i style={{ width: `${(c.score / c.max) * 100}%` }} /></div>
                     <span className="ats-note">{c.note}</span>
                   </li>
                 ))}
+                <li className="ats-adjust">
+                  <div className="ats-cat-h"><span>Base + bonus − deductions</span>
+                    <b>{rank.base} {rank.bonus ? <span className="pos">+{rank.bonus}</span> : null} {rank.deductions ? <span className="neg">−{rank.deductions}</span> : null} = {rank.overall}</b>
+                  </div>
+                  {rank.bonusNotes.length > 0 && <span className="ats-note pos">Bonus: {rank.bonusNotes.join(", ")}</span>}
+                  {rank.deductionNotes.length > 0 && <span className="ats-note neg">Deductions: {rank.deductionNotes.join(", ")}</span>}
+                </li>
               </ul>
             </div>
-            {ats.fixes.length > 0 && (
+            {rank.fixes.length > 0 && (
               <div className="ats-fixes">
-                <span className="eyebrow">Top fixes</span>
-                <ul>{ats.fixes.map((f, i) => <li key={i}>{f}</li>)}</ul>
+                <span className="eyebrow">Raise your rank</span>
+                <ul>{rank.fixes.map((f, i) => <li key={i}>{f}</li>)}</ul>
               </div>
             )}
-            {ats.source === "stub" && <span className="badge offline">Offline estimate — add an OpenAI key for a deeper score</span>}
+            {rank.source === "stub" && <span className="badge offline">Offline estimate — add an OpenAI key for the full screener read</span>}
           </div>
         )}
       </div>
