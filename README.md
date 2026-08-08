@@ -22,8 +22,9 @@ The full experience, including **browser-extension autofill**.
 > (Windows: *More info → Run anyway*; macOS: right-click → *Open*).
 
 ### 🌐 Use it in your browser — nothing to install
-**[Open the web app →](https://internpilot.vercel.app)** &nbsp;<!-- replace with your Vercel URL -->
-Sign in and go. On iPhone, tap **Share → Add to Home Screen** for an app icon.
+_Web app coming soon_ — deploy it in a few minutes with [cloud/DEPLOY.md](cloud/DEPLOY.md).
+<!-- After deploying, replace this line with: **[Open the web app →](https://YOUR-APP.vercel.app)** -->
+Once live: sign in and go — on iPhone, tap **Share → Add to Home Screen** for an app icon.
 
 _Same account, same data everywhere. The desktop app is where the autofill extension runs;
 the web/phone app browses, queues, and tracks._
