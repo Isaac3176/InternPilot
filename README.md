@@ -1,5 +1,15 @@
 # InternPilot AI
 
+[![Download](https://img.shields.io/github/v/release/Isaac3176/InternPilot?label=Download&color=1F6FEB&sort=semver)](https://github.com/Isaac3176/InternPilot/releases/latest)
+
+### ⬇ [Download the app](https://github.com/Isaac3176/InternPilot/releases/latest) — Windows · macOS · Linux
+
+Grab the installer for your OS from the latest release, install it, and sign in with your
+account. (Unsigned beta build: on Windows click **More info → Run anyway**; on macOS
+right-click the app → **Open** the first time.)
+
+---
+
 A local-first **desktop career assistant** for software-engineering internship hunting.
 InternPilot discovers internships, tailors your résumé, tracks every application, manages
 referrals, prepares you for OAs and interviews, and can **autofill applications from a
