@@ -1,41 +1,51 @@
 # InternPilot AI
 
 [![Download](https://img.shields.io/github/v/release/Isaac3176/InternPilot?label=Download&color=1F6FEB&sort=semver)](https://github.com/Isaac3176/InternPilot/releases/latest)
+&nbsp;[![License](https://img.shields.io/badge/status-beta-A9761C)](#)
 
-### ⬇ [Download the app](https://github.com/Isaac3176/InternPilot/releases/latest) — Windows · macOS · Linux
+**Your internship search — discovered, ranked, tracked, and half-applied for you.**
+InternPilot finds internships, scores each one against your résumé, tells you the single
+best thing to do next, autofills applications from a browser extension, and preps you for
+OAs and interviews. Sign in and your data is the same across **desktop, web, and phone**.
 
-Grab the installer for your OS from the latest release, install it, and sign in with your
-account. (Unsigned beta build: on Windows click **More info → Run anyway**; on macOS
-right-click the app → **Open** the first time.)
+## Get it — two ways
 
----
+### 💻 Install the desktop app
+The full experience, including **browser-extension autofill**.
 
-A local-first **desktop career assistant** for software-engineering internship hunting.
-InternPilot discovers internships, tailors your résumé, tracks every application, manages
-referrals, prepares you for OAs and interviews, and can **autofill applications from a
-browser extension** — all grounded in your own data, stored on your device.
+**[⬇ Download for Windows](https://github.com/Isaac3176/InternPilot/releases/latest)** ·
+**[macOS](https://github.com/Isaac3176/InternPilot/releases/latest)** ·
+**[Linux](https://github.com/Isaac3176/InternPilot/releases/latest)**
 
-Built with **Tauri 2 + React 19 + TypeScript + SQLite**, with **OpenAI** powering the AI
-features (every AI feature has an offline fallback, so the app is usable without a key).
+> Pick the installer for your OS on the release page — Windows `.exe`/`.msi`, macOS `.dmg`,
+> Linux `.AppImage`/`.deb`. It's an **unsigned beta**, so your OS warns on first launch
+> (Windows: *More info → Run anyway*; macOS: right-click → *Open*).
 
-**Status: Beta** — actively developed, usable locally, not yet independently tested at scale.
+### 🌐 Use it in your browser — nothing to install
+**[Open the web app →](https://internpilot.vercel.app)** &nbsp;<!-- replace with your Vercel URL -->
+Sign in and go. On iPhone, tap **Share → Add to Home Screen** for an app icon.
 
-- **Repo:** https://github.com/Isaac3176/InternPilot
-- **Deeper docs:** [Architecture](docs/ARCHITECTURE.md) · [Browser extension](docs/EXTENSION.md) · [Privacy](docs/PRIVACY.md) · [Development](docs/DEVELOPMENT.md)
+_Same account, same data everywhere. The desktop app is where the autofill extension runs;
+the web/phone app browses, queues, and tracks._
 
-## Download
+## Screenshots
 
-Grab the latest installer from the
-**[Releases page](https://github.com/Isaac3176/InternPilot/releases/latest)**:
+<details open>
+<summary>Fast Apply · Discover · Application packet</summary>
 
-| OS | File |
-| --- | --- |
-| Windows | `.msi` / `.exe` (NSIS) |
-| macOS | `.dmg` (Apple Silicon + Intel) |
-| Linux | `.AppImage` / `.deb` |
+<p>
+  <img src="docs/screenshots/fast-apply.png" alt="Fast Apply queue" width="32%">
+  <img src="docs/screenshots/discover.png" alt="Discover feed" width="32%">
+  <img src="docs/screenshots/packet.png" alt="Application packet" width="32%">
+</p>
+</details>
 
-The app is unsigned, so your OS may warn on first launch (Windows: More info → Run anyway;
-macOS: right-click → Open). All data stays on your device.
+> _Add PNGs to `docs/screenshots/` with those names — see the folder's README._
+
+Built with **Tauri 2 + React 19 + TypeScript** on the desktop and **Supabase** (Postgres +
+auth) in the cloud, with **OpenAI** powering the AI features (each has an offline fallback).
+
+- **Deeper docs:** [Architecture](docs/ARCHITECTURE.md) · [Browser extension](docs/EXTENSION.md) · [Privacy](docs/PRIVACY.md) · [Development](docs/DEVELOPMENT.md) · [Cloud setup](cloud/SETUP.md)
 
 ## Features
 
