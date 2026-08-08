@@ -3,8 +3,8 @@ import { createResumeVersion, listResumeVersions } from "../db/resumes";
 import type { ResumeVersion } from "../db/types";
 import { hasApiKey } from "../ai/settings";
 import {
-  gapFinder, rewriteResume, redFlagScan,
-  type GapResult, type RewriteResult, type RedFlagResult,
+  gapFinder, rewriteResume, redFlagScan, atsScore,
+  type GapResult, type RewriteResult, type RedFlagResult, type AtsResult,
 } from "../ai/resumeLab";
 
 export default function ResumeLab() {
@@ -15,7 +15,8 @@ export default function ResumeLab() {
   const [gap, setGap] = useState<GapResult | null>(null);
   const [rewrite, setRewrite] = useState<RewriteResult | null>(null);
   const [scan, setScan] = useState<RedFlagResult | null>(null);
-  const [busy, setBusy] = useState<"" | "gap" | "rewrite" | "scan">("");
+  const [ats, setAts] = useState<AtsResult | null>(null);
+  const [busy, setBusy] = useState<"" | "gap" | "rewrite" | "scan" | "ats">("");
   const [err, setErr] = useState("");
   const [saveName, setSaveName] = useState("");
 
@@ -30,11 +31,12 @@ export default function ResumeLab() {
   const selected = versions.find((v) => v.id === selId) ?? null;
   const resumeText = selected?.content ?? "";
 
-  async function run(tool: "gap" | "rewrite" | "scan") {
+  async function run(tool: "gap" | "rewrite" | "scan" | "ats") {
     setErr(""); setBusy(tool);
     try {
       if (tool === "gap") setGap(await gapFinder(resumeText, jd));
       else if (tool === "rewrite") { const r = await rewriteResume(resumeText, jd); setRewrite(r); setSaveName(`${selected?.name ?? "Résumé"} — tailored`); }
+      else if (tool === "ats") setAts(await atsScore(resumeText, jd || undefined));
       else setScan(await redFlagScan(resumeText, jd || undefined));
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -79,6 +81,38 @@ export default function ResumeLab() {
         {noText && <p className="hint text-red" style={{ marginTop: 10 }}>This résumé has no text. Add résumé text in Résumé Center (paste or upload) so the tools have something to work with.</p>}
         {!hasApiKey() && <p className="hint" style={{ marginTop: 10 }}>No OpenAI key set — Gap Finder &amp; Red-Flag run offline (lighter); Rewrite needs a key (Settings).</p>}
         {err && <p className="hint text-red" style={{ marginTop: 10 }}>{err}</p>}
+      </div>
+
+      {/* 0. ATS Score */}
+      <div className="card">
+        <div className="lab-head"><div><h2>ATS Score</h2><p className="sub">How a recruiter's ATS + a human are likely to rate this résumé, out of 100.</p></div>
+          <button type="button" onClick={() => run("ats")} disabled={busy !== "" || noText}>{busy === "ats" ? "Scoring…" : "Score my résumé"}</button>
+        </div>
+        {ats && (
+          <div className="ats">
+            <div className="ats-top">
+              <div className="ats-ring" style={{ ["--v" as string]: `${ats.overall}`, ["--c" as string]: ats.overall >= 80 ? "var(--beacon)" : ats.overall >= 60 ? "var(--accent)" : "var(--warn)" }}>
+                <b>{ats.overall}</b><span>/100</span>
+              </div>
+              <ul className="ats-cats">
+                {ats.categories.map((c) => (
+                  <li key={c.key}>
+                    <div className="ats-cat-h"><span>{c.name}</span><b>{c.score}/{c.max}</b></div>
+                    <div className="ats-bar"><i style={{ width: `${(c.score / c.max) * 100}%` }} /></div>
+                    <span className="ats-note">{c.note}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {ats.fixes.length > 0 && (
+              <div className="ats-fixes">
+                <span className="eyebrow">Top fixes</span>
+                <ul>{ats.fixes.map((f, i) => <li key={i}>{f}</li>)}</ul>
+              </div>
+            )}
+            {ats.source === "stub" && <span className="badge offline">Offline estimate — add an OpenAI key for a deeper score</span>}
+          </div>
+        )}
       </div>
 
       {/* 1. Gap Finder */}

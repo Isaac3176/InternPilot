@@ -1271,3 +1271,25 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   .grid-2, .pk-grid { grid-template-columns: 1fr !important; }
   .results, .workspace, .detail-head { overflow-x: auto; }
 }
+
+/* ================= Résumé Lab — ATS score ================= */
+.ats-top { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.ats-ring {
+  --v: 0; --c: var(--accent);
+  width: 108px; height: 108px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: radial-gradient(closest-side, var(--surface) 79%, transparent 80% 100%),
+    conic-gradient(var(--c) calc(var(--v) * 1%), var(--line-2) 0);
+  text-align: center;
+}
+.ats-ring b { font-family: var(--mono); font-size: 30px; font-weight: 700; letter-spacing: -.04em; line-height: 1; }
+.ats-ring span { font-size: 11px; color: var(--slate-2); }
+.ats-cats { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 9px; }
+.ats-cat-h { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-2); }
+.ats-cat-h b { font-family: var(--mono); font-weight: 600; }
+.ats-bar { height: 6px; border-radius: 3px; background: var(--line-2); overflow: hidden; margin: 4px 0 2px; }
+.ats-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.ats-note { font-size: 11px; color: var(--slate-2); }
+.ats-fixes { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-2); }
+.ats-fixes ul { margin: 8px 0 0; padding-left: 18px; }
+.ats-fixes li { font-size: 13px; color: var(--ink-2); margin-bottom: 5px; }
+.ats .badge.offline { display: inline-block; margin-top: 12px; background: #f1f4f8; color: var(--slate); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .05em; padding: 3px 8px; border-radius: 5px; }
