@@ -5,7 +5,15 @@ import { PROFILE_SECTIONS, useProfileForm } from "./useProfileForm";
 import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { parseResume } from "../ai/resumeParse";
 import { createResumeVersion } from "../db/resumes";
+import { getPrefs, savePrefs } from "../ranking/prefs";
 import { ROLE_SUGGESTIONS } from "../data/roles";
+
+const EMPLOYMENT_TYPES = [
+  { value: "internship", label: "Internship" },
+  { value: "fulltime", label: "Full-time" },
+  { value: "parttime", label: "Part-time" },
+  { value: "coop", label: "Co-op" },
+];
 
 export default function SignupWizard({ onDone, skipAccount = false }: { onDone: () => void; skipAccount?: boolean }) {
   const h = useProfileForm();
@@ -19,6 +27,8 @@ export default function SignupWizard({ onDone, skipAccount = false }: { onDone: 
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeMsg, setResumeMsg] = useState("");
   const [resumeErr, setResumeErr] = useState("");
+  const [empTypes, setEmpTypes] = useState<string[]>(getPrefs().employmentTypes?.length ? getPrefs().employmentTypes : ["internship"]);
+  const toggleEmp = (v: string) => setEmpTypes((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]);
 
   // Steps: 0 = account, 1 = resume, 2 = goal, 3.. = profile sections
   const totalSteps = PROFILE_SECTIONS.length + 3;
@@ -76,6 +86,7 @@ export default function SignupWizard({ onDone, skipAccount = false }: { onDone: 
     setError("");
     try {
       if (!skipAccount) await signup(email.trim().toLowerCase(), password); // local desktop account (legacy)
+      savePrefs({ employmentTypes: empTypes.length ? empTypes : ["internship"] });
       await h.save();
       onDone();
     } catch (e) {
@@ -135,6 +146,16 @@ export default function SignupWizard({ onDone, skipAccount = false }: { onDone: 
           <>
             <h2>Your goal</h2>
             <p className="hint mb-md">We'll use this to surface and prioritize the right postings for you.</p>
+            <div className="field">
+              <label>What type of roles?</label>
+              <div className="emp-types">
+                {EMPLOYMENT_TYPES.map((e) => (
+                  <button type="button" key={e.value} className={`emp-type${empTypes.includes(e.value) ? " on" : ""}`} onClick={() => toggleEmp(e.value)}>
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             {h.tags("target_roles", "What roles are you looking for?", ROLE_SUGGESTIONS, "Search roles — e.g. Backend, Machine Learning…")}
             <div className="field">
               <label htmlFor="su-target-date">When do you want a job by?</label>

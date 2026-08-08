@@ -1297,3 +1297,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 /* remember-me row on the cloud login */
 .remember-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); font-weight: 500; margin: 4px 0 14px; cursor: pointer; }
 .remember-row input { width: auto; }
+
+/* onboarding employment-type toggles */
+.emp-types { display: flex; flex-wrap: wrap; gap: 8px; }
+.emp-type { padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+.emp-type.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
