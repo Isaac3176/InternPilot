@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../db/profile";
 import { listResumeVersions } from "../db/resumes";
 import TagMultiSelect from "./TagMultiSelect";
+import OptionChips, { type ChipOption } from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
 import { SKILL_SUGGESTIONS } from "../data/skills";
 import {
@@ -49,6 +50,7 @@ export interface ProfileFormApi {
   save: () => Promise<void>;
   text: (k: string, label: string, ph?: string) => ReactNode;
   choice: (k: string, label: string, opts: string[]) => ReactNode;
+  cards: (k: string, label: string, opts: ChipOption[]) => ReactNode;
   tags: (k: string, label: string, suggestions: string[], ph: string) => ReactNode;
 }
 
@@ -125,6 +127,12 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
       </select>
     </div>
   );
+  const cards = (k: string, label: string, opts: ChipOption[]) => (
+    <div className="field">
+      <label>{label}</label>
+      <OptionChips options={opts} value={s[k]} onChange={(v) => set(k, v as string)} />
+    </div>
+  );
   const tags = (k: string, label: string, suggestions: string[], ph: string) => (
     <div className="field">
       <label htmlFor={`pf-${k}`}>{label}</label>
@@ -138,7 +146,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
     </div>
   );
 
-  return { s, set, resumes, saving, savedMsg, save, text, choice, tags };
+  return { s, set, resumes, saving, savedMsg, save, text, choice, cards, tags };
 }
 
 /** Profile questionnaire sections, reused by the Profile page and the signup wizard. */
@@ -181,15 +189,8 @@ export const PROFILE_SECTIONS: { title: string; render: (h: ProfileFormApi) => R
         {h.tags("target_roles", "Target roles", ROLE_SUGGESTIONS, "Search roles — e.g. Backend, Machine Learning…")}
         {h.tags("skills", "Key skills", SKILL_SUGGESTIONS, "Search skills — e.g. Python, React…")}
         {h.tags("locations", "Preferred locations", LOCATION_SUGGESTIONS, "Add locations…")}
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="pf-remote_pref">Work style</label>
-            <select id="pf-remote_pref" value={h.s.remote_pref} onChange={(e) => h.set("remote_pref", e.target.value)}>
-              {REMOTE_PREFS.map((r) => <option key={r} value={r}>{REMOTE_PREF_LABELS[r]}</option>)}
-            </select>
-          </div>
-          {h.choice("willing_to_relocate", "Willing to relocate?", YES_NO)}
-        </div>
+        {h.cards("remote_pref", "Work style", REMOTE_PREFS.map((r) => ({ value: r, label: REMOTE_PREF_LABELS[r] })))}
+        {h.cards("willing_to_relocate", "Willing to relocate?", YES_NO.map((o) => ({ value: o, label: o })))}
         <div className="field-row">{h.text("desired_salary", "Desired salary", "$40/hr")}{h.text("earliest_start_date", "Earliest start date", "June 2026")}</div>
         <div className="field">
           <label htmlFor="pf-target_date">Target job-by date</label>
@@ -216,11 +217,9 @@ export const PROFILE_SECTIONS: { title: string; render: (h: ProfileFormApi) => R
             {WORK_AUTH_OPTIONS.map((w) => <option key={w} value={w}>{WORK_AUTH_LABELS[w]}</option>)}
           </select>
         </div>
-        <div className="field-row">
-          {h.choice("authorized_us", "Authorized to work in the U.S.?", YES_NO)}
-          {h.choice("requires_sponsorship", "Require sponsorship now or in future?", YES_NO)}
-        </div>
-        {h.choice("security_clearance", "Have an active security clearance?", YES_NO)}
+        {h.cards("authorized_us", "Authorized to work in the U.S.?", YES_NO.map((o) => ({ value: o, label: o })))}
+        {h.cards("requires_sponsorship", "Require sponsorship now or in future?", YES_NO.map((o) => ({ value: o, label: o })))}
+        {h.cards("security_clearance", "Have an active security clearance?", YES_NO.map((o) => ({ value: o, label: o })))}
       </>
     ),
   },

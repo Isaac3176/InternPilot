@@ -6,6 +6,7 @@ import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { parseResume } from "../ai/resumeParse";
 import { createResumeVersion } from "../db/resumes";
 import { getPrefs, savePrefs } from "../ranking/prefs";
+import OptionChips from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
 
 const EMPLOYMENT_TYPES = [
@@ -28,7 +29,6 @@ export default function SignupWizard({ onDone, skipAccount = false }: { onDone: 
   const [resumeMsg, setResumeMsg] = useState("");
   const [resumeErr, setResumeErr] = useState("");
   const [empTypes, setEmpTypes] = useState<string[]>(getPrefs().employmentTypes?.length ? getPrefs().employmentTypes : ["internship"]);
-  const toggleEmp = (v: string) => setEmpTypes((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]);
 
   // Steps: 0 = account, 1 = resume, 2 = goal, 3.. = profile sections
   const totalSteps = PROFILE_SECTIONS.length + 3;
@@ -148,13 +148,7 @@ export default function SignupWizard({ onDone, skipAccount = false }: { onDone: 
             <p className="hint mb-md">We'll use this to surface and prioritize the right postings for you.</p>
             <div className="field">
               <label>What type of roles?</label>
-              <div className="emp-types">
-                {EMPLOYMENT_TYPES.map((e) => (
-                  <button type="button" key={e.value} className={`emp-type${empTypes.includes(e.value) ? " on" : ""}`} onClick={() => toggleEmp(e.value)}>
-                    {e.label}
-                  </button>
-                ))}
-              </div>
+              <OptionChips multi options={EMPLOYMENT_TYPES} value={empTypes} onChange={(v) => setEmpTypes(v as string[])} />
             </div>
             {h.tags("target_roles", "What roles are you looking for?", ROLE_SUGGESTIONS, "Search roles — e.g. Backend, Machine Learning…")}
             <div className="field">
