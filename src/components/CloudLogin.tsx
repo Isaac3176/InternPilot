@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { cloudSignIn, cloudSignUp } from "../cloud/auth";
+import { getRemember, setRemember } from "../cloud/supabase";
 import { AscentIcon } from "./Logo";
 
 /** Sign-in gate for the web/phone build (no local account — Supabase only). */
 export default function CloudLogin({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRememberState] = useState(getRemember());
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
   async function run(kind: "in" | "up") {
     setBusy(true); setMsg("");
+    setRemember(remember); // choose storage before the session is written
     try {
       if (kind === "up") {
         await cloudSignUp(email, password);
@@ -43,6 +46,10 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && email && password && run("in")} />
         </div>
+        <label className="remember-row">
+          <input type="checkbox" checked={remember} onChange={(e) => setRememberState(e.target.checked)} />
+          <span>Remember this device — stay signed in</span>
+        </label>
         <button type="button" style={{ width: "100%" }} disabled={busy || !email || !password} onClick={() => run("in")}>
           {busy ? "…" : "Log in"}
         </button>

@@ -1293,3 +1293,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .ats-fixes ul { margin: 8px 0 0; padding-left: 18px; }
 .ats-fixes li { font-size: 13px; color: var(--ink-2); margin-bottom: 5px; }
 .ats .badge.offline { display: inline-block; margin-top: 12px; background: #f1f4f8; color: var(--slate); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .05em; padding: 3px 8px; border-radius: 5px; }
+
+/* remember-me row on the cloud login */
+.remember-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); font-weight: 500; margin: 4px 0 14px; cursor: pointer; }
+.remember-row input { width: auto; }
