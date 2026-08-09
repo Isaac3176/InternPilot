@@ -91,8 +91,13 @@ export default function ResumeLab() {
         {rank && (
           <div className="ats">
             <div className="ats-top">
-              <div className="ats-ring" style={{ ["--v" as string]: `${Math.round(((rank.overall - rank.min) / (rank.max - rank.min)) * 100)}`, ["--c" as string]: rank.overall >= 80 ? "var(--beacon)" : rank.overall >= 45 ? "var(--accent)" : "var(--warn)" }}>
-                <b>{rank.overall}</b><span>of {rank.max}</span>
+              <div className="ats-scorewrap">
+                <div className="ats-ring" style={{ ["--v" as string]: `${Math.round(((rank.overall - rank.min) / (rank.max - rank.min)) * 100)}`, ["--c" as string]: rank.overall >= 80 ? "var(--beacon)" : rank.overall >= 45 ? "var(--accent)" : "var(--warn)" }}>
+                  <b>{rank.overall}</b><span>of {rank.max}</span>
+                </div>
+                {rank.spread
+                  ? <span className="ats-spread">{rank.spread.runs} runs ranged <b>{rank.spread.lo}–{rank.spread.hi}</b> — a band, not a grade</span>
+                  : <span className="ats-spread">range {rank.min} to {rank.max}</span>}
               </div>
               <ul className="ats-cats">
                 {rank.categories.map((c) => (
@@ -111,12 +116,19 @@ export default function ResumeLab() {
                 </li>
               </ul>
             </div>
+            {rank.integrity.length > 0 && (
+              <div className="ats-integrity">
+                <span className="eyebrow">⚠ Résumé integrity</span>
+                <ul>{rank.integrity.map((w, i) => <li key={i}>{w}</li>)}</ul>
+              </div>
+            )}
             {rank.fixes.length > 0 && (
               <div className="ats-fixes">
                 <span className="eyebrow">Raise your rank</span>
                 <ul>{rank.fixes.map((f, i) => <li key={i}>{f}</li>)}</ul>
               </div>
             )}
+            <p className="ats-undersell">ℹ This rubric is GitHub-centric by design — it only credits <b>public</b> work. Strong private or company codebases (NDA'd internships, closed-source products) won't show up here even though real employers value them. A low rank means "low on HackerRank's open-source signal," not "weak engineer."</p>
             {rank.source === "stub" && <span className="badge offline">Offline estimate — add an OpenAI key for the full screener read</span>}
           </div>
         )}

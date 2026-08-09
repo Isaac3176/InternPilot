@@ -34,7 +34,35 @@ export interface RankResult {
   bonusNotes: string[];
   deductionNotes: string[];
   fixes: string[];
+  spread?: { lo: number; hi: number; runs: number }; // range across repeated LLM runs
+  integrity: string[];   // tampering / keyword-stuffing warnings on the résumé text
   source: Source;
+}
+
+const STOPWORDS = new Set(["the","and","for","with","that","this","from","have","was","were","are","you","your","our","their","its","a","an","of","to","in","on","at","as","by","or","is","it","be"]);
+
+/**
+ * Text-level integrity heuristics — the "invisible text / keyword stuffing" trick
+ * the articles flagged. We only have extracted plain text, so we can't see white
+ * or off-page fonts directly, but stuffing leaves fingerprints: a keyword repeated
+ * far past natural use, or a giant comma-run of skills. HackerRank's screen (and
+ * most ATS) penalize this, so we surface it.
+ */
+export function integrityScan(resume: string): string[] {
+  const flags: string[] = [];
+  const words = (resume.toLowerCase().match(/[a-z][a-z+#.]{2,}/g) || []);
+  const freq = new Map<string, number>();
+  for (const w of words) if (!STOPWORDS.has(w)) freq.set(w, (freq.get(w) ?? 0) + 1);
+  const stuffed = [...freq.entries()].filter(([, n]) => n >= 12).sort((a, b) => b[1] - a[1]);
+  if (stuffed.length) {
+    const [w, n] = stuffed[0];
+    flags.push(`"${w}" appears ${n}× — possible keyword stuffing (HackerRank & most ATS flag this).`);
+  }
+  const longestCommaRun = Math.max(0, ...resume.split(/\n/).map((l) => (l.includes(",") ? l.split(",").length : 0)));
+  if (longestCommaRun >= 40) flags.push(`A single line lists ${longestCommaRun} comma-separated terms — reads as a stuffed keyword block, not real experience.`);
+  // Extraction artifacts that often accompany hidden layers: long runs of no whitespace.
+  if (/\S{120,}/.test(resume)) flags.push("Found an unusually long unbroken text run — check the PDF didn't merge a hidden layer into the export.");
+  return flags;
 }
 
 /**
@@ -120,9 +148,35 @@ function clampFinal(base: number, bonus: number, deductions: number): number {
   return Math.max(HR_ROLE.min_final_score, Math.min(HR_ROLE.max_final_score, base + bonus - deductions));
 }
 
+const median = (xs: number[]): number => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+};
+
+/**
+ * The rubric's original weakness (per the articles) is LLM run-to-run variance.
+ * We run the screener 3× in parallel and report the median run plus the spread,
+ * so a single lucky/unlucky roll can't masquerade as a precise grade.
+ */
 export async function hrRank(resume: string, jd?: string): Promise<RankResult> {
   if (!resume.trim()) throw new Error("Pick a résumé with text first.");
-  if (!hasApiKey()) return offlineRank(resume, jd);
+  const integrity = integrityScan(resume);
+  if (!hasApiKey()) return { ...offlineRank(resume, jd), integrity };
+  const runs = await Promise.allSettled([hrRankOnce(resume, jd), hrRankOnce(resume, jd), hrRankOnce(resume, jd)]);
+  const ok = runs.filter((r): r is PromiseFulfilledResult<RankResult> => r.status === "fulfilled").map((r) => r.value);
+  if (ok.length === 0) {
+    const first = runs[0];
+    throw first.status === "rejected" ? first.reason : new Error("Ranking failed.");
+  }
+  const finals = ok.map((r) => r.overall);
+  const med = median(finals);
+  // Pick the run closest to the median as the representative (keeps notes/fixes self-consistent).
+  const rep = ok.reduce((best, r) => (Math.abs(r.overall - med) < Math.abs(best.overall - med) ? r : best), ok[0]);
+  return { ...rep, integrity, spread: ok.length > 1 ? { lo: Math.min(...finals), hi: Math.max(...finals), runs: ok.length } : undefined };
+}
+
+async function hrRankOnce(resume: string, jd?: string): Promise<RankResult> {
   const rubric = HR_ROLE.categories.map((c) => `${c.key} (0..${c.max}): ${c.label}`).join("; ");
   const out = await chat<{
     categories?: { key: string; score: number; note?: string }[];
@@ -142,6 +196,7 @@ export async function hrRank(resume: string, jd?: string): Promise<RankResult> {
     overall: clampFinal(base, bonus, deductions), base, bonus, deductions,
     min: HR_ROLE.min_final_score, max: HR_ROLE.max_final_score,
     categories, bonusNotes: out.bonusNotes ?? [], deductionNotes: out.deductionNotes ?? [], fixes: out.fixes ?? [],
+    integrity: [], // filled in by hrRank() from a single scan of the résumé text
     source: "openai",
   };
 }
@@ -210,7 +265,7 @@ function offlineRank(resume: string, jd?: string): RankResult {
   return {
     overall: clampFinal(base, bonus, deductions), base, bonus, deductions,
     min: HR_ROLE.min_final_score, max: HR_ROLE.max_final_score,
-    categories, bonusNotes, deductionNotes, fixes, source: "stub",
+    categories, bonusNotes, deductionNotes, fixes, integrity: integrityScan(resume), source: "stub",
   };
 }
 
