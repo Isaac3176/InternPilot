@@ -5,6 +5,8 @@ import { pushProfileToBridge, pushAnswersToBridge, startBridgeListener } from ".
 import { pushSnapshotToBridge, startMobileBridge } from "./mobile/sync";
 import { isTauri } from "./lib/env";
 import { AscentMark } from "./components/Logo";
+import { useIsPhone } from "./mobile/ui/useIsPhone";
+import MobileApp from "./mobile/ui/MobileApp";
 import "./App.css";
 
 // Run one-time startup tasks per app launch.
@@ -34,6 +36,7 @@ const NAV = [
 
 export default function App() {
   const [navOpen, setNavOpen] = useState(false);
+  const isPhone = useIsPhone();
   useEffect(() => {
     if (startupRan) return;
     startupRan = true;
@@ -52,6 +55,11 @@ export default function App() {
     window.addEventListener("internpilot:application-recorded", onRec);
     return () => { window.clearInterval(iv); window.removeEventListener("internpilot:application-recorded", onRec); };
   }, []);
+
+  // On a phone in the web/PWA build, render the purpose-built mobile shell
+  // instead of the desktop sidebar layout. The desktop app (Tauri) always
+  // uses the full layout, even in a narrow window.
+  if (isPhone && !isTauri()) return <MobileApp />;
 
   return (
     <div className="app-shell">
