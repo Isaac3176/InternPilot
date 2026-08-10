@@ -146,6 +146,81 @@ body {
   padding: 28px 32px 48px;
 }
 
+/* ===== Desktop shell: 5-item dark rail + top bar + ⌘K palette ===== */
+.dsk-rail { width: 224px; flex: none; background: var(--nav); color: #fff; display: flex; flex-direction: column; padding: 14px 10px 10px; min-height: 0; border-right: 1px solid #10161e; }
+.dsk-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 16px; }
+.dsk-brand .dsk-mark { color: #4e93f5; flex: none; }
+.dsk-brand b { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.015em; }
+.dsk-brand span { display: block; font-size: 11px; color: #5D6E82; font-family: var(--mono); letter-spacing: .05em; }
+
+.dsk-focus { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 11px; border-radius: 10px; margin-bottom: 14px; background: rgba(91,155,246,.14); border: 1px solid rgba(91,155,246,.26); color: #BFD8FB; }
+.dsk-focus:hover { background: rgba(91,155,246,.22); }
+.dsk-focus svg { width: 16px; height: 16px; flex: none; }
+.dsk-focus b { font-size: 12.5px; font-weight: 600; color: #DCEAFD; }
+.dsk-focus span { margin-left: auto; font-family: var(--mono); font-size: 10px; color: #7FA9E8; }
+
+.dsk-nav { display: flex; flex-direction: column; gap: 2px; }
+.dsk-nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 11px; border-radius: 9px; color: var(--nav-text); font-size: 13.5px; font-weight: 500; position: relative; text-decoration: none; }
+.dsk-nav-item svg { width: 17px; height: 17px; flex: none; opacity: .72; }
+.dsk-nav-item:hover { background: var(--nav-hover); color: #E6ECF3; }
+.dsk-nav-item.active { background: var(--nav-active); color: #fff; font-weight: 600; }
+.dsk-nav-item.active svg { opacity: 1; color: #6BA4F7; }
+.dsk-nav-item.active::before { content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.dsk-badge { margin-left: auto; font-family: var(--mono); font-size: 10px; font-weight: 600; background: rgba(255,255,255,.1); padding: 1px 6px; border-radius: 5px; color: #C3D0DE; }
+.dsk-badge.hot { background: rgba(176,61,42,.3); color: #F0AA9B; }
+
+.dsk-more-btn { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 11px; border-radius: 9px; margin-top: 6px; color: var(--nav-text); font-size: 13.5px; font-weight: 500; }
+.dsk-more-btn svg { width: 17px; height: 17px; flex: none; opacity: .72; }
+.dsk-more-btn:hover { background: var(--nav-hover); color: #E6ECF3; }
+.dsk-more-btn .dsk-chev { margin-left: auto; width: 13px; height: 13px; transition: transform .15s; }
+.dsk-more-btn.open .dsk-chev { transform: rotate(180deg); }
+.dsk-more-list { display: flex; flex-direction: column; gap: 1px; margin: 2px 0 2px 6px; padding-left: 9px; border-left: 1px solid rgba(255,255,255,.08); }
+.dsk-more-item { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 7px; color: #7C8B9D; font-size: 12.5px; font-weight: 500; text-decoration: none; }
+.dsk-more-item:hover { background: var(--nav-hover); color: #E6ECF3; }
+.dsk-more-item.active { color: #fff; background: var(--nav-active); }
+.dsk-glyph { width: 16px; text-align: center; opacity: .8; font-size: 12px; }
+
+.dsk-foot { margin-top: auto; border-top: 1px solid rgba(255,255,255,.07); padding-top: 10px; }
+.dsk-me { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 8px; border-radius: 9px; text-decoration: none; color: #fff; }
+.dsk-me:hover { background: var(--nav-hover); }
+.dsk-av { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; background: linear-gradient(150deg,#3B85F5,#1A5BC4); font-family: var(--mono); font-size: 11px; font-weight: 600; color: #fff; }
+.dsk-who { min-width: 0; }
+.dsk-who b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dsk-who span { display: block; font-size: 10.5px; color: #5D6E82; font-family: var(--mono); letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.dsk-main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.dsk-top { flex: none; display: flex; align-items: center; gap: 10px; padding: 11px 18px; background: #fff; border-bottom: 1px solid var(--line); }
+.dsk-cmdk { flex: 1; max-width: 460px; display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); color: #98A5B4; font-size: 13.5px; }
+.dsk-cmdk:hover { border-color: #CBD4DE; background: #fff; }
+.dsk-cmdk kbd { margin-left: auto; }
+.dsk-spacer { flex: 1; }
+.dsk-sync { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: #6B7A8D; }
+.dsk-sync i { width: 6px; height: 6px; border-radius: 50%; background: #157F5F; }
+
+/* command palette */
+.cmdp-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(15,27,45,.4); display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+.cmdp { width: min(560px,92vw); background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 30px 60px -24px rgba(15,27,45,.55); overflow: hidden; }
+.cmdp-search { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); color: #6B7A8D; }
+.cmdp-input { flex: 1; border: none; outline: none; font: inherit; font-size: 15px; color: #0F1B2D; background: none; }
+.cmdp-list { max-height: min(420px,52vh); overflow-y: auto; padding: 6px; }
+.cmdp-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 9px; }
+.cmdp-item.sel { background: var(--accent-soft); }
+.cmdp-label { font-size: 14px; font-weight: 600; color: #0F1B2D; }
+.cmdp-group { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #98A5B4; }
+.cmdp-empty { padding: 24px; text-align: center; color: #6B7A8D; font-size: 13.5px; }
+
+/* responsive: collapse the rail to icons (phones <768 get the mobile build) */
+@media (max-width: 1040px) {
+  .dsk-rail { width: 60px; padding: 14px 8px 10px; }
+  .dsk-brand > div, .dsk-focus b, .dsk-focus span, .dsk-label, .dsk-who { display: none; }
+  .dsk-brand { justify-content: center; padding: 2px 0 14px; }
+  .dsk-focus, .dsk-nav-item, .dsk-more-btn { justify-content: center; padding: 10px 0; }
+  .dsk-nav-item .dsk-badge { position: absolute; top: 2px; right: 4px; margin: 0; padding: 0 4px; font-size: 9px; }
+  .dsk-more-btn .dsk-chev { display: none; }
+  .dsk-more-list { display: none; }
+  .dsk-me { justify-content: center; }
+}
+
 .page-header {
   display: flex;
   align-items: flex-end;
@@ -286,7 +361,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .tag.hit { color: var(--green); border-color: #bfe6cb; background: #eefaf1; }
 
 .hint { color: var(--text-faint); font-size: 12px; margin-top: 6px; }
-.chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 150px); }
+.chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 210px); }
 .chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; }
 .chat-msg { max-width: 78%; padding: 11px 14px; border-radius: 12px; line-height: 1.5; white-space: pre-wrap; }
 .chat-msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
@@ -548,7 +623,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .workspace {
   display: grid;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(280px, 330px);
-  height: calc(100vh - 150px);
+  height: calc(100vh - 210px);
   min-height: 520px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -1332,26 +1407,11 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .phone-connect-txt .field { margin-bottom: 10px; }
 
 /* ================= Mobile / responsive shell ================= */
-.mobile-topbar { display: none; }
+/* Narrow desktop / Tauri windows: dense feature pages assume desktop widths, so
+   let them scroll instead of overflowing. (The web build hands off to the phone
+   UI below 768px; this only affects narrow app windows on desktop.) */
 @media (max-width: 760px) {
-  .mobile-topbar {
-    display: flex; align-items: center; gap: 10px; height: 52px; flex: none;
-    padding: 0 14px calc(env(safe-area-inset-top)) 14px; padding-top: env(safe-area-inset-top);
-    background: var(--nav); color: #fff; position: sticky; top: 0; z-index: 30;
-  }
-  .mobile-topbar .menu-btn { color: #fff; display: grid; place-items: center; padding: 4px; }
-  .mobile-topbar .brand-mark { color: #4e93f5; }
-  .mobile-topbar b { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
-
-  .app-shell { flex-direction: column; height: 100vh; }
-  .sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; width: 260px;
-    transform: translateX(-100%); transition: transform .22s cubic-bezier(.22,.9,.28,1);
-  }
-  .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,.4); }
-  .nav-overlay { position: fixed; inset: 0; z-index: 45; background: rgba(15,27,45,.5); }
   .main { padding: 16px 16px 40px; }
-  /* Feature pages assume desktop widths — let them scroll instead of overflowing. */
   .grid-2, .pk-grid { grid-template-columns: 1fr !important; }
   .results, .workspace, .detail-head { overflow-x: auto; }
 }
