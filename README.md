@@ -1,6 +1,7 @@
 # InternPilot AI
 
 [![Download](https://img.shields.io/github/v/release/Isaac3176/InternPilot?label=Download&color=1F6FEB&sort=semver)](https://github.com/Isaac3176/InternPilot/releases/latest)
+&nbsp;[![Web app](https://img.shields.io/badge/Web%20app-live-2EA043)](https://intern-pilot-seven.vercel.app)
 &nbsp;[![License](https://img.shields.io/badge/status-beta-A9761C)](#)
 
 **Your internship search — discovered, ranked, tracked, and half-applied for you.**
@@ -22,9 +23,8 @@ The full experience, including **browser-extension autofill**.
 > (Windows: *More info → Run anyway*; macOS: right-click → *Open*).
 
 ### 🌐 Use it in your browser — nothing to install
-_Web app coming soon_ — deploy it in a few minutes with [cloud/DEPLOY.md](cloud/DEPLOY.md).
-<!-- After deploying, replace this line with: **[Open the web app →](https://YOUR-APP.vercel.app)** -->
-Once live: sign in and go — on iPhone, tap **Share → Add to Home Screen** for an app icon.
+**[Open the web app → intern-pilot-seven.vercel.app](https://intern-pilot-seven.vercel.app)**
+Sign in and go — on iPhone, tap **Share → Add to Home Screen** for a full-screen app icon.
 
 _Same account, same data everywhere. The desktop app is where the autofill extension runs;
 the web/phone app browses, queues, and tracks._

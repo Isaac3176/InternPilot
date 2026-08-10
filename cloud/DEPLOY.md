@@ -16,12 +16,14 @@ already sets the build command, output dir, and SPA routing.
    - `VITE_SUPABASE_KEY` = your `sb_publishable_…` key
 5. **Deploy.** You'll get a URL like `https://internpilot.vercel.app`.
 
+**Live deployment:** https://intern-pilot-seven.vercel.app
+
 Every push to `main` redeploys automatically.
 
 ## Point Supabase at the deployed URL (so auth emails/links work)
 Supabase → **Authentication → URL Configuration**:
-- **Site URL:** your Vercel URL.
-- **Redirect URLs:** add your Vercel URL.
+- **Site URL:** `https://intern-pilot-seven.vercel.app`
+- **Redirect URLs:** add `https://intern-pilot-seven.vercel.app` (and `https://intern-pilot-seven.vercel.app/**`).
 (If you turned **off** "Confirm email", this isn't strictly required to log in, but
 set it anyway for password resets.)
 
