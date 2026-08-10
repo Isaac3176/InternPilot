@@ -50,6 +50,45 @@ function shortLocations(locs: string[]): string {
   return `${locs.slice(0, 3).join(", ")} +${locs.length - 3} more`;
 }
 
+// ── "About the role" helpers ──────────────────────────────────────────────
+/** First real sentence of a description, for the pull quote. Empty if too short. */
+function leadSentence(text: string): string {
+  const clean = text.replace(/^\s*[•\-*]\s*/, "").replace(/\s+/g, " ").trim();
+  const m = clean.match(/^(.{40,220}?[.!?])(\s|$)/);
+  const s = (m ? m[1] : clean.slice(0, 160)).trim();
+  return s.length >= 30 ? s : "";
+}
+const RESP_HEAD = /responsib|what you'?ll do|what you will do|in this role|day[- ]?to[- ]?day|you will\b/i;
+const STOP_HEAD = /requirement|qualification|what we'?re looking for|about you|minimum|preferred|benefit|perk|compensation|equal opportunity|eeo/i;
+/** Pull the "responsibilities / what you'll do" bullets out of a JD, if present. */
+function parseDuties(text: string): string[] {
+  const out: string[] = [];
+  let on = false;
+  for (const raw of text.split(/\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const isBullet = /^[•\-*]/.test(line);
+    const isHead = !isBullet && line.length <= 64 && !/[.!?]$/.test(line);
+    if (!on) { if (isHead && RESP_HEAD.test(line)) on = true; continue; }
+    if (isHead && STOP_HEAD.test(line)) break;
+    if (isBullet) {
+      const b = line.replace(/^[•\-*]\s*/, "").trim();
+      if (b.length >= 10 && b.length <= 240) out.push(b);
+    }
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
+const svgSm = { width: 11, height: 11, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 3.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const IC_CHECK = <svg {...svgSm}><path d="M20 6 9 17l-5-5" /></svg>;
+const IC_DASH = <svg {...svgSm}><path d="M5 12h14" /></svg>;
+const IC_CHEV = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>;
+const IC_INFO = <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 8.5v5" /><path d="M12 16.5h.01" /><circle cx="12" cy="12" r="9" /></svg>;
+const IC_EXT = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>;
+const IC_DOC = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M6 3h9l5 5v13H6z" /><path d="M14 3v6h6" /></svg>;
+const IC_CLOCK = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>;
+
 export default function Internships() {
   const navigate = useNavigate();
   const [listings, setListings] = useState<RankedListing[]>([]);
@@ -74,6 +113,7 @@ export default function Internships() {
   const [total, setTotal] = useState(0);
   const [descByUrl, setDescByUrl] = useState<Map<string, string>>(new Map());
   const [descLoading, setDescLoading] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   async function refreshApps() {
     const apps = await listApplications();
@@ -135,6 +175,7 @@ export default function Internships() {
 
   // Fetch the job description for the selected posting (cached per URL).
   useEffect(() => {
+    setDescExpanded(false); // collapse the long-description clamp when switching postings
     if (!selectedUrl || descByUrl.has(selectedUrl)) return;
     let cancelled = false;
     setDescLoading(true);
@@ -345,17 +386,85 @@ export default function Internships() {
                   <p className="muted-note mb-md">{selElig.reasons[0]} <button type="button" className="pop-clear" onClick={() => navigate("/profile")}>Set it</button></p>
                 )}
 
-                <h2>About the role</h2>
                 {descLoading ? (
-                  <p className="hint">Loading description from the posting…</p>
-                ) : descByUrl.get(selected.url) ? (
-                  <div className="prose jd">{descByUrl.get(selected.url)}</div>
-                ) : (
-                  <div className="prose">
-                    <p>We couldn't load the description automatically for this posting — open it on the company site to read the full details.</p>
-                  </div>
-                )}
-                <button type="button" className="secondary" onClick={() => openExternal(selected.url)}>View full posting →</button>
+                  <><h2>About the role</h2><p className="hint">Loading description from the posting…</p></>
+                ) : (() => {
+                  const desc = selDesc;
+                  const long = !!desc && desc.length > 600; // only long JDs get the clamp + read-more
+                  const lead = desc ? leadSentence(desc) : "";
+                  const duties = desc ? parseDuties(desc) : [];
+                  const req = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch : null;
+                  const age = selected.datePosted ? postedAgo(selected.datePosted).replace(/^Posted /, "") : "";
+                  const signals: { ok: boolean; b: string; s: string }[] = [];
+                  if (selected.season || selected.locations[0]) signals.push({ ok: true, b: `${selected.season ?? jobTypeOf(selected.title)}${selected.locations[0] ? `, ${selected.locations[0]}` : ""}`, s: "From the feed listing — matches your filters" });
+                  if (age) signals.push({ ok: true, b: `Posted ${age}`, s: "One of the fresher listings in your feed" });
+                  signals.push({ ok: false, b: "Requirements unknown", s: `Readiness (${selected.score}) is estimated from the title alone — treat it as a guess, not a score` });
+                  if (!selected.salary || !selected.sponsorshipOk) signals.push({ ok: false, b: "Compensation / sponsorship not stated", s: "Check the posting before you spend an hour on the form" });
+                  return (
+                    <div className="rolebody">
+                      {desc ? (
+                        <>
+                          {lead && <blockquote className="rb-pull"><p>{lead}</p><span className="eyebrow src">Pulled from the posting</span></blockquote>}
+                          <div className="rb-shead"><h3>About the role</h3><span className="rule" /></div>
+                          <div className={"rb-copy" + (long && !descExpanded ? " clamped" : "")}>
+                            {desc.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)}
+                          </div>
+                          {long && !descExpanded && <button type="button" className="rb-more" onClick={() => setDescExpanded(true)}>Read the full description {IC_CHEV}</button>}
+                          {duties.length >= 3 && (
+                            <>
+                              <div className="rb-shead"><h3>What you'll do</h3><span className="rule" /></div>
+                              <ul className="rb-duties">{duties.map((d, i) => <li key={i}><span className="n">{i + 1}</span><span className="tx">{d}</span></li>)}</ul>
+                            </>
+                          )}
+                          {req && (
+                            <>
+                              <div className="rb-shead">
+                                <h3>Requirements</h3><span className="rule" />
+                                <span className="rb-count good">{req.matched.length} of {req.matched.length + req.missing.length} met</span>
+                                <button type="button" className="act" onClick={() => navigate("/resumes")}>Edit résumé</button>
+                              </div>
+                              <ul className="rb-reqs">
+                                {req.matched.slice(0, 8).map((s) => (
+                                  <li key={`h-${s}`}><span className="mk hit">{IC_CHECK}</span><span className="tx"><b>{s}</b><span>Found on your résumé</span></span></li>
+                                ))}
+                                {req.missing.slice(0, 8).map((s) => (
+                                  <li key={`g-${s}`} className="gap"><span className="mk gap">{IC_DASH}</span><span className="tx"><b>{s}</b></span><button type="button" className="add" onClick={() => navigate("/bullets")}>Add</button></li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="rb-shead"><h3>About the role</h3><span className="rule" /></div>
+                          <div className="rb-thin">
+                            <span className="ic">{IC_INFO}</span>
+                            <div className="bd">
+                              <b>The feed didn't carry a description</b>
+                              <p>{selected.source} gave us the role, company, and location. What the posting says about requirements lives on {selected.company}'s site — here are two ways to get it.</p>
+                              <div className="acts">
+                                <button type="button" className="rb-btn warnp" onClick={() => openExternal(selected.url)}>Open the posting {IC_EXT}</button>
+                                <button type="button" className="rb-btn warns" onClick={() => navigate("/chat")}>Have AI Chat summarise it</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="rb-shead"><h3>What we can tell you</h3><span className="rule" /><span className="rb-count">{signals.length} signals</span></div>
+                          <ul className="rb-known">
+                            {signals.map((sig, i) => (
+                              <li key={i} className={sig.ok ? "" : "gap"}><span className={"mk " + (sig.ok ? "hit" : "gap")}>{sig.ok ? IC_CHECK : IC_DASH}</span><span className="tx"><b>{sig.b}</b><span>{sig.s}</span></span></li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      <div className="rb-prov">
+                        <span className="r">{IC_DOC}Source <b>{selected.source}</b></span>
+                        {age ? <span className="r">{IC_CLOCK}Posted <b>{age}</b></span> : null}
+                        <span className="spacer" />
+                        <button type="button" className="rep" onClick={() => openExternal(selected.url)}>Something look wrong?</button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </>
           )}

@@ -55,15 +55,14 @@ export function companyDomain(company: string): string | null {
 }
 
 /**
- * Icon URLs to try in order for a domain. DuckDuckGo returns a real,
- * reasonably-sized icon and a proper 404 for unknown domains (so wrong guesses
- * fall through to the monogram); Google's favicon service is the backup.
+ * Icon URL(s) to try for a domain. DuckDuckGo returns a real icon and a proper
+ * 404 for unknown domains, so a wrong domain guess falls cleanly through to the
+ * colored monogram. We deliberately DON'T chain Google's favicon service: it
+ * returns a generic globe placeholder (not a 404) for unknown domains, which
+ * looked worse than the monogram for the many companies we can't resolve.
  */
 export function logoUrls(domain: string): string[] {
-  return [
-    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-  ];
+  return [`https://icons.duckduckgo.com/ip3/${domain}.ico`];
 }
 
 const K_LOGOS_ON = "internpilot.listings.logosOn";

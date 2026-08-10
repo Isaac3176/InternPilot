@@ -10,13 +10,23 @@ function colorFor(name: string): string {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return LOGO_COLORS[h % LOGO_COLORS.length];
 }
+function shade(hex: string, delta: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const clamp = (x: number) => Math.max(0, Math.min(255, x));
+  return `rgb(${clamp(((n >> 16) & 255) + delta)},${clamp(((n >> 8) & 255) + delta)},${clamp((n & 255) + delta)})`;
+}
+/** A soft top-lit gradient so the monogram fallback reads as a designed tile, not a flat block. */
+function monogramBg(name: string): string {
+  const c = colorFor(name);
+  return `linear-gradient(140deg, ${shade(c, 22)}, ${c} 55%, ${shade(c, -26)})`;
+}
 function initialsFor(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
 /**
- * Company avatar: a Clearbit logo when logos are enabled and a domain can be
- * guessed, otherwise (or on load failure) a colored monogram. Reuses the
+ * Company avatar: a DuckDuckGo icon when logos are enabled and a domain can be
+ * guessed, otherwise (or on load failure) a gradient monogram. Reuses the
  * existing `.logo` styles so sizing matches wherever it's dropped in.
  */
 export default function CompanyLogo({ company, className }: { company: string; className?: string }) {
@@ -37,5 +47,5 @@ export default function CompanyLogo({ company, className }: { company: string; c
       </div>
     );
   }
-  return <div className={cls} style={{ background: colorFor(company) }}>{initialsFor(company)}</div>;
+  return <div className={cls} style={{ background: monogramBg(company) }}>{initialsFor(company)}</div>;
 }
