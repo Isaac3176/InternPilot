@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
-const QUERY = "(max-width: 767px)";
+// Portrait phones (<=767px) plus landscape phones (short + touch), while
+// keeping tablets and touch laptops on the desktop layout.
+const QUERY = "(max-width: 767px), (max-height: 500px) and (pointer: coarse)";
 
 /** True on phone-sized viewports. Reacts to rotation / resize. */
 export function useIsPhone(): boolean {

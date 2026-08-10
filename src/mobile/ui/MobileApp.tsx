@@ -1,20 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import CompanyLogo from "../../components/CompanyLogo";
 import { openExternal } from "../../lib/open";
-import { getFeed } from "../../listings/service";
-import { getOpportunityQueue } from "../../ranking/queue";
-import { listApplications, createApplication } from "../../db/applications";
-import { listResumeVersions } from "../../db/resumes";
-import { getProfile } from "../../db/profile";
-import {
-  getStatusCounts, getFunnelRates, getResumeVersionPerformance,
-  type StatusCounts, type FunnelRates, type ResumeVersionPerf,
-} from "../../db/metrics";
+import { createApplication } from "../../db/applications";
 import { askChat, type ChatMessage } from "../../ai/chat";
 import { cloudSignOut } from "../../cloud/auth";
 import type { RankedListing } from "../../listings/types";
 import type { ApplicationRow, Profile, ResumeVersion, Status } from "../../db/types";
+import type { StatusCounts, FunnelRates, ResumeVersionPerf } from "../../db/metrics";
 import { initials, daysSince, postedShort, bandColor } from "./mshared";
+import { feedC, queueC, appsC, countsC, perfC, resumesC, ratesC, profileC, invalidateAfterSave, invalidateAll } from "./mcache";
 import "./mobile.css";
 
 type Tab = "home" | "jobs" | "tracker" | "toolkit" | "coach";
@@ -50,12 +44,25 @@ function Empty({ label }: { label: string }) { return <div className="empty">{la
 export default function MobileApp() {
   const [tab, setTab] = useState<Tab>("home");
   const [sheet, setSheet] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [badge, setBadge] = useState(0);
+  const [profile, setProfile] = useState<Profile | null>(() => profileC.peek());
+  const [badge, setBadge] = useState(() => { const c = countsC.peek(); return c ? c.oa + c.interview : 0; });
+  const lastFocus = useRef(Date.now());
 
   useEffect(() => {
-    getProfile().then(setProfile).catch(console.error);
-    getStatusCounts().then((c) => setBadge(c.oa + c.interview)).catch(console.error);
+    profileC.load().then(setProfile).catch(console.error);
+    countsC.load().then((c) => setBadge(c.oa + c.interview)).catch(console.error);
+    // When the app regains focus after a while (e.g. you applied on desktop),
+    // drop the caches so switching tabs pulls fresh data. Re-switch to reload
+    // the current tab; we avoid remounting to not lose scroll / chat state.
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastFocus.current < 60_000) return;
+      lastFocus.current = Date.now();
+      invalidateAll();
+      countsC.load().then((c) => setBadge(c.oa + c.interview)).catch(console.error);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
   const name = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || profile?.email || "";
@@ -86,16 +93,18 @@ export default function MobileApp() {
 
 // ── Home ────────────────────────────────────────────────────────────────────
 function Home({ avatar, onSheet, go }: TabProps) {
-  const [today, setToday] = useState<RankedListing[]>([]);
-  const [todayCount, setTodayCount] = useState(0);
-  const [counts, setCounts] = useState<StatusCounts | null>(null);
-  const [apps, setApps] = useState<ApplicationRow[]>([]);
+  const [today, setToday] = useState<RankedListing[]>(() => queueC.peek() ?? []);
+  const [counts, setCounts] = useState<StatusCounts | null>(() => countsC.peek());
+  const [apps, setApps] = useState<ApplicationRow[]>(() => appsC.peek() ?? []);
+  const [loaded, setLoaded] = useState(() => appsC.peek() != null && queueC.peek() != null);
   const [skipped, setSkipped] = useState(false);
 
   useEffect(() => {
-    getOpportunityQueue().then((q) => { setToday(q.today); setTodayCount(q.counts.today); }).catch(console.error);
-    getStatusCounts().then(setCounts).catch(console.error);
-    listApplications().then(setApps).catch(console.error);
+    Promise.allSettled([
+      queueC.load().then(setToday),
+      countsC.load().then(setCounts),
+      appsC.load().then(setApps),
+    ]).then(() => setLoaded(true));
   }, []);
 
   const quiet = apps.find((a) => a.status === "applied" && (daysSince(a.date_applied) ?? 0) >= 10);
@@ -114,7 +123,9 @@ function Home({ avatar, onSheet, go }: TabProps) {
       <div className="pad">
         <div className="today">
           <span className="eyebrow">Do this first</span>
-          {quiet && !skipped ? (
+          {!loaded ? (
+            <><h3>Loading your day…</h3><p>Pulling together your queue and pipeline.</p></>
+          ) : quiet && !skipped ? (
             <>
               <h3>Follow up with {quiet.company_name ?? "a quiet application"}</h3>
               <p>Applied {daysSince(quiet.date_applied)} days ago with no reply — time for a nudge.</p>
@@ -144,7 +155,7 @@ function Home({ avatar, onSheet, go }: TabProps) {
 
       {today.length > 0 && (
         <>
-          <div className="sechead"><h3>New today</h3><button className="more" onClick={() => go("jobs")}>See {todayCount} →</button></div>
+          <div className="sechead"><h3>New today</h3><button className="more" onClick={() => go("jobs")}>See {today.length} →</button></div>
           <div className="jobs">{today.slice(0, 2).map((o) => <JobCard key={o.id} o={o} />)}</div>
         </>
       )}
@@ -178,28 +189,28 @@ function Home({ avatar, onSheet, go }: TabProps) {
 // ── Jobs ────────────────────────────────────────────────────────────────────
 function Jobs({ avatar, onSheet }: TabProps) {
   const [seg, setSeg] = useState<"browse" | "saved" | "queue">("browse");
-  const [feed, setFeed] = useState<RankedListing[]>([]);
-  const [queue, setQueue] = useState<RankedListing[]>([]);
-  const [savedApps, setSavedApps] = useState<ApplicationRow[]>([]);
-  const [savedUrls, setSavedUrls] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [feed, setFeed] = useState<RankedListing[]>(() => feedC.peek() ?? []);
+  const [queue, setQueue] = useState<RankedListing[]>(() => queueC.peek() ?? []);
+  const [apps, setApps] = useState<ApplicationRow[]>(() => appsC.peek() ?? []);
+  const [feedLoading, setFeedLoading] = useState(() => feedC.peek() == null);
 
-  async function reloadSaved() {
-    const a = await listApplications();
-    setSavedApps(a.filter((x) => x.status === "interested"));
-    setSavedUrls(new Set(a.map((x) => x.job_link).filter((x): x is string => !!x)));
-  }
   useEffect(() => {
-    getFeed().then((f) => setFeed(f.listings)).catch(console.error).finally(() => setLoading(false));
-    getOpportunityQueue().then((q) => setQueue(q.today)).catch(console.error);
-    reloadSaved().catch(console.error);
+    feedC.load().then(setFeed).catch(console.error).finally(() => setFeedLoading(false));
+    queueC.load().then(setQueue).catch(console.error);
+    appsC.load().then(setApps).catch(console.error);
   }, []);
+
+  const savedApps = apps.filter((a) => a.status === "interested");
+  const savedUrls = new Set(apps.map((a) => a.job_link).filter((x): x is string => !!x));
 
   async function save(o: RankedListing) {
     if (savedUrls.has(o.url)) return;
-    setSavedUrls((s) => new Set(s).add(o.url)); // optimistic
-    await createApplication({ company_name: o.company, role_title: o.title, job_link: o.url, location: o.locations.join(", "), status: "interested", resume_version_id: null });
-    reloadSaved().catch(console.error);
+    setApps((prev) => [{ id: -Date.now(), company_name: o.company, role_title: o.title, job_link: o.url, location: o.locations.join(", "), status: "interested" } as ApplicationRow, ...prev]); // optimistic
+    try {
+      await createApplication({ company_name: o.company, role_title: o.title, job_link: o.url, location: o.locations.join(", "), status: "interested", resume_version_id: null });
+      invalidateAfterSave();
+      setApps(await appsC.load());
+    } catch (e) { console.error("save failed", e); setApps(await appsC.load()); }
   }
 
   const list = seg === "browse" ? feed.slice(0, 60) : seg === "queue" ? queue : [];
@@ -207,7 +218,7 @@ function Jobs({ avatar, onSheet }: TabProps) {
   return (
     <div className="m-scroll">
       <header className="apphead"><div className="row">
-        <div><h2>Jobs</h2><div className="sub">{feed.length.toLocaleString()} in your feed</div></div>
+        <div><h2>Jobs</h2><div className="sub">{feedLoading ? "Loading feed…" : `${feed.length.toLocaleString()} in your feed`}</div></div>
         <button className="avatar" onClick={onSheet}>{avatar}</button>
       </div></header>
 
@@ -220,7 +231,7 @@ function Jobs({ avatar, onSheet }: TabProps) {
       <div className="jobs" style={{ paddingBottom: 24 }}>
         {seg === "saved" ? (
           savedApps.length ? savedApps.map((a) => <SavedCard key={a.id} a={a} />) : <Empty label="Nothing saved yet. Tap the bookmark on a role to keep it here." />
-        ) : loading && seg === "browse" ? (
+        ) : feedLoading && seg === "browse" ? (
           <Empty label="Loading your feed…" />
         ) : list.length ? (
           list.map((o) => <JobCard key={o.id} o={o} saved={savedUrls.has(o.url)} onSave={() => save(o)} />)
@@ -271,9 +282,10 @@ function SavedCard({ a }: { a: ApplicationRow }) {
 
 // ── Tracker ─────────────────────────────────────────────────────────────────
 function Tracker({ avatar, onSheet }: TabProps) {
-  const [apps, setApps] = useState<ApplicationRow[]>([]);
+  const [apps, setApps] = useState<ApplicationRow[]>(() => appsC.peek() ?? []);
+  const [loaded, setLoaded] = useState(() => appsC.peek() != null);
   const [seg, setSeg] = useState<"active" | "replies" | "closed">("active");
-  useEffect(() => { listApplications().then(setApps).catch(console.error); }, []);
+  useEffect(() => { appsC.load().then(setApps).catch(console.error).finally(() => setLoaded(true)); }, []);
 
   const active = apps.filter((a) => a.status !== "rejected");
   const replies = apps.filter((a) => ["oa", "interview", "offer"].includes(a.status));
@@ -298,7 +310,7 @@ function Tracker({ avatar, onSheet }: TabProps) {
         <button className={seg === "closed" ? "on" : ""} onClick={() => setSeg("closed")}>Closed <span className="n">{closed.length}</span></button>
       </div>
 
-      {seg === "active" ? (
+      {!loaded ? <Empty label="Loading your applications…" /> : seg === "active" ? (
         active.length === 0 ? <Empty label="No active applications yet. Save and apply to roles in Jobs." /> : (
           <>
             {needs.length > 0 && <Group label="Needs action" n={needs.length}>{needs.map((a) => <AppCard key={a.id} a={a} />)}</Group>}
@@ -342,11 +354,11 @@ function AppCard({ a }: { a: ApplicationRow }) {
 
 // ── Toolkit ─────────────────────────────────────────────────────────────────
 function Toolkit({ avatar, onSheet }: TabProps) {
-  const [perf, setPerf] = useState<ResumeVersionPerf[]>([]);
-  const [resumes, setResumes] = useState<ResumeVersion[]>([]);
+  const [perf, setPerf] = useState<ResumeVersionPerf[]>(() => perfC.peek() ?? []);
+  const [resumes, setResumes] = useState<ResumeVersion[]>(() => resumesC.peek() ?? []);
   useEffect(() => {
-    getResumeVersionPerformance().then(setPerf).catch(console.error);
-    listResumeVersions().then(setResumes).catch(console.error);
+    perfC.load().then(setPerf).catch(console.error);
+    resumesC.load().then(setResumes).catch(console.error);
   }, []);
 
   const rows: ResumeVersionPerf[] = perf.length ? perf : resumes.map((r) => ({ id: r.id, name: r.name, total: 0, reachedOa: 0, reachedInterview: 0, offers: 0 }));
@@ -389,18 +401,18 @@ function Toolkit({ avatar, onSheet }: TabProps) {
 
 // ── Coach ───────────────────────────────────────────────────────────────────
 function Coach({ avatar, onSheet }: TabProps) {
-  const [rates, setRates] = useState<FunnelRates | null>(null);
-  const [counts, setCounts] = useState<StatusCounts | null>(null);
-  const [perf, setPerf] = useState<ResumeVersionPerf[]>([]);
+  const [rates, setRates] = useState<FunnelRates | null>(() => ratesC.peek());
+  const [counts, setCounts] = useState<StatusCounts | null>(() => countsC.peek());
+  const [perf, setPerf] = useState<ResumeVersionPerf[]>(() => perfC.peek() ?? []);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    getFunnelRates().then(setRates).catch(console.error);
-    getStatusCounts().then(setCounts).catch(console.error);
-    getResumeVersionPerformance().then(setPerf).catch(console.error);
+    ratesC.load().then(setRates).catch(console.error);
+    countsC.load().then(setCounts).catch(console.error);
+    perfC.load().then(setPerf).catch(console.error);
   }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
