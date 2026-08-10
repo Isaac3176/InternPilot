@@ -131,13 +131,47 @@ body {
 .nav a .ico { width: 18px; text-align: center; opacity: 0.85; }
 .nav a.active .ico { opacity: 1; color: #6ba4f7; }
 
+/* Pinned Focus-session entry (a mode, above the groups) */
+.nav-focus {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 8px; margin-bottom: 10px;
+  background: rgba(91, 155, 246, 0.12); border: 1px solid rgba(91, 155, 246, 0.22);
+  color: #bfd8fb; text-decoration: none; font-weight: 600;
+}
+.nav-focus:hover { background: rgba(91, 155, 246, 0.2); color: #dceafd; }
+.nav-focus.active { background: rgba(91, 155, 246, 0.26); color: #fff; }
+.nav-focus .ico { width: 18px; text-align: center; opacity: 0.9; }
+
+/* Collapsible groups: a mono uppercase header that toggles its items */
+.nav-group { display: flex; flex-direction: column; }
+.nav-group-h {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  padding: 9px 11px 5px; color: #6b7787;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+}
+.nav-group-h:hover { color: #9fb0c2; }
+.nav-group-h .chev { width: 11px; height: 11px; opacity: 0.55; transition: transform 0.15s; }
+.nav-group-h.open .chev { transform: rotate(180deg); }
+.nav-group-items { display: flex; flex-direction: column; gap: 2px; padding-bottom: 4px; }
+
 .sidebar-footer {
   margin-top: auto;
-  padding: 10px;
-  color: #6b7787;
-  font-size: 11px;
-  font-family: var(--mono);
-  letter-spacing: 0.04em;
+  padding: 8px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.nav-foot-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 11px; border-radius: 7px;
+  color: var(--nav-text); text-decoration: none; font-weight: 500;
+}
+.nav-foot-item:hover { background: var(--nav-hover); color: #e6ecf3; }
+.nav-foot-item.active { background: var(--nav-active); color: #fff; font-weight: 600; }
+.nav-foot-item .ico { width: 18px; text-align: center; opacity: 0.85; }
+.nav-foot-item.active .ico { opacity: 1; color: #6ba4f7; }
+.sidebar-footer .beta {
+  padding: 6px 11px 0; color: #6b7787;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em;
 }
 
 .main {
