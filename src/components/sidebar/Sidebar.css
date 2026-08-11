@@ -146,12 +146,11 @@
 .is-collapsed .ip-who,
 .is-collapsed .ip-up { display: none; }
 
-/* account menu popover */
+/* account menu popover — position:fixed so the sidebar's overflow:hidden can't clip it */
 .ip-acct-scrim { position: fixed; inset: 0; z-index: 40; }
-.ip-acct { position: absolute; left: 8px; right: 8px; bottom: calc(100% - 2px); z-index: 41;
+.ip-acct { position: fixed; width: 210px; max-width: calc(100vw - 16px); z-index: 41;
   background: #182430; border: 1px solid var(--nav-line); border-radius: 11px; padding: 5px;
   box-shadow: 0 18px 40px -18px rgba(0,0,0,.7); display: flex; flex-direction: column; gap: 1px; }
-.is-collapsed .ip-acct { left: 8px; right: auto; width: 190px; }
 .ip-acct a, .ip-acct button {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 8px;
   color: var(--nav-text); font: inherit; font-size: 13px; font-weight: 500; text-decoration: none; background: none; border: none; cursor: pointer; text-align: left;

@@ -39,11 +39,13 @@ export async function listEmails(): Promise<EmailRow[]> {
 
 export async function createEmail(input: EmailInput): Promise<number | null> {
   if (cloudMode()) {
+    // Empty strings are invalid for a Postgres timestamptz — coerce to null.
+    const received = input.received_at && input.received_at.trim() ? input.received_at : null;
     const { data } = await supabase.from("emails").insert({
       sender: input.sender ?? null,
       subject: input.subject ?? null,
       body: input.body ?? null,
-      received_at: input.received_at ?? null,
+      received_at: received,
       application_id: input.application_id ?? null,
       gmail_id: input.gmail_id ?? null,
     }).select("id").single();

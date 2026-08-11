@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NAV, type NavCounts, type NavItem } from "./nav";
 import "./Sidebar.css";
@@ -59,7 +59,18 @@ export default function Sidebar({
   useEffect(() => setPeeked(null), [activeId]);
 
   const [acctOpen, setAcctOpen] = useState(false);
+  const meRef = useRef<HTMLButtonElement>(null);
+  // The menu is position:fixed so the sidebar's overflow:hidden can't clip it
+  // (which it would when the rail is collapsed to icons).
+  const [acctStyle, setAcctStyle] = useState<CSSProperties>({});
   useEffect(() => setAcctOpen(false), [pathname]);
+  function toggleAcct() {
+    if (!acctOpen && meRef.current) {
+      const r = meRef.current.getBoundingClientRect();
+      setAcctStyle({ left: Math.max(8, r.left), bottom: Math.max(8, window.innerHeight - r.top + 6) });
+    }
+    setAcctOpen((o) => !o);
+  }
 
   /* ---------- roving keyboard focus ---------- */
   const listRef = useRef<HTMLDivElement>(null);
@@ -147,14 +158,14 @@ export default function Sidebar({
         {acctOpen && (
           <>
             <div className="ip-acct-scrim" onClick={() => setAcctOpen(false)} />
-            <div className="ip-acct" role="menu">
+            <div className="ip-acct" role="menu" style={acctStyle}>
               <NavLink to="/profile" role="menuitem"><span className="ip-glyph">◍</span>Profile</NavLink>
               <NavLink to="/settings" role="menuitem"><span className="ip-glyph">⚙</span>Settings</NavLink>
               {onSignOut && <><div className="sep" /><button type="button" className="danger" role="menuitem" onClick={() => { setAcctOpen(false); onSignOut(); }}><span className="ip-glyph">⏻</span>Sign out</button></>}
             </div>
           </>
         )}
-        <button type="button" className="ip-me" onClick={() => setAcctOpen((o) => !o)} aria-haspopup="menu" aria-expanded={acctOpen}>
+        <button type="button" ref={meRef} className="ip-me" onClick={toggleAcct} aria-haspopup="menu" aria-expanded={acctOpen}>
           <span className="ip-av">{user.initials}</span>
           <span className="ip-who">
             <b>{user.name}</b>
