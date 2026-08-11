@@ -14,6 +14,7 @@ import type { ApplicationRow, ContactRow, Profile, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
 import CompanyLogo from "../components/CompanyLogo";
+import PeopleFinder from "../components/PeopleFinder";
 
 const MAX_SHOWN = 200;
 const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
@@ -113,6 +114,7 @@ export default function Internships() {
   const [hideIneligible, setHideIneligible] = useState(false);
   const [sort, setSort] = useState<"relevance" | "recent">("relevance");
   const [listView, setListView] = useState<"browse" | "saved" | "queue">("browse");
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
@@ -548,8 +550,12 @@ export default function Internships() {
                     <button type="button" className="secondary small" onClick={() => navigate("/networking")}>Ask</button>
                   </div>
                 )) : (
-                  <p className="muted-note">No contacts here yet. Add one in Networking to build a referral path.</p>
+                  <p className="muted-note">No saved contacts here yet — let InternPilot find who's worth reaching out to.</p>
                 )}
+                <button type="button" className="find-people" onClick={() => setPeopleOpen(true)}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0111 0" /><circle cx="18" cy="8.5" r="2.4" /><path d="M18 13a4 4 0 013.8 2.8" /></svg>
+                  Find people to contact
+                </button>
               </div>
 
               {selected.datePosted && (
@@ -565,6 +571,17 @@ export default function Internships() {
           )}
         </aside>
       </div>
+
+      {peopleOpen && selected && (
+        <PeopleFinder
+          company={selected.company}
+          title={selected.title}
+          jd={selDesc}
+          profile={profile}
+          contacts={selContacts}
+          onClose={() => setPeopleOpen(false)}
+        />
+      )}
     </>
   );
 }
