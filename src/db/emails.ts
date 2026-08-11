@@ -106,6 +106,18 @@ export async function linkEmailApplication(id: number, applicationId: number | n
   await db.execute("UPDATE emails SET application_id = ? WHERE id = ?", [applicationId, id]);
 }
 
+/** Total stored emails — cheap count for the sidebar "Replies" badge. */
+export async function countEmails(): Promise<number> {
+  if (cloudMode()) {
+    const { count } = await supabase.from("emails").select("*", { count: "exact", head: true });
+    return count ?? 0;
+  }
+  if (!isTauri()) return 0;
+  const db = await getDb();
+  const rows = await db.select<{ n: number }[]>("SELECT COUNT(*) AS n FROM emails");
+  return rows[0]?.n ?? 0;
+}
+
 export async function deleteEmail(id: number): Promise<void> {
   if (cloudMode()) {
     await supabase.from("emails").delete().eq("id", id);
