@@ -45,6 +45,10 @@ function initials(name: string): string {
 function bandColor(v: number): string {
   return v >= 80 ? "var(--beacon)" : v >= 65 ? "var(--accent)" : "var(--warn)";
 }
+// A score is an estimate when the posting never gave us its required skills.
+function isEstimate(l: RankedListing): boolean {
+  return !l.skills || l.skills.length === 0;
+}
 function shortLocations(locs: string[]): string {
   if (locs.length <= 3) return locs.join(", ") || "—";
   return `${locs.slice(0, 3).join(", ")} +${locs.length - 3} more`;
@@ -108,6 +112,7 @@ export default function Internships() {
   const [matchesMyRoles, setMatchesMyRoles] = useState(false);
   const [hideIneligible, setHideIneligible] = useState(false);
   const [sort, setSort] = useState<"relevance" | "recent">("relevance");
+  const [listView, setListView] = useState<"browse" | "saved" | "queue">("browse");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
@@ -169,6 +174,11 @@ export default function Internships() {
     if (sort === "recent") rows = [...rows].sort((a, b) => (b.datePosted ?? 0) - (a.datePosted ?? 0));
     return rows.slice(0, MAX_SHOWN);
   }, [listings, search, selectedTypes, location, onlyNew, matchesMyRoles, hideIneligible, profile, sort]);
+
+  // Browse / Saved / Queue views over the filtered feed.
+  const savedList = useMemo(() => filtered.filter((l) => appByUrl.has(l.url)), [filtered, appByUrl]);
+  const queueList = useMemo(() => filtered.filter((l) => !appByUrl.has(l.url) && l.score >= 70).sort((a, b) => b.score - a.score), [filtered, appByUrl]);
+  const shown = listView === "saved" ? savedList : listView === "queue" ? queueList : filtered;
 
   const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
   const selectedUrl = selected?.url ?? null;
@@ -280,21 +290,28 @@ export default function Internships() {
       <div className="workspace">
         <aside className="results">
           <div className="results-head">
-            <div className="count">Showing <b>{filtered.length}</b> of <b>{total}</b> internships</div>
+            <div className="count">Showing <b>{shown.length}</b> of <b>{total}</b> internships</div>
             <div className="seg">
               <button type="button" className={sort === "relevance" ? "on" : ""} onClick={() => setSort("relevance")}>Best fit</button>
               <button type="button" className={sort === "recent" ? "on" : ""} onClick={() => setSort("recent")}>Newest</button>
             </div>
           </div>
+          <div className="list-views">
+            <button type="button" className={listView === "browse" ? "on" : ""} onClick={() => setListView("browse")}>Browse</button>
+            <button type="button" className={listView === "saved" ? "on" : ""} onClick={() => setListView("saved")}>Saved{savedList.length ? <span className="vn">{savedList.length}</span> : null}</button>
+            <button type="button" className={listView === "queue" ? "on" : ""} onClick={() => setListView("queue")}>Queue{queueList.length ? <span className="vn">{queueList.length}</span> : null}</button>
+          </div>
           <div className="list">
-            {filtered.length === 0 ? (
+            {shown.length === 0 ? (
               <div className="empty">
-                {listings.length === 0 ? "No listings — click Refresh." : "No listings match your filters."}
-                {listings.length > 0 && anyActive && (
+                {listView === "saved" ? "No saved roles yet — click Save on a posting to keep it here."
+                  : listView === "queue" ? "Your apply queue is clear — strong matches you haven't applied to show up here."
+                  : listings.length === 0 ? "No listings — click Refresh." : "No listings match your filters."}
+                {listView === "browse" && listings.length > 0 && anyActive && (
                   <div className="mt-sm"><button type="button" className="secondary small" onClick={clearAll}>Clear filters</button></div>
                 )}
               </div>
-            ) : filtered.map((l) => (
+            ) : shown.map((l) => (
               <button type="button" key={l.id} className={"job" + (selected?.id === l.id ? " on" : "")} onClick={() => setSelectedId(l.id)}>
                 <div className="job-top">
                   <CompanyLogo company={l.company} />
@@ -313,7 +330,9 @@ export default function Internships() {
                 </div>
                 <div className="job-foot">
                   <span className="closes">{postedAgo(l.datePosted).toUpperCase()}</span>
-                  <span className="matchpip"><i style={{ ["--w" as string]: `${l.score}%`, ["--c" as string]: bandColor(l.score) }} />{l.score}</span>
+                  <span className={"matchpip" + (isEstimate(l) ? " est" : "")} title={isEstimate(l) ? "Estimated — this posting didn't list its requirements" : undefined}>
+                    <i style={{ ["--c" as string]: isEstimate(l) ? "var(--slate-2)" : bandColor(l.score) }} />{isEstimate(l) ? "~" : ""}{l.score}
+                  </span>
                 </div>
               </button>
             ))}
