@@ -37,5 +37,7 @@ set it anyway for password resets.)
 - Works on any network — no desktop needed, no same-Wi-Fi requirement.
 - Desktop stays the place you run the **browser-extension autofill**; the phone
   browses, queues, and tracks. Both share the same Supabase data.
-- Not-yet-cloud pages (Networking, Interview Prep, Experiences, Email Inbox) show
-  empty in the web build until they're migrated (Phase 3b).
+- All pages are cloud-backed now — Networking, Interview Prep, Experiences, and
+  Email Inbox included. **Gmail sync itself is desktop-only** (OAuth + fetch run
+  in the Tauri app); synced/classified emails are written to the cloud, so the
+  web/phone reads them and you can still paste-and-classify mail there.
