@@ -1366,24 +1366,10 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .phone-connect-txt .field { margin-bottom: 10px; }
 
 /* ================= Mobile / responsive shell ================= */
-.mobile-topbar { display: none; }
+/* Narrow desktop / Tauri windows: the sidebar auto-collapses to icons, and
+   dense feature pages get to scroll instead of overflowing. (The web build
+   hands off to the phone UI below 768px.) */
 @media (max-width: 760px) {
-  .mobile-topbar {
-    display: flex; align-items: center; gap: 10px; height: 52px; flex: none;
-    padding: 0 14px calc(env(safe-area-inset-top)) 14px; padding-top: env(safe-area-inset-top);
-    background: var(--nav); color: #fff; position: sticky; top: 0; z-index: 30;
-  }
-  .mobile-topbar .menu-btn { color: #fff; display: grid; place-items: center; padding: 4px; }
-  .mobile-topbar .brand-mark { color: #4e93f5; }
-  .mobile-topbar b { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
-
-  .app-shell { flex-direction: column; height: 100vh; }
-  .sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; width: 260px;
-    transform: translateX(-100%); transition: transform .22s cubic-bezier(.22,.9,.28,1);
-  }
-  .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,.4); }
-  .nav-overlay { position: fixed; inset: 0; z-index: 45; background: rgba(15,27,45,.5); }
   .main { padding: 16px 16px 40px; }
   /* Feature pages assume desktop widths — let them scroll instead of overflowing. */
   .grid-2, .pk-grid { grid-template-columns: 1fr !important; }

@@ -1,0 +1,183 @@
+/* Sidebar.css — desktop app sidebar
+   Rule that fixes the current build: fill is reserved for interactive state.
+   A group label or section heading NEVER takes a background. */
+
+.ip-sidebar {
+  --nav-bg:            #0E1621;
+  --nav-text:          #93A4B7;
+  --nav-text-hover:    #DCE4EC;
+  --nav-text-active:   #FFFFFF;
+  --nav-icon:          #72869B;
+  --nav-icon-hover:    #9DB0C4;
+  --nav-icon-active:   #3B85F5;
+  --nav-hover:         rgba(255,255,255,.055);
+  --nav-active:        rgba(255,255,255,.085);
+  --nav-marker:        #3B85F5;
+  --nav-line:          rgba(255,255,255,.07);
+  --nav-dim:           #54677C;
+  --nav-badge:         rgba(255,255,255,.10);
+  --nav-badge-tx:      #BBC8D6;
+  --nav-badge-hot:     rgba(176,61,42,.32);
+  --nav-badge-hot-tx:  #F0A997;
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  width: 248px;
+  flex: none;
+  height: 100%;
+  background: var(--nav-bg);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 10px 12px;
+  overflow: hidden;
+  transition: width .16s ease;
+}
+
+.ip-sidebar.is-collapsed { width: 68px; padding: 16px 8px 12px; align-items: center; }
+
+/* ---------- brand ---------- */
+.ip-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 16px; }
+.ip-mark { width: 30px; height: 30px; flex: none; }
+.ip-brand-tx b { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.018em; line-height: 1.25; }
+.ip-brand-tx > span { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .07em; color: var(--nav-dim); }
+.is-collapsed .ip-brand { padding: 2px 0 16px; justify-content: center; }
+.is-collapsed .ip-brand-tx { display: none; }
+
+/* ---------- focus session: a mode, so it must not look like a destination ---------- */
+.ip-focus {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; padding: 9px 11px; margin-bottom: 16px;
+  border-radius: 10px; cursor: pointer;
+  background: rgba(59,133,245,.13);
+  border: 1px solid rgba(59,133,245,.24);
+  color: inherit; font: inherit; text-align: left;
+}
+.ip-focus:hover { background: rgba(59,133,245,.19); }
+.ip-focus svg { color: #7FB0F7; flex: none; }
+.ip-focus b { font-size: 12.5px; font-weight: 600; color: #DCEAFD; }
+.ip-focus em { margin-left: auto; font-style: normal; font-family: var(--mono); font-size: 10px; color: #7FA9E8; }
+.is-collapsed .ip-focus { width: 44px; justify-content: center; padding: 9px 0; }
+.is-collapsed .ip-focus b,
+.is-collapsed .ip-focus em { display: none; }
+
+/* ---------- nav ---------- */
+.ip-nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; width: 100%; }
+.ip-nav::-webkit-scrollbar { display: none; }
+.ip-section + .ip-section { margin-top: 1px; }
+
+.ip-item {
+  display: flex; align-items: center; gap: 11px;
+  height: 38px; padding: 0 11px; border-radius: 9px;
+  color: var(--nav-text); font-size: 13.5px; font-weight: 500;
+  text-decoration: none; position: relative;
+  transition: background .12s ease, color .12s ease;
+}
+.ip-item svg:not(.ip-chev) { width: 17px; height: 17px; flex: none; color: var(--nav-icon); transition: color .12s ease; }
+.ip-item:hover { background: var(--nav-hover); color: var(--nav-text-hover); }
+.ip-item:hover svg:not(.ip-chev) { color: var(--nav-icon-hover); }
+
+/* react-router adds .active */
+.ip-item.active { background: var(--nav-active); color: var(--nav-text-active); font-weight: 600; }
+.ip-item.active svg:not(.ip-chev) { color: var(--nav-icon-active); }
+.ip-item.active::before {
+  content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px;
+  width: 3px; border-radius: 0 3px 3px 0; background: var(--nav-marker);
+}
+.is-collapsed .ip-item.active::before { left: -8px; }
+
+.ip-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ip-badge {
+  flex: none; font-style: normal; font-family: var(--mono);
+  font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 5px;
+  background: var(--nav-badge); color: var(--nav-badge-tx);
+}
+/* Red is for deadlines only. A count of saved roles is not urgent. */
+.ip-badge.is-alert { background: var(--nav-badge-hot); color: var(--nav-badge-hot-tx); }
+
+.ip-chev { width: 13px; height: 13px; flex: none; color: var(--nav-dim); transition: transform .16s ease; }
+.ip-item.is-open .ip-chev { transform: rotate(90deg); }
+
+.is-collapsed .ip-item { width: 44px; height: 42px; justify-content: center; padding: 0; }
+.is-collapsed .ip-item .ip-label,
+.is-collapsed .ip-item .ip-chev { display: none; }
+.is-collapsed .ip-badge {
+  position: absolute; top: 4px; right: 4px;
+  padding: 0 4px; height: 14px; line-height: 14px; font-size: 8.5px;
+}
+
+/* ---------- sub-items ---------- */
+.ip-sub { padding: 3px 0 4px 22px; position: relative; }
+.ip-sub::before {
+  content: ""; position: absolute; left: 19px; top: 5px; bottom: 6px;
+  width: 1px; background: var(--nav-line);
+}
+.ip-subitem {
+  display: flex; align-items: center; gap: 9px;
+  height: 30px; padding: 0 10px; border-radius: 7px;
+  color: #7C8DA1; font-size: 12.5px; font-weight: 500; text-decoration: none;
+}
+.ip-subitem:hover { background: var(--nav-hover); color: #C6D2DE; }
+.ip-subitem.active { color: #fff; font-weight: 600; background: rgba(255,255,255,.06); }
+.ip-dot { width: 5px; height: 5px; border-radius: 50%; background: #3E5064; flex: none; }
+.ip-subitem.active .ip-dot { background: var(--nav-marker); }
+.ip-n { font-family: var(--mono); font-size: 10px; color: var(--nav-dim); flex: none; }
+
+/* ---------- foot ---------- */
+.ip-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--nav-line); width: 100%; position: relative; }
+.ip-me {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 7px 8px; border-radius: 9px; border: none; background: none;
+  color: inherit; font: inherit; cursor: pointer; text-align: left;
+}
+.ip-me:hover { background: var(--nav-hover); }
+.ip-av {
+  width: 28px; height: 28px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(150deg, #3B85F5, #1A5BC4);
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+}
+.ip-who { flex: 1; min-width: 0; }
+.ip-who b { display: block; font-size: 12.5px; font-weight: 600; color: #E4EAF1; letter-spacing: -.01em; }
+.ip-who span { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--nav-dim); }
+.ip-up { flex: none; color: var(--nav-dim); }
+.is-collapsed .ip-me { justify-content: center; padding: 7px 0; }
+.is-collapsed .ip-who,
+.is-collapsed .ip-up { display: none; }
+
+/* account menu popover */
+.ip-acct-scrim { position: fixed; inset: 0; z-index: 40; }
+.ip-acct { position: absolute; left: 8px; right: 8px; bottom: calc(100% - 2px); z-index: 41;
+  background: #182430; border: 1px solid var(--nav-line); border-radius: 11px; padding: 5px;
+  box-shadow: 0 18px 40px -18px rgba(0,0,0,.7); display: flex; flex-direction: column; gap: 1px; }
+.is-collapsed .ip-acct { left: 8px; right: auto; width: 190px; }
+.ip-acct a, .ip-acct button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 8px;
+  color: var(--nav-text); font: inherit; font-size: 13px; font-weight: 500; text-decoration: none; background: none; border: none; cursor: pointer; text-align: left;
+}
+.ip-acct a:hover, .ip-acct button:hover { background: var(--nav-hover); color: var(--nav-text-hover); }
+.ip-acct .ip-glyph { width: 16px; text-align: center; opacity: .8; }
+.ip-acct .sep { height: 1px; background: var(--nav-line); margin: 4px 2px; }
+.ip-acct .danger { color: #F0A997; }
+
+.ip-collapse {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; height: 30px; margin-top: 6px; border-radius: 8px;
+  border: none; background: none; cursor: pointer;
+  color: var(--nav-dim); font-size: 11.5px; font-weight: 600;
+}
+.ip-collapse:hover { background: var(--nav-hover); color: var(--nav-text); }
+.ip-collapse .ip-label { flex: none; }
+.is-collapsed .ip-collapse .ip-label { display: none; }
+
+/* ---------- focus ring ---------- */
+.ip-sidebar :focus-visible {
+  outline: 2px solid var(--nav-marker);
+  outline-offset: 2px;
+  border-radius: 9px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ip-sidebar, .ip-item, .ip-chev { transition: none !important; }
+}
