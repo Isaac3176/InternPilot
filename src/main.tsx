@@ -17,6 +17,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Applications = lazy(() => import("./pages/Applications"));
 const Internships = lazy(() => import("./pages/Internships"));
 const ResumeCenter = lazy(() => import("./pages/ResumeCenter"));
+const Toolkit = lazy(() => import("./pages/Toolkit"));
 const Bullets = lazy(() => import("./pages/Bullets"));
 const Networking = lazy(() => import("./pages/Networking"));
 const InterviewPrep = lazy(() => import("./pages/InterviewPrep"));
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       { path: "resume-lab", element: <ResumeLab /> },
       { path: "focus", element: <FocusSession /> },
       { path: "resumes", element: <ResumeCenter /> },
+      { path: "toolkit", element: <Toolkit /> },
+      { path: "toolkit/bullets", element: <Toolkit /> },
+      { path: "toolkit/experiences", element: <Toolkit /> },
+      { path: "toolkit/answers", element: <Toolkit /> },
       { path: "bullets", element: <Bullets /> },
       { path: "networking", element: <Networking /> },
       { path: "prep", element: <InterviewPrep /> },

@@ -60,13 +60,12 @@ export const NAV: NavItem[] = [
     ],
   },
   {
-    id: "toolkit", label: "Toolkit", to: "/resumes", icon: DocIcon,
+    id: "toolkit", label: "Toolkit", to: "/toolkit", icon: DocIcon,
     children: [
-      { label: "Résumés", to: "/resumes", end: true },
-      { label: "Résumé Lab", to: "/resume-lab" },
-      { label: "Bullets", to: "/bullets", badge: "flaggedBullets" },
-      { label: "Experiences", to: "/experiences" },
-      { label: "Saved answers", to: "/answers" },
+      { label: "Résumés", to: "/toolkit", end: true },
+      { label: "Bullets", to: "/toolkit/bullets", badge: "flaggedBullets" },
+      { label: "Experiences", to: "/toolkit/experiences" },
+      { label: "Saved answers", to: "/toolkit/answers" },
     ],
   },
   {
