@@ -9,7 +9,8 @@
 import { getFeed } from "../listings/service";
 import { getWatchlist, type CompanyPriority } from "../ranking/companies";
 import { getPrefs } from "../ranking/prefs";
-import { forecastForCompany, normName, type ReleaseForecast } from "./history";
+import { forecastForCompany, normName, seasonYearOf, type ReleaseForecast } from "./history";
+import { recordOpen } from "./observed";
 
 export type RadarState = "open" | "signal" | "forecast" | "none";
 
@@ -74,6 +75,8 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
       const recent = live.find((l) => (l.datePosted ?? 0) * 1000 > now - 30 * DAY);
       const posted = live.map((l) => l.datePosted ?? 0).filter((t) => t > 0);
       const actualFirst = posted.length ? Math.min(...posted) * 1000 : null; // ms
+      // Self-learning: remember this cycle's actual earliest post for future forecasts.
+      if (actualFirst != null) recordOpen(key, seasonYearOf(actualFirst / 1000), Math.round(actualFirst / 1000));
       return { c, forecast, live, openMatch, recent, actualFirst };
     });
 
@@ -131,6 +134,10 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
       }
       if (applyDrift) {
         reasons.push(`Cohort signal: this cycle is running ~${Math.abs(driftDays)} days ${driftDays < 0 ? "early" : "late"} (${offsets.length} companies already open) — window shifted`);
+      }
+      if (openMatch && r.actualFirst != null) {
+        const delta = Math.round((r.actualFirst - forecast.typical) / DAY);
+        reasons.push(`Predicted ~${humanDate(forecast.typical)}, opened ${humanDate(r.actualFirst)} (${delta === 0 ? "on time" : `${Math.abs(delta)}d ${delta < 0 ? "early" : "late"}`})`);
       }
     } else {
       reasons.push("No historical data for this company yet — capturing this cycle");

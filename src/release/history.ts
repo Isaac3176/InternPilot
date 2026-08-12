@@ -9,6 +9,7 @@
  * upcoming cycle; confidence rises with more cycles and tighter agreement.
  */
 import bundle from "./release-history.json";
+import { getObserved } from "./observed";
 
 export type RoleFamily = "software" | "ml-data" | "hardware" | "quant" | "other";
 
@@ -58,33 +59,55 @@ function median(sorted: number[]): number {
 }
 
 /** The recruiting-cycle (season) year a posting belongs to: Aug–Dec roll to next year. */
-function seasonYearOf(tsSeconds: number): number {
+export function seasonYearOf(tsSeconds: number): number {
   const d = new Date(tsSeconds * 1000);
   return d.getUTCMonth() >= 7 ? d.getUTCFullYear() + 1 : d.getUTCFullYear();
 }
 
 const RECENCY = 0.65; // weight decay per cycle into the past
+interface Cycle { e: number; year: number; n: number }
 
-function forecastFor(rec: CompanyRecord, family: RoleFamily, targetYear: number): ReleaseForecast | null {
-  const seasons = rec.fam[family];
-  if (!seasons) return null;
-  const cycles = Object.values(seasons);
-  if (cycles.length === 0) return null;
+// ── cohort prior: a typical opening date from all well-observed companies, so a
+//    company with only one cycle can borrow strength instead of guessing wildly ──
+const priorCache = new Map<number, { typical: number; spreadDays: number } | null>();
+function globalPrior(targetYear: number): { typical: number; spreadDays: number } | null {
+  const cached = priorCache.get(targetYear);
+  if (cached !== undefined) return cached;
+  const typicals: number[] = [];
+  for (const rec of Object.values(DATA.companies)) {
+    const fam = rec.fam["software"] ?? rec.fam["ml-data"];
+    if (!fam) continue;
+    const cs = Object.values(fam);
+    if (cs.length < 2) continue; // only multi-cycle companies inform the prior
+    const pts = cs.map((c) => ({ mapped: toCycleDate(c.e, targetYear), year: seasonYearOf(c.e) }));
+    const mx = Math.max(...pts.map((p) => p.year));
+    const w = pts.map((p) => Math.pow(RECENCY, mx - p.year));
+    const ws = w.reduce((a, b) => a + b, 0);
+    typicals.push(pts.reduce((a, p, i) => a + p.mapped * w[i], 0) / ws);
+  }
+  let res: { typical: number; spreadDays: number } | null = null;
+  if (typicals.length >= 8) {
+    const sorted = [...typicals].sort((a, b) => a - b);
+    const mean = typicals.reduce((a, b) => a + b, 0) / typicals.length;
+    const sd = Math.sqrt(typicals.reduce((a, b) => a + (b - mean) ** 2, 0) / typicals.length) / DAY;
+    res = { typical: sorted[Math.floor(sorted.length / 2)], spreadDays: sd };
+  }
+  priorCache.set(targetYear, res);
+  return res;
+}
 
-  // Each cycle → its earliest posting mapped onto the upcoming calendar, tagged with its season year.
+function computeForecast(name: string, family: RoleFamily, cycles: Cycle[], targetYear: number): ReleaseForecast {
   const pts = cycles
-    .map((c) => ({ mapped: toCycleDate(c.e, targetYear), year: seasonYearOf(c.e) }))
+    .map((c) => ({ mapped: toCycleDate(c.e, targetYear), year: c.year }))
     .sort((a, b) => a.year - b.year);
   const cycleCount = pts.length;
-  const sampleSize = cycles.reduce((s, c) => s + c.n, 0);
+  const sampleSize = cycles.reduce((s, c) => s + (c.n || 1), 0);
   const maxYear = pts[pts.length - 1].year;
 
-  // Recency-weighted mean (recent cycles matter more).
   const w = pts.map((p) => Math.pow(RECENCY, maxYear - p.year));
   const wsum = w.reduce((a, b) => a + b, 0);
   const wmean = pts.reduce((a, p, i) => a + p.mapped * w[i], 0) / wsum;
 
-  // Trend: weighted linear regression of date-on-year, extrapolated to the target cycle.
   let typical = wmean;
   let trendDaysPerYear = 0;
   if (cycleCount >= 3) {
@@ -92,21 +115,28 @@ function forecastFor(rec: CompanyRecord, family: RoleFamily, targetYear: number)
     let num = 0, den = 0;
     pts.forEach((p, i) => { num += w[i] * (p.year - xbar) * (p.mapped - wmean); den += w[i] * (p.year - xbar) ** 2; });
     if (den > 0) {
-      const maxSlope = 20 * DAY; // clamp so a wild 2-point slope can't run away
+      const maxSlope = 20 * DAY;
       const slope = Math.max(-maxSlope, Math.min(maxSlope, num / den));
       trendDaysPerYear = Math.round(slope / DAY);
-      const trendPred = wmean + slope * (targetYear - xbar);
-      typical = 0.6 * trendPred + 0.4 * wmean;
+      typical = 0.6 * (wmean + slope * (targetYear - xbar)) + 0.4 * wmean;
     }
   }
 
-  // Predictive window = real spread + a small-sample penalty (fewer cycles → wider, honest window).
   const wvar = pts.reduce((a, p, i) => a + w[i] * (p.mapped - wmean) ** 2, 0) / wsum;
-  const halfWidth = Math.max(5, Math.sqrt(wvar) / DAY + 16 / cycleCount) * DAY;
+  let halfWidthDays = Math.max(5, Math.sqrt(wvar) / DAY + 16 / cycleCount);
 
+  // Cohort shrinkage: for 1–2 cycle companies, pull toward the prior (fades to 0 at 3+ cycles).
+  const prior = globalPrior(targetYear);
+  const priorW = Math.max(0, 3 - cycleCount);
+  let shrunk = false;
+  if (prior && priorW > 0) {
+    typical = (typical * cycleCount + prior.typical * priorW) / (cycleCount + priorW);
+    halfWidthDays = Math.max(halfWidthDays, prior.spreadDays * 0.8); // don't claim tighter than the cohort
+    shrunk = true;
+  }
+  const halfWidth = halfWidthDays * DAY;
   const mappedSorted = pts.map((p) => p.mapped).sort((a, b) => a - b);
 
-  // Confidence, calibrated by leave-one-out backtest: predict each cycle from the others.
   let confidence: number;
   if (cycleCount >= 2) {
     const errs: number[] = [];
@@ -116,14 +146,15 @@ function forecastFor(rec: CompanyRecord, family: RoleFamily, targetYear: number)
       errs.push(Math.abs(n2 / d2 - pts[i].mapped) / DAY);
     }
     errs.sort((a, b) => a - b);
-    const accuracy = Math.max(0, 1 - median(errs) / 30); // 1 at 0d LOO error, 0 at ≥30d
+    const accuracy = Math.max(0, 1 - median(errs) / 30);
     confidence = Math.round(Math.min(95, 12 + Math.min(cycleCount / 5, 1) * 30 + accuracy * 48));
   } else {
-    confidence = Math.min(38, 18 + Math.min(sampleSize, 20)); // one cycle → honestly low
+    confidence = Math.min(38, 18 + Math.min(sampleSize, 20));
+    if (shrunk) confidence = Math.min(50, confidence + 8); // anchored to a real cohort prior
   }
 
   return {
-    companyKey: normName(rec.name), company: rec.name, family, cycleCount, sampleSize,
+    companyKey: normName(name), company: name, family, cycleCount, sampleSize,
     typical: Math.round(typical),
     windowStart: Math.round(typical - halfWidth),
     windowEnd: Math.round(typical + halfWidth),
@@ -133,17 +164,36 @@ function forecastFor(rec: CompanyRecord, family: RoleFamily, targetYear: number)
   };
 }
 
-/** Best forecast for a company name (prefers software, then ml-data). */
+/** Static bundle cycles for a company's best-sampled family. */
+function staticCycles(rec: CompanyRecord): { family: RoleFamily; cycles: Cycle[] } {
+  const family: RoleFamily = rec.fam["software"] ? "software" : rec.fam["ml-data"] ? "ml-data" : "software";
+  const fam = rec.fam[family];
+  const cycles = fam ? Object.values(fam).map((c) => ({ e: c.e, year: seasonYearOf(c.e), n: c.n })) : [];
+  return { family, cycles };
+}
+
+/**
+ * Forecast for a company: merges the static history bundle with dates the app has
+ * actually observed from your feed (observed cycles override the bundle for that
+ * year), then shrinks sparse companies toward the cohort prior.
+ */
 export function forecastForCompany(companyName: string, targetYear: number): ReleaseForecast | null {
   const key = normName(companyName);
-  let rec = DATA.companies[key];
+  let rec: CompanyRecord | undefined = DATA.companies[key];
   if (!rec) {
-    const hit = Object.entries(DATA.companies).find(
-      ([k]) => key.length >= 4 && (k.includes(key) || key.includes(k)));
-    rec = hit?.[1] as CompanyRecord | undefined ?? undefined as unknown as CompanyRecord;
+    const hit = Object.entries(DATA.companies).find(([k]) => key.length >= 4 && (k.includes(key) || key.includes(k)));
+    rec = hit?.[1];
   }
-  if (!rec) return null;
-  return forecastFor(rec, "software", targetYear) ?? forecastFor(rec, "ml-data", targetYear);
+  const base = rec ? staticCycles(rec) : { family: "software" as RoleFamily, cycles: [] as Cycle[] };
+  const observed = getObserved(key).filter((o) => o.year < targetYear).map((o) => ({ e: o.e, year: o.year, n: 1 }));
+
+  const byYear = new Map<number, Cycle>();
+  for (const c of base.cycles) byYear.set(c.year, c);
+  for (const o of observed) byYear.set(o.year, o); // your real feed overrides the bundle for that cycle
+  const cycles = [...byYear.values()];
+  if (cycles.length === 0) return null;
+
+  return computeForecast(rec?.name ?? companyName, base.family, cycles, targetYear);
 }
 
 export function confidenceLabel(c: number): string {
