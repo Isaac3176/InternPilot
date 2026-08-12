@@ -3,25 +3,48 @@ import { openExternal } from "../lib/open";
 import {
   buildPlan, scoreContact, getChecklistState, setChecklistState, checklistFor,
 } from "../networking/connections";
-import type { ContactRow, Profile } from "../db/types";
+import { bestConnection, staleReferrals } from "../networking/graph";
+import { createContact } from "../db/contacts";
+import { createReferral } from "../db/referrals";
+import { RELATIONSHIP_TYPES, RELATIONSHIP_TYPE_LABELS, type ContactRow, type Profile, type ReferralRow, type RelationshipType } from "../db/types";
 
 /**
- * "Find People" for a job — Connection Intelligence. Turns the posting + your
- * profile into warm connections you already have, a prioritized who-to-find plan
- * with one-click LinkedIn/Google searches, and a networking checklist.
+ * "Find People" for a job — Connection Intelligence. Warm connections you
+ * already have (with the best warm path), a prioritized who-to-find plan with
+ * one-click LinkedIn/Google searches, capture-to-CRM for people you find, stale
+ * follow-ups, and a networking checklist.
  */
 export default function PeopleFinder({
-  company, title, jd, profile, contacts, onClose,
+  company, title, jd, profile, contacts, applicationId, referrals = [], onSaved, onClose,
 }: {
-  company: string; title: string; jd?: string; profile: Profile | null; contacts: ContactRow[]; onClose: () => void;
+  company: string; title: string; jd?: string; profile: Profile | null; contacts: ContactRow[];
+  applicationId?: number | null; referrals?: ReferralRow[]; onSaved?: () => void; onClose: () => void;
 }) {
   const { team, tiers } = useMemo(() => buildPlan(company, title, jd, profile), [company, title, jd, profile]);
   const warm = useMemo(
     () => contacts.map((c) => scoreContact(c, team)).sort((a, b) => b.score - a.score),
     [contacts, team],
   );
+  const best = useMemo(() => bestConnection(contacts, team, profile), [contacts, team, profile]);
+  const stale = useMemo(() => staleReferrals(referrals), [referrals]);
   const steps = useMemo(() => checklistFor(company, !!profile?.school?.trim()), [company, profile]);
   const [done, setDone] = useState<Record<string, boolean>>(() => getChecklistState(company));
+
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState<{ name: string; title: string; rel: RelationshipType; linkedin: string }>({ name: "", title: "", rel: "cold_outreach", linkedin: "" });
+  const [saving, setSaving] = useState(false);
+  async function saveContact() {
+    if (!form.name.trim() || saving) return;
+    setSaving(true);
+    try {
+      const id = await createContact({ name: form.name.trim(), company_name: company, title: form.title.trim() || null, linkedin: form.linkedin.trim() || null, relationship_type: form.rel });
+      if (id && applicationId) await createReferral({ contact_id: id, application_id: applicationId, company_id: null, status: "potential_contact" });
+      setForm({ name: "", title: "", rel: "cold_outreach", linkedin: "" });
+      setAdding(false);
+      onSaved?.();
+    } catch (e) { console.error("save contact failed", e); }
+    finally { setSaving(false); }
+  }
   function toggle(id: string) {
     setDone((prev) => { const next = { ...prev, [id]: !prev[id] }; setChecklistState(company, next); return next; });
   }
@@ -45,11 +68,34 @@ export default function PeopleFinder({
         </div>
 
         <div className="pf-body">
-          {/* warm connections you already have */}
-          {warm.length > 0 && (
-            <section className="pf-sec">
-              <div className="pf-sh"><h3>Warm connections you already have</h3><span className="pf-badge good">{warm.length}</span></div>
-              {warm.slice(0, 6).map(({ contact, score, reasons, action }) => (
+          {/* best path + your network here */}
+          <section className="pf-sec">
+            <div className="pf-sh">
+              <h3>Your network here</h3>
+              {warm.length > 0 && <span className="pf-badge good">{warm.length}</span>}
+              <button type="button" className="pf-mini" style={{ marginLeft: "auto" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add someone"}</button>
+            </div>
+            {best ? (
+              <div className="pf-bestpath">
+                <span className="eyebrow">Best path</span>
+                <div className="pf-bp-row"><b>{best.path}</b><span className={"pf-score " + (best.scored.score >= 70 ? "hi" : best.scored.score >= 45 ? "mid" : "lo")}>{best.scored.score}</span></div>
+                <p>{best.scored.action}</p>
+              </div>
+            ) : (
+              <p className="pf-muted">No warm connection here yet — use the searches below (start with alumni), then add whoever you find.</p>
+            )}
+            {adding && (
+              <div className="pf-addform">
+                <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input placeholder="Title (optional)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                <select value={form.rel} onChange={(e) => setForm({ ...form, rel: e.target.value as RelationshipType })}>
+                  {RELATIONSHIP_TYPES.map((r) => <option key={r} value={r}>{RELATIONSHIP_TYPE_LABELS[r]}</option>)}
+                </select>
+                <input placeholder="LinkedIn URL (optional)" value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} />
+                <button type="button" className="pf-mini primary" disabled={!form.name.trim() || saving} onClick={saveContact}>{saving ? "Saving…" : applicationId ? "Save & link to this role" : "Save contact"}</button>
+              </div>
+            )}
+            {warm.slice(0, 6).map(({ contact, score, reasons, action }) => (
                 <div className="pf-contact" key={contact.id}>
                   <span className="pf-av">{contact.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}</span>
                   <div className="pf-ctx">
@@ -63,8 +109,7 @@ export default function PeopleFinder({
                   </div>
                 </div>
               ))}
-            </section>
-          )}
+          </section>
 
           {/* extracted team */}
           {team.areas.length > 0 && (
@@ -98,6 +143,19 @@ export default function PeopleFinder({
               </div>
             ))}
           </section>
+
+          {/* stale outreach that needs action */}
+          {stale.length > 0 && (
+            <section className="pf-sec">
+              <div className="pf-sh"><h3>Needs follow-up</h3><span className="pf-badge">{stale.length}</span></div>
+              {stale.map((s, i) => (
+                <div className="pf-stale" key={i}>
+                  <span className={"pf-sdot " + s.severity} />
+                  <span className="pf-stx"><b>{s.referral.contact_name ?? "A contact"}</b><span>{s.reason}{s.referral.role_title ? ` · ${s.referral.role_title}` : ""}</span></span>
+                </div>
+              ))}
+            </section>
+          )}
 
           {/* checklist */}
           <section className="pf-sec">

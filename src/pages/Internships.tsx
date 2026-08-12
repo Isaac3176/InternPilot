@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { openExternal } from "../lib/open";
 import { createApplication, listApplications } from "../db/applications";
 import { listContacts } from "../db/contacts";
+import { listReferrals } from "../db/referrals";
+import { extractTeam } from "../networking/connections";
+import { bestConnection } from "../networking/graph";
 import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
@@ -10,7 +13,7 @@ import { jdSkillMatch } from "../listings/match";
 import { assessEligibility } from "../listings/eligibility";
 import { getResumeVersion } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
-import type { ApplicationRow, ContactRow, Profile, Status } from "../db/types";
+import type { ApplicationRow, ContactRow, Profile, ReferralRow, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
 import CompanyLogo from "../components/CompanyLogo";
@@ -99,6 +102,7 @@ export default function Internships() {
   const [listings, setListings] = useState<RankedListing[]>([]);
   const [appByUrl, setAppByUrl] = useState<Map<string, ApplicationRow>>(new Map());
   const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
   const [mySkills, setMySkills] = useState<string[]>([]);
   const [resumeHay, setResumeHay] = useState("");
@@ -128,12 +132,17 @@ export default function Internships() {
     for (const a of apps) if (a.job_link) map.set(a.job_link, a);
     setAppByUrl(map);
   }
+  async function refreshNetwork() {
+    const [cts, refs] = await Promise.all([listContacts(), listReferrals()]);
+    setContacts(cts); setReferrals(refs);
+  }
 
   async function load(force = false) {
     setLoading(true);
     setError("");
     try {
-      const [feed, profile, cts] = await Promise.all([getFeed(force), getProfile(), listContacts()]);
+      const [feed, profile, cts, refs] = await Promise.all([getFeed(force), getProfile(), listContacts(), listReferrals()]);
+      setReferrals(refs);
       setListings(feed.listings);
       setTotal(feed.listings.length);
       // Honor a hand-off from Fast Apply's "Prepare" so we open that exact role.
@@ -247,6 +256,9 @@ export default function Internships() {
   const effMatch = jdMatch ?? srcMatch;
   const gaugeValue = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch.score : selected?.score ?? 0;
   const selElig = selected ? assessEligibility(profile, selected, selDesc) : null;
+  const selReferrals = selected ? referrals.filter((r) => (r.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
+  const selTeam = selected ? extractTeam(selected.title, selDesc) : { areas: [], keywords: [] };
+  const bestPath = bestConnection(selContacts, selTeam, profile);
 
   return (
     <>
@@ -543,6 +555,12 @@ export default function Internships() {
                   <span className="lbl">Contacts at {selected.company}</span>
                   <button type="button" onClick={() => navigate("/networking")}>Manage</button>
                 </div>
+                {bestPath && (
+                  <div className="rail-bestpath">
+                    <span className="eyebrow">Best path</span>
+                    <div className="rbp"><b>{bestPath.path}</b><span className="rbp-score">{bestPath.scored.score}</span></div>
+                  </div>
+                )}
                 {selContacts.length > 0 ? selContacts.slice(0, 4).map((c) => (
                   <div className="person" key={c.id}>
                     <span className="av">{initials(c.name)}</span>
@@ -579,6 +597,9 @@ export default function Internships() {
           jd={selDesc}
           profile={profile}
           contacts={selContacts}
+          applicationId={selApp?.id ?? null}
+          referrals={selReferrals}
+          onSaved={refreshNetwork}
           onClose={() => setPeopleOpen(false)}
         />
       )}
