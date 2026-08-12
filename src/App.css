@@ -669,6 +669,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .pf-ctx b { display: block; font-size: 13.5px; font-weight: 600; }
 .pf-role { color: var(--slate); font-weight: 500; }
 .pf-reasons { display: block; font-size: 11.5px; color: var(--slate-2); margin-top: 1px; }
+.pf-hist { display: block; font-size: 11px; color: var(--slate-2); margin-top: 2px; font-family: var(--mono); }
 .pf-action { display: block; font-size: 12px; color: var(--accent-ink); margin-top: 3px; }
 .pf-cright { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .pf-score { font-family: var(--mono); font-size: 15px; font-weight: 700; }

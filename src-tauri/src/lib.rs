@@ -434,6 +434,25 @@ pub fn run() {
             sql: "ALTER TABLE profile ADD COLUMN target_date TEXT;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "create_contact_employment_history",
+            sql: "CREATE TABLE IF NOT EXISTS contact_employment_history (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contact_id   INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+                    company      TEXT NOT NULL,
+                    title        TEXT,
+                    team         TEXT,
+                    start_date   TEXT,
+                    end_date     TEXT,
+                    is_current   INTEGER NOT NULL DEFAULT 0,
+                    source       TEXT,
+                    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+                  );
+                  CREATE INDEX IF NOT EXISTS idx_ceh_contact ON contact_employment_history(contact_id);
+                  CREATE INDEX IF NOT EXISTS idx_ceh_company ON contact_employment_history(company);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let bridge: SharedBridge = Arc::new(Mutex::new(BridgeState::default()));

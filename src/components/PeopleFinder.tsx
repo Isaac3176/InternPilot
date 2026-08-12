@@ -6,6 +6,7 @@ import {
 import { bestConnection, staleReferrals } from "../networking/graph";
 import { createContact } from "../db/contacts";
 import { createReferral } from "../db/referrals";
+import { addEmployment, type ContactEmployment } from "../db/contactHistory";
 import { RELATIONSHIP_TYPES, RELATIONSHIP_TYPE_LABELS, type ContactRow, type Profile, type ReferralRow, type RelationshipType } from "../db/types";
 
 /**
@@ -15,10 +16,11 @@ import { RELATIONSHIP_TYPES, RELATIONSHIP_TYPE_LABELS, type ContactRow, type Pro
  * follow-ups, and a networking checklist.
  */
 export default function PeopleFinder({
-  company, title, jd, profile, contacts, applicationId, referrals = [], onSaved, onClose,
+  company, title, jd, profile, contacts, applicationId, referrals = [], employment, onSaved, onClose,
 }: {
   company: string; title: string; jd?: string; profile: Profile | null; contacts: ContactRow[];
-  applicationId?: number | null; referrals?: ReferralRow[]; onSaved?: () => void; onClose: () => void;
+  applicationId?: number | null; referrals?: ReferralRow[]; employment?: Map<number, ContactEmployment[]>;
+  onSaved?: () => void; onClose: () => void;
 }) {
   const { team, tiers } = useMemo(() => buildPlan(company, title, jd, profile), [company, title, jd, profile]);
   const warm = useMemo(
@@ -38,7 +40,10 @@ export default function PeopleFinder({
     setSaving(true);
     try {
       const id = await createContact({ name: form.name.trim(), company_name: company, title: form.title.trim() || null, linkedin: form.linkedin.trim() || null, relationship_type: form.rel });
-      if (id && applicationId) await createReferral({ contact_id: id, application_id: applicationId, company_id: null, status: "potential_contact" });
+      if (id) {
+        await addEmployment({ contact_id: id, company, title: form.title.trim() || null, is_current: true, source: "manual" });
+        if (applicationId) await createReferral({ contact_id: id, application_id: applicationId, company_id: null, status: "potential_contact" });
+      }
       setForm({ name: "", title: "", rel: "cold_outreach", linkedin: "" });
       setAdding(false);
       onSaved?.();
@@ -101,6 +106,7 @@ export default function PeopleFinder({
                   <div className="pf-ctx">
                     <b>{contact.name}{contact.title ? <span className="pf-role"> · {contact.title}</span> : null}</b>
                     <span className="pf-reasons">{reasons.join(" · ")}</span>
+                    {(() => { const h = employment?.get(contact.id) ?? []; return h.length > 1 ? <span className="pf-hist">History: {h.map((e) => e.company).join(" · ")}</span> : null; })()}
                     <span className="pf-action">{action}</span>
                   </div>
                   <div className="pf-cright">

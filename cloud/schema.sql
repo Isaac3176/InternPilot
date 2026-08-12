@@ -143,6 +143,24 @@ create table if not exists referrals (
   updated_at        timestamptz not null default now()
 );
 
+-- Employment history per contact — preserves one person as they change companies,
+-- so best-path scoring can use both current and historical shared-employer paths.
+create table if not exists contact_employment_history (
+  id           bigint generated always as identity primary key,
+  user_id      uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  contact_id   bigint not null references contacts(id) on delete cascade,
+  company      text not null,
+  title        text,
+  team         text,
+  start_date   date,
+  end_date     date,
+  is_current   integer not null default 0,
+  source       text,
+  created_at   timestamptz not null default now()
+);
+create index if not exists idx_ceh_contact on contact_employment_history(contact_id);
+create index if not exists idx_ceh_company on contact_employment_history(company);
+
 -- One profile row per user (all the autofill + preference fields).
 create table if not exists profiles (
   user_id             uuid primary key default auth.uid() references auth.users(id) on delete cascade,
@@ -184,7 +202,8 @@ declare t text;
 begin
   foreach t in array array[
     'companies','resume_versions','applications','resume_bullets','interviews',
-    'interview_experiences','emails','tasks','contacts','referrals','profiles','user_settings'
+    'interview_experiences','emails','tasks','contacts','referrals',
+    'contact_employment_history','profiles','user_settings'
   ] loop
     execute format('alter table %I enable row level security;', t);
     execute format('drop policy if exists own_rows on %I;', t);

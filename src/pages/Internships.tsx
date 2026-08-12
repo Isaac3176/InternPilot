@@ -4,6 +4,7 @@ import { openExternal } from "../lib/open";
 import { createApplication, listApplications } from "../db/applications";
 import { listContacts } from "../db/contacts";
 import { listReferrals } from "../db/referrals";
+import { listAllEmployment, type ContactEmployment } from "../db/contactHistory";
 import { extractTeam } from "../networking/connections";
 import { bestConnection } from "../networking/graph";
 import { getProfile } from "../db/profile";
@@ -103,6 +104,7 @@ export default function Internships() {
   const [appByUrl, setAppByUrl] = useState<Map<string, ApplicationRow>>(new Map());
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
+  const [employment, setEmployment] = useState<ContactEmployment[]>([]);
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
   const [mySkills, setMySkills] = useState<string[]>([]);
   const [resumeHay, setResumeHay] = useState("");
@@ -133,16 +135,17 @@ export default function Internships() {
     setAppByUrl(map);
   }
   async function refreshNetwork() {
-    const [cts, refs] = await Promise.all([listContacts(), listReferrals()]);
-    setContacts(cts); setReferrals(refs);
+    const [cts, refs, emp] = await Promise.all([listContacts(), listReferrals(), listAllEmployment()]);
+    setContacts(cts); setReferrals(refs); setEmployment(emp);
   }
 
   async function load(force = false) {
     setLoading(true);
     setError("");
     try {
-      const [feed, profile, cts, refs] = await Promise.all([getFeed(force), getProfile(), listContacts(), listReferrals()]);
+      const [feed, profile, cts, refs, emp] = await Promise.all([getFeed(force), getProfile(), listContacts(), listReferrals(), listAllEmployment()]);
       setReferrals(refs);
+      setEmployment(emp);
       setListings(feed.listings);
       setTotal(feed.listings.length);
       // Honor a hand-off from Fast Apply's "Prepare" so we open that exact role.
@@ -240,7 +243,15 @@ export default function Internships() {
 
   const selApp = selected ? appByUrl.get(selected.url) : undefined;
   const selStage = selApp ? STATUS_STAGE[selApp.status] : -1;
-  const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
+  const employmentByContact = useMemo(() => {
+    const m = new Map<number, ContactEmployment[]>();
+    for (const e of employment) { const a = m.get(e.contact_id) ?? []; a.push(e); m.set(e.contact_id, a); }
+    return m;
+  }, [employment]);
+  const companyLc = selected?.company.toLowerCase() ?? "";
+  const histContactIds = useMemo(() => new Set(employment.filter((e) => e.company.toLowerCase() === companyLc).map((e) => e.contact_id)), [employment, companyLc]);
+  // Warm contacts here = current company matches OR they've worked here before (history).
+  const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === companyLc || histContactIds.has(c.id)) : [];
   const matchedSkills = selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [];
 
   // Skill match: prefer the fetched JD; else use source-extracted skills; else title-based score.
@@ -599,6 +610,7 @@ export default function Internships() {
           contacts={selContacts}
           applicationId={selApp?.id ?? null}
           referrals={selReferrals}
+          employment={employmentByContact}
           onSaved={refreshNetwork}
           onClose={() => setPeopleOpen(false)}
         />
