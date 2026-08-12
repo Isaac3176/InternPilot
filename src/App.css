@@ -671,6 +671,18 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 .small-n { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .03em; color: var(--warn); }
 
+/* Release Radar "opening this week" banner (Home / Fast Apply) */
+.opening-soon { border: 1px solid #c9b8ea; background: linear-gradient(180deg, #f6f2ff, var(--surface-2)); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; }
+.os-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.os-head b { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.os-head span { font-size: 12.5px; color: var(--slate); }
+.os-x { margin-left: auto; flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--slate); font-size: 11px; cursor: pointer; }
+.os-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.os-item { display: inline-flex; align-items: center; gap: 8px; padding: 6px 11px; border: 1px solid #d8ccf0; border-radius: 20px; background: var(--card); cursor: pointer; }
+.os-item:hover { border-color: #7A5AF8; background: #f7f4ff; }
+.os-item b { font-size: 12.5px; font-weight: 600; }
+.os-item span { font-family: var(--mono); font-size: 10.5px; font-weight: 700; color: #6b46c1; }
+
 /* Network map: You → channel → companies */
 .nm { display: flex; align-items: flex-start; gap: 16px; margin-top: 12px; }
 .nm-you { flex: none; align-self: center; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: #fff; background: linear-gradient(150deg, #3B85F5, #1A5BC4); box-shadow: 0 4px 14px -6px rgba(31,111,235,.6); }

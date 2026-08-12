@@ -12,6 +12,7 @@ type FeedbackAction = FeedbackKind | "dismiss" | "mute";
 import type { ResumeVersion, Status } from "../db/types";
 import { APP_RECORDED_EVENT } from "../bridge";
 import CompanyLogo from "../components/CompanyLogo";
+import OpeningSoonBanner from "../components/OpeningSoonBanner";
 
 function scoreColor(v: number): string {
   return v >= 85 ? "var(--beacon)" : v >= 70 ? "var(--accent)" : v >= 55 ? "var(--warn)" : "var(--slate)";
@@ -109,6 +110,8 @@ export default function Queue() {
           <button type="button" className="btn" onClick={() => load(true)}>Refresh</button>
         </div>
       </div>
+
+      <OpeningSoonBanner />
 
       {instantCount > 0 && (
         <div className="instant-banner">
