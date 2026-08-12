@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getResumeVersionPerformance, type ResumeVersionPerf } from "../db/metrics";
-import { listResumeVersions, listResumeBullets } from "../db/resumes";
-import { listExperiences } from "../db/experiences";
+import { listResumeVersions, listResumeBullets, saveResumeBullet } from "../db/resumes";
+import { listExperiences, createExperience } from "../db/experiences";
 import { getFeed } from "../listings/service";
 import { listApplications } from "../db/applications";
 import { getProfile } from "../db/profile";
 import { getAnswers, ensureSeededAnswers, type ApplicationAnswer } from "../apply/answers";
-import type { ResumeBullet, ExperienceRow } from "../db/types";
+import { extractExperiences, type ExtractedExp } from "../ai/resumeExtract";
+import { hasApiKey } from "../ai/settings";
+import type { ResumeBullet, ExperienceRow, ResumeVersion } from "../db/types";
 import "./Toolkit.css";
 
 const TABS = [
@@ -185,29 +187,119 @@ function ResumesTab() {
   );
 }
 
+// ── Import experiences & bullets from a résumé ───────────────────────────────
+function ResumeImport({ onDone }: { onDone: () => void }) {
+  const [versions, setVersions] = useState<ResumeVersion[]>([]);
+  const [selId, setSelId] = useState<number | null>(null);
+  const [result, setResult] = useState<ExtractedExp[] | null>(null);
+  const [include, setInclude] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState<"" | "extract" | "add">("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    listResumeVersions().then((v) => { setVersions(v); const wt = v.find((r) => r.content?.trim()); if (wt) setSelId(wt.id); }).catch(() => {});
+  }, []);
+  const selected = versions.find((v) => v.id === selId);
+  const chosenCount = result ? result.reduce((n, e, i) => n + e.bullets.filter((_, j) => include[`${i}-${j}`]).length, 0) : 0;
+
+  async function extract() {
+    if (!selected?.content?.trim()) { setErr("Pick a résumé that has text (add it in Résumé Center)."); return; }
+    setBusy("extract"); setErr("");
+    try {
+      const exps = await extractExperiences(selected.content);
+      if (exps.length === 0) { setErr("Couldn't find experiences with bullet points in this résumé."); setResult(null); }
+      else { setResult(exps); setInclude(Object.fromEntries(exps.flatMap((e, i) => e.bullets.map((_, j) => [`${i}-${j}`, true])))); }
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(""); }
+  }
+
+  async function add() {
+    if (!result) return;
+    setBusy("add"); setErr("");
+    try {
+      for (let i = 0; i < result.length; i++) {
+        const e = result[i];
+        const chosen = e.bullets.filter((_, j) => include[`${i}-${j}`]);
+        if (chosen.length === 0) continue;
+        const expName = `${e.company}${e.role ? " — " + e.role : ""}`.trim();
+        if (e.company && e.company.toLowerCase() !== "experience") {
+          await createExperience({ company_name: e.company, role: e.role || null, summary: e.summary || null }).catch(() => {});
+        }
+        for (const b of chosen) {
+          await saveResumeBullet({ experience_name: expName || null, original_text: b, improved_text: null, tags: null, application_id: null });
+        }
+      }
+      setResult(null);
+      onDone();
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(""); }
+  }
+
+  return (
+    <div className="tk-panel tk-import">
+      <div className="tk-panelhead">
+        <h3>Import from a résumé</h3>
+        {!hasApiKey() && <span className="tk-muted" style={{ fontSize: 11 }}>offline heuristic — add an OpenAI key for better grouping</span>}
+      </div>
+      <p className="tk-muted" style={{ marginTop: "-6px" }}>Pull your experiences and their bullet points straight out of a résumé — review, then add to your library. Nothing is invented.</p>
+      <div className="tk-import-row">
+        <select value={selId ?? ""} onChange={(e) => { setSelId(Number(e.target.value) || null); setResult(null); setErr(""); }}>
+          {versions.length === 0 && <option value="">No résumés yet</option>}
+          {versions.map((v) => <option key={v.id} value={v.id}>{v.name}{v.content?.trim() ? "" : " (no text)"}</option>)}
+        </select>
+        <button type="button" className="tk-btn primary" disabled={busy !== "" || !selected?.content?.trim()} onClick={extract}>{busy === "extract" ? "Reading…" : "Extract"}</button>
+      </div>
+      {err && <p className="tk-muted" style={{ color: "var(--tk-warn)" }}>{err}</p>}
+      {result && (
+        <>
+          <p className="tk-muted">Found {result.length} experience{result.length === 1 ? "" : "s"}. Uncheck anything you don't want.</p>
+          {result.map((e, i) => (
+            <div className="tk-imp-exp" key={i}>
+              <div className="tk-imp-h">{e.company}{e.role ? ` · ${e.role}` : ""}</div>
+              {e.bullets.map((b, j) => (
+                <label key={j} className="tk-imp-b">
+                  <input type="checkbox" checked={!!include[`${i}-${j}`]} onChange={() => setInclude((p) => ({ ...p, [`${i}-${j}`]: !p[`${i}-${j}`] }))} />
+                  <span>{b}</span>
+                </label>
+              ))}
+            </div>
+          ))}
+          <button type="button" className="tk-btn primary full" style={{ marginTop: 10 }} disabled={busy !== "" || chosenCount === 0} onClick={add}>
+            {busy === "add" ? "Adding…" : `Add ${chosenCount} bullet${chosenCount === 1 ? "" : "s"} & ${result.length} experience${result.length === 1 ? "" : "s"}`}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Bullets ─────────────────────────────────────────────────────────────────
 function BulletsTab() {
   const navigate = useNavigate();
   const [bullets, setBullets] = useState<ResumeBullet[] | null>(null);
-  useEffect(() => { listResumeBullets().then(setBullets).catch(() => setBullets([])); }, []);
+  const reload = () => { listResumeBullets().then(setBullets).catch(() => setBullets([])); };
+  useEffect(() => { reload(); }, []);
   const sorted = (bullets ?? []).slice().sort((a, b) => (classifyBullet(a).cls === "weak" ? 0 : 1) - (classifyBullet(b).cls === "weak" ? 0 : 1));
 
   return (
-    <div className="tk-panel">
-      <div className="tk-panelhead"><h3>Bullets — weakest first</h3><button type="button" className="tk-btn" onClick={() => navigate("/bullets")}>Open full library</button></div>
-      {bullets === null ? <p className="tk-muted">Loading…</p> : sorted.length === 0 ? (
-        <div className="tk-empty">No bullets yet. Build a library of reusable, quantified lines from your projects and experience.</div>
-      ) : sorted.map((b) => {
-        const k = classifyBullet(b);
-        return (
-          <div className="tk-bullet" key={b.id}>
-            <span className={`tk-tag ${k.cls}`}>{k.tag}</span>
-            <span className="tk-tx">{b.improved_text || b.original_text || "(empty)"}<span>{k.why}</span></span>
-            {k.cls === "weak" && <button type="button" className="tk-go" onClick={() => navigate("/bullets")}>Rewrite</button>}
-          </div>
-        );
-      })}
-    </div>
+    <>
+      <ResumeImport onDone={reload} />
+      <div className="tk-panel" style={{ marginTop: 14 }}>
+        <div className="tk-panelhead"><h3>Bullets — weakest first</h3><button type="button" className="tk-btn" onClick={() => navigate("/bullets")}>Open full library</button></div>
+        {bullets === null ? <p className="tk-muted">Loading…</p> : sorted.length === 0 ? (
+          <div className="tk-empty">No bullets yet. Import from a résumé above, or build a library of reusable, quantified lines.</div>
+        ) : sorted.map((b) => {
+          const k = classifyBullet(b);
+          return (
+            <div className="tk-bullet" key={b.id}>
+              <span className={`tk-tag ${k.cls}`}>{k.tag}</span>
+              <span className="tk-tx">{b.improved_text || b.original_text || "(empty)"}<span>{k.why}</span></span>
+              {k.cls === "weak" && <button type="button" className="tk-go" onClick={() => navigate("/bullets")}>Rewrite</button>}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
