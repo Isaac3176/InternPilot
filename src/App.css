@@ -637,6 +637,38 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .matchpip.est { border-style: dashed; color: var(--slate-2); background: none; }
 .matchpip.est i { background: var(--slate-2); }
 
+/* Tier-A "your targets just opened" alert on the feed */
+.target-openings { border: 1px solid var(--accent-line); background: linear-gradient(180deg, #f4f9ff, var(--surface-2)); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.to-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.to-head b { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.to-head span { font-size: 12.5px; color: var(--slate); }
+.to-x { margin-left: auto; flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--slate); font-size: 11px; cursor: pointer; }
+.to-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.to-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: pointer; text-align: left; }
+.to-item:hover { border-color: var(--accent-line); box-shadow: var(--shadow-sm); }
+.to-item .logo { width: 30px; height: 30px; }
+.to-tx { flex: 1; min-width: 0; }
+.to-tx b { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
+.to-tx > b > span { font-weight: 600; }
+.to-tx > span { display: block; font-size: 11.5px; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.to-track { flex: none; font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 6px; padding: 3px 7px; }
+.to-tier { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; }
+.to-tier.instant { background: var(--alert-soft); color: var(--alert); }
+.to-tier.high { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* Tier-A playbook panel in the detail rail */
+.panel.tierA { border-color: var(--accent-line); background: linear-gradient(180deg, #f6faff, var(--card)); }
+.panel.tierA .panel-head { display: flex; align-items: center; justify-content: space-between; }
+.tierA-track { margin: 2px 0 10px; font-size: 12.5px; color: var(--ink-2); }
+.tierA-steps { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.tierA-step { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; padding: 3px 0; line-height: 1.4; }
+.tierA-step input { width: auto; margin-top: 2px; flex: none; }
+.tierA-step.on span { color: var(--slate-2); text-decoration: line-through; }
+.tierA-acts { display: flex; gap: 8px; }
+.tierA-acts button { flex: 1; }
+
+.wl-track { max-width: 130px; }
+
 .rail-bestpath { margin: 10px 0 4px; padding: 9px 11px; background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 9px; }
 .rail-bestpath .rbp { display: flex; align-items: center; gap: 9px; margin-top: 3px; }
 .rail-bestpath .rbp b { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; }

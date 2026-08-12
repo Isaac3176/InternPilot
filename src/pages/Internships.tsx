@@ -7,6 +7,7 @@ import { listReferrals } from "../db/referrals";
 import { listAllEmployment, type ContactEmployment } from "../db/contactHistory";
 import { extractTeam } from "../networking/connections";
 import { bestConnection } from "../networking/graph";
+import { matchCompany, trackFor, TRACK_LABEL, PRIORITY_LABEL, type TargetCompany } from "../ranking/companies";
 import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
@@ -98,6 +99,35 @@ const IC_EXT = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" strok
 const IC_DOC = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M6 3h9l5 5v13H6z" /><path d="M14 3v6h6" /></svg>;
 const IC_CLOCK = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>;
 
+const TIER_STEPS = [
+  { id: "read", label: "Read the JD — pull its 4-6 strongest signals" },
+  { id: "resume", label: "Pick the track résumé & reorder bullets (don't invent tech)" },
+  { id: "autofill", label: "Autofill the form & review every field" },
+  { id: "submit", label: "Submit — be an early, strong application" },
+  { id: "outreach", label: "After: one recruiter or engineer (only if outreach fits)" },
+  { id: "prep", label: "Start interview prep today — don't wait for the OA" },
+];
+function TierPlaybook({ company, onFindPeople, onApply }: { company: string; onFindPeople: () => void; onApply: () => void }) {
+  const key = `internpilot.tierA.${company.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+  const [done, setDone] = useState<Record<string, boolean>>(() => { try { return JSON.parse(localStorage.getItem(key) ?? "{}"); } catch { return {}; } });
+  const toggle = (id: string) => setDone((p) => { const n = { ...p, [id]: !p[id] }; try { localStorage.setItem(key, JSON.stringify(n)); } catch { /* ignore */ } return n; });
+  return (
+    <>
+      <div className="tierA-steps">
+        {TIER_STEPS.map((s) => (
+          <label key={s.id} className={"tierA-step" + (done[s.id] ? " on" : "")}>
+            <input type="checkbox" checked={!!done[s.id]} onChange={() => toggle(s.id)} /><span>{s.label}</span>
+          </label>
+        ))}
+      </div>
+      <div className="tierA-acts">
+        <button type="button" className="secondary small" onClick={onFindPeople}>Find people</button>
+        <button type="button" className="small" onClick={onApply}>⚡ Apply</button>
+      </div>
+    </>
+  );
+}
+
 export default function Internships() {
   const navigate = useNavigate();
   const [listings, setListings] = useState<RankedListing[]>([]);
@@ -121,6 +151,7 @@ export default function Internships() {
   const [sort, setSort] = useState<"relevance" | "recent">("relevance");
   const [listView, setListView] = useState<"browse" | "saved" | "queue">("browse");
   const [peopleOpen, setPeopleOpen] = useState(false);
+  const [openingsDismissed, setOpeningsDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
@@ -252,6 +283,22 @@ export default function Internships() {
   const histContactIds = useMemo(() => new Set(employment.filter((e) => e.company.toLowerCase() === companyLc).map((e) => e.contact_id)), [employment, companyLc]);
   // Warm contacts here = current company matches OR they've worked here before (history).
   const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === companyLc || histContactIds.has(c.id)) : [];
+  const selTarget = selected ? matchCompany(selected.company) : null;
+
+  // Tier-A openings: brand-new postings from your instant/high watchlist companies, not yet applied.
+  const targetOpenings = useMemo(() => {
+    const out: { l: RankedListing; tc: TargetCompany }[] = [];
+    const seen = new Set<string>();
+    for (const l of listings) {
+      if (!l.isNew || appByUrl.has(l.url) || seen.has(l.id)) continue;
+      const tc = matchCompany(l.company);
+      if (!tc || (tc.priority !== "instant" && tc.priority !== "high")) continue;
+      seen.add(l.id);
+      out.push({ l, tc });
+      if (out.length >= 6) break;
+    }
+    return out;
+  }, [listings, appByUrl]);
   const matchedSkills = selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [];
 
   // Skill match: prefer the fetched JD; else use source-extracted skills; else title-based score.
@@ -311,6 +358,28 @@ export default function Internships() {
       </div>
 
       {error && <p className="hint text-red">{error}</p>}
+
+      {targetOpenings.length > 0 && !openingsDismissed && (
+        <div className="target-openings">
+          <div className="to-head">
+            <b>🎯 Your targets just opened</b>
+            <span>{targetOpenings.length} watchlist {targetOpenings.length === 1 ? "company" : "companies"} posted a new role — apply fast</span>
+            <button type="button" className="to-x" onClick={() => setOpeningsDismissed(true)} aria-label="Dismiss">✕</button>
+          </div>
+          <div className="to-list">
+            {targetOpenings.map(({ l, tc }) => (
+              <button type="button" className="to-item" key={l.id} onClick={() => { setListView("browse"); setSelectedId(l.id); }}>
+                <CompanyLogo company={l.company} />
+                <span className="to-tx">
+                  <b>{l.company}<span className={`to-tier ${tc.priority}`}>{PRIORITY_LABEL[tc.priority]}</span></b>
+                  <span>{l.title}</span>
+                </span>
+                <span className="to-track">Use {TRACK_LABEL[trackFor(l.company)]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="workspace">
         <aside className="results">
@@ -517,6 +586,14 @@ export default function Internships() {
         <aside className="rightrail">
           {selected && (
             <>
+              {selTarget && (selTarget.priority === "instant" || selTarget.priority === "high") && (
+                <div className="panel tierA">
+                  <div className="panel-head"><span className="lbl">Tier-A playbook</span><span className={`to-tier ${selTarget.priority}`}>{PRIORITY_LABEL[selTarget.priority]}</span></div>
+                  <p className="tierA-track">Lead with your <b>{TRACK_LABEL[trackFor(selected.company)]}</b> résumé — don't rebuild it.</p>
+                  <TierPlaybook company={selected.company} onFindPeople={() => setPeopleOpen(true)} onApply={() => apply(selected)} />
+                </div>
+              )}
+
               <div className="panel">
                 <div className="panel-head"><span className="lbl">Readiness</span></div>
                 <ReadinessGauge value={gaugeValue} />

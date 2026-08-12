@@ -7,10 +7,21 @@
 
 export type CompanyPriority = "instant" | "high" | "normal" | "muted";
 
+/** Which master résumé to lead with — predetermined per company so you can apply fast. */
+export type ResumeTrack = "general" | "infra" | "ai" | "fullstack";
+export const TRACK_LABEL: Record<ResumeTrack, string> = {
+  general: "General SWE",
+  infra: "Infra / Backend",
+  ai: "AI / ML",
+  fullstack: "Full-stack / Product",
+};
+
 export interface TargetCompany {
   id: string;
   name: string;
   priority: CompanyPriority;
+  /** Predetermined résumé track to use when this company opens. */
+  track?: ResumeTrack;
   preferredRoles: string[];
   blockedRoles: string[];
   preferredLocations: string[];
@@ -125,6 +136,26 @@ export function setCompanyPriority(id: string, priority: CompanyPriority): void 
   const list = getWatchlist();
   const c = list.find((x) => x.id === id);
   if (c) { c.priority = priority; saveWatchlist(list); }
+}
+
+export function setCompanyTrack(id: string, track: ResumeTrack): void {
+  const list = getWatchlist();
+  const c = list.find((x) => x.id === id);
+  if (c) { c.track = track; saveWatchlist(list); }
+}
+
+// Sensible default track for well-known companies, used until you set one.
+const INFRA = new Set(["cloudflare", "datadog", "snowflake", "mongodb", "confluent", "elastic", "fastly", "akamai", "crowdstrike", "okta", "palo alto networks", "hashicorp", "cockroach labs"]);
+const AI = new Set(["nvidia", "databricks", "openai", "anthropic", "scale ai", "hugging face"]);
+export function inferTrack(name: string): ResumeTrack {
+  const n = name.toLowerCase();
+  if (INFRA.has(n)) return "infra";
+  if (AI.has(n)) return "ai";
+  return "general";
+}
+/** The track to lead with for a company name — stored choice, else an inferred default. */
+export function trackFor(name: string): ResumeTrack {
+  return matchCompany(name)?.track ?? inferTrack(name);
 }
 
 /** Add a company (from a listing) to the watchlist at a given tier, if absent. */

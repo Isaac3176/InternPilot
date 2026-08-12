@@ -3,14 +3,19 @@ import {
   addCompanyByName,
   ensureSeeded,
   getWatchlist,
+  inferTrack,
   PRIORITY_LABEL,
   removeCompany,
   setCompanyPriority,
+  setCompanyTrack,
+  TRACK_LABEL,
   type CompanyPriority,
+  type ResumeTrack,
   type TargetCompany,
 } from "../ranking/companies";
 
 const TIERS: CompanyPriority[] = ["instant", "high", "normal", "muted"];
+const TRACKS: ResumeTrack[] = ["general", "infra", "ai", "fullstack"];
 const TIER_HINT: Record<CompanyPriority, string> = {
   instant: "Apply almost immediately — instant persistent alert, 24-hour timer.",
   high: "Excited to join — normal notification, near the top of the queue.",
@@ -83,6 +88,15 @@ export default function Watchlist() {
                       aria-label={`Priority for ${c.name}`}
                     >
                       {TIERS.map((x) => <option key={x} value={x}>{PRIORITY_LABEL[x]}</option>)}
+                    </select>
+                    <select
+                      className="wl-track"
+                      value={c.track ?? inferTrack(c.name)}
+                      onChange={(e) => { setCompanyTrack(c.id, e.target.value as ResumeTrack); reload(); }}
+                      aria-label={`Résumé track for ${c.name}`}
+                      title="Résumé track to lead with"
+                    >
+                      {TRACKS.map((x) => <option key={x} value={x}>{TRACK_LABEL[x]}</option>)}
                     </select>
                     <button type="button" className="wl-x" onClick={() => { removeCompany(c.id); reload(); }} title="Remove">✕</button>
                   </div>
