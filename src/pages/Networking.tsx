@@ -15,6 +15,7 @@ import {
   type ReferralRow,
   type ReferralStatus,
 } from "../db/types";
+import { getConversionByOutreach, getResumeVersionPerformance, type OutreachBucket, type ResumeVersionPerf } from "../db/metrics";
 import ContactModal from "../components/ContactModal";
 import ReferralModal from "../components/ReferralModal";
 
@@ -51,11 +52,15 @@ export default function Networking() {
   const [referralModal, setReferralModal] = useState(false);
   const [editingReferral, setEditingReferral] = useState<ReferralRow | null>(null);
   const [stats, setStats] = useState<NetworkingStats | null>(null);
+  const [outreach, setOutreach] = useState<OutreachBucket[]>([]);
+  const [resumePerf, setResumePerf] = useState<ResumeVersionPerf[]>([]);
 
   function load() {
     listReferrals().then(setReferrals).catch(console.error);
     listContacts().then(setContacts).catch(console.error);
     getNetworkingStats().then(setStats).catch(console.error);
+    getConversionByOutreach().then(setOutreach).catch(console.error);
+    getResumeVersionPerformance().then(setResumePerf).catch(console.error);
   }
   useEffect(load, []);
 
@@ -120,6 +125,49 @@ export default function Networking() {
             Correlation only — small samples are unreliable. Treat rates based on fewer than ~10 applications as
             directional, not conclusive.
           </p>
+        </div>
+      )}
+
+      {(outreach.some((b) => b.count > 0) || resumePerf.some((p) => p.total > 0)) && (
+        <div className="card">
+          <h2>What's actually working</h2>
+          <p className="hint" style={{ marginTop: "-4px" }}>
+            Outcome rates by how you applied. Correlation, not cause — anything under ~10 applications (marked
+            <span className="small-n"> ·small n</span>) is directional only, not a reason to change your résumé.
+          </p>
+
+          <h3 className="result-h3">By outreach type</h3>
+          <table>
+            <thead><tr><th>How you applied</th><th>Apps</th><th>OA+</th><th>Interview+</th><th>Offer</th></tr></thead>
+            <tbody>
+              {outreach.filter((b) => b.count > 0).map((b) => (
+                <tr key={b.key}>
+                  <td>{b.label}{b.count < 10 && <span className="small-n" title="Small sample — directional only"> ·small n</span>}</td>
+                  <td>{b.count}</td><td>{b.oaRate}%</td><td>{b.interviewRate}%</td><td>{b.offerRate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {resumePerf.some((p) => p.total > 0) && (
+            <>
+              <h3 className="result-h3">By résumé version</h3>
+              <table>
+                <thead><tr><th>Version</th><th>Apps</th><th>OA+ rate</th><th>Interview rate</th><th>Offers</th></tr></thead>
+                <tbody>
+                  {resumePerf.filter((p) => p.total > 0).map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.name}{p.total < 10 && <span className="small-n" title="Small sample — directional only"> ·small n</span>}</td>
+                      <td>{p.total}</td>
+                      <td>{Math.round((p.reachedOa / p.total) * 100)}%</td>
+                      <td>{Math.round((p.reachedInterview / p.total) * 100)}%</td>
+                      <td>{p.offers}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
       )}
 

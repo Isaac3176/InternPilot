@@ -126,6 +126,75 @@ export async function getResumeVersionPerformance(): Promise<ResumeVersionPerf[]
   }));
 }
 
+export interface OutreachBucket {
+  key: "none" | "outreach" | "referral" | "alumni_referral";
+  label: string;
+  count: number;    // applications in this bucket (the denominator)
+  oaRate: number;   // reached OA or better
+  interviewRate: number;
+  offerRate: number;
+}
+
+const AGREED_STATUSES = ["referral_agreed", "referral_submitted", "referral_confirmed", "applied_through_referral"];
+const SENT_STATUSES = ["outreach_sent", "follow_up_due", "contact_responded", ...AGREED_STATUSES, "declined", "no_response", "expired"];
+
+/**
+ * Outcome rates by how much outreach an application had: none / employee outreach /
+ * referral / alumni referral. Correlational, not causal — read with the sample sizes.
+ */
+export async function getConversionByOutreach(): Promise<OutreachBucket[]> {
+  let apps: { id: number; status: Status; referral: string | null }[];
+  let refs: { application_id: number | null; contact_id: number | null; status: string }[];
+  let contacts: { id: number; relationship_type: string | null }[];
+
+  if (cloudMode()) {
+    const [{ data: a }, { data: r }, { data: c }] = await Promise.all([
+      supabase.from("applications").select("id, status, referral"),
+      supabase.from("referrals").select("application_id, contact_id, status"),
+      supabase.from("contacts").select("id, relationship_type"),
+    ]);
+    apps = (a ?? []) as typeof apps;
+    refs = (r ?? []) as typeof refs;
+    contacts = (c ?? []) as typeof contacts;
+  } else {
+    const db = await getDb();
+    [apps, refs, contacts] = await Promise.all([
+      db.select<typeof apps>("SELECT id, status, referral FROM applications"),
+      db.select<typeof refs>("SELECT application_id, contact_id, status FROM referrals"),
+      db.select<typeof contacts>("SELECT id, relationship_type FROM contacts"),
+    ]);
+  }
+
+  const relById = new Map(contacts.map((c) => [c.id, c.relationship_type]));
+  const refsByApp = new Map<number, typeof refs>();
+  for (const r of refs) if (r.application_id != null) (refsByApp.get(r.application_id) ?? refsByApp.set(r.application_id, []).get(r.application_id)!).push(r);
+
+  const buckets: Record<OutreachBucket["key"], Status[]> = { none: [], outreach: [], referral: [], alumni_referral: [] };
+  for (const app of apps) {
+    const rs = refsByApp.get(app.id) ?? [];
+    const agreed = rs.filter((r) => AGREED_STATUSES.includes(r.status));
+    const hasReferral = agreed.length > 0 || !!(app.referral && app.referral.trim());
+    const isAlumni = agreed.some((r) => r.contact_id != null && relById.get(r.contact_id) === "alumnus");
+    const hasOutreach = rs.some((r) => SENT_STATUSES.includes(r.status));
+    const key: OutreachBucket["key"] = isAlumni && hasReferral ? "alumni_referral" : hasReferral ? "referral" : hasOutreach ? "outreach" : "none";
+    buckets[key].push(app.status);
+  }
+
+  const LABEL: Record<OutreachBucket["key"], string> = {
+    none: "No outreach", outreach: "Employee outreach", referral: "Confirmed referral", alumni_referral: "Alumni referral",
+  };
+  const rate = (rows: Status[], reached: Status[]) => (rows.length ? Math.round((rows.filter((s) => reached.includes(s)).length / rows.length) * 100) : 0);
+  return (Object.keys(buckets) as OutreachBucket["key"][]).map((key) => {
+    const rows = buckets[key];
+    return {
+      key, label: LABEL[key], count: rows.length,
+      oaRate: rate(rows, ["oa", "interview", "offer"]),
+      interviewRate: rate(rows, ["interview", "offer"]),
+      offerRate: rate(rows, ["offer"]),
+    };
+  });
+}
+
 export interface WeekBucket {
   label: string;
   count: number;

@@ -669,6 +669,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 .wl-track { max-width: 130px; }
 
+.small-n { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .03em; color: var(--warn); }
+
 .rail-bestpath { margin: 10px 0 4px; padding: 9px 11px; background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 9px; }
 .rail-bestpath .rbp { display: flex; align-items: center; gap: 9px; margin-top: 3px; }
 .rail-bestpath .rbp b { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
