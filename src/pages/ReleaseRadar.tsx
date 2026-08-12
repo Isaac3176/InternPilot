@@ -6,7 +6,14 @@ import { confidenceLabel } from "../release/history";
 import { getPrefs } from "../ranking/prefs";
 import { PRIORITY_LABEL } from "../ranking/companies";
 import { createApplication } from "../db/applications";
+import { listContacts } from "../db/contacts";
+import { listReferrals } from "../db/referrals";
+import { listAllEmployment, type ContactEmployment } from "../db/contactHistory";
+import { getProfile } from "../db/profile";
+import { buildMission, PHASE_LABEL, getMissionState, setMissionState, type Mission } from "../release/missions";
+import PeopleFinder from "../components/PeopleFinder";
 import CompanyLogo from "../components/CompanyLogo";
+import type { ContactRow, Profile, ReferralRow } from "../db/types";
 
 const STATE_LABEL: Record<RadarState, string> = {
   open: "Confirmed open", signal: "Early signal", forecast: "Forecasted", none: "No data yet",
@@ -20,13 +27,40 @@ export default function ReleaseRadar() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState<RadarEntry[] | null>(null);
   const [error, setError] = useState("");
+  const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [employment, setEmployment] = useState<ContactEmployment[]>([]);
+  const [referrals, setReferrals] = useState<ReferralRow[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [peopleTarget, setPeopleTarget] = useState<{ company: string; contacts: ContactRow[] } | null>(null);
   const targetSeason = getPrefs().targetSeason;
 
   useEffect(() => {
     getReleaseRadar()
       .then(setEntries)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    refreshNetwork();
   }, []);
+
+  function refreshNetwork() {
+    Promise.all([listContacts(), listReferrals(), listAllEmployment(), getProfile()])
+      .then(([c, r, e, p]) => { setContacts(c); setReferrals(r); setEmployment(e); setProfile(p); })
+      .catch(() => {});
+  }
+
+  function companyContactsFor(company: string): ContactRow[] {
+    const lc = company.toLowerCase();
+    const histIds = new Set(employment.filter((e) => e.company.toLowerCase() === lc).map((e) => e.contact_id));
+    return contacts.filter((c) => (c.company_name ?? "").toLowerCase() === lc || histIds.has(c.id));
+  }
+  function missionFor(e: RadarEntry): Mission {
+    const rr = referrals.filter((r) => (r.company_name ?? "").toLowerCase() === e.company.toLowerCase());
+    return buildMission(e, companyContactsFor(e.company), rr, profile);
+  }
+  function employmentMap(): Map<number, ContactEmployment[]> {
+    const m = new Map<number, ContactEmployment[]>();
+    for (const e of employment) { const a = m.get(e.contact_id) ?? []; a.push(e); m.set(e.contact_id, a); }
+    return m;
+  }
 
   if (error) {
     return (
@@ -77,17 +111,57 @@ export default function ReleaseRadar() {
 
       <Section title="Already open" hint="A target-season role is posted right now.">
         {open.length === 0 ? <Empty text="Nothing from your watchlist is open yet." /> :
-          open.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} />)}
+          open.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} mission={missionFor(e)} onFindPeople={() => setPeopleTarget({ company: e.company, contacts: companyContactsFor(e.company) })} />)}
       </Section>
 
       <Section title="Opening soon" hint="Inside or approaching the historical window, or already showing early signals.">
         {soon.length === 0 ? <Empty text="No companies are in their opening window right now." /> :
-          soon.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} />)}
+          soon.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} mission={missionFor(e)} onFindPeople={() => setPeopleTarget({ company: e.company, contacts: companyContactsFor(e.company) })} />)}
       </Section>
 
       <Section title="On the radar" hint="Forecasted further out, or awaiting first-cycle data.">
-        {watching.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} />)}
+        {watching.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} mission={missionFor(e)} onFindPeople={() => setPeopleTarget({ company: e.company, contacts: companyContactsFor(e.company) })} />)}
       </Section>
+
+      {peopleTarget && (
+        <PeopleFinder
+          company={peopleTarget.company}
+          title="Software Engineer Intern"
+          profile={profile}
+          contacts={peopleTarget.contacts}
+          referrals={referrals.filter((r) => (r.company_name ?? "").toLowerCase() === peopleTarget.company.toLowerCase())}
+          employment={employmentMap()}
+          onSaved={refreshNetwork}
+          onClose={() => setPeopleTarget(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function MissionBlock({ company, mission, onFindPeople }: { company: string; mission: Mission; onFindPeople: () => void }) {
+  const [done, setDone] = useState<Record<string, boolean>>(() => getMissionState(company));
+  const toggle = (id: string) => setDone((p) => { const n = { ...p, [id]: !p[id] }; setMissionState(company, n); return n; });
+  return (
+    <div className="mission">
+      <p className="mission-head">{mission.headline}</p>
+      {mission.best ? (
+        <div className="mission-best">
+          <span className="eyebrow">Best contact</span>
+          <div className="mission-bp"><b>{mission.best.path}</b><span className="mission-score">{mission.best.scored.score}</span></div>
+          {mission.referralStatusLabel && <span className="mission-ref">Referral: {mission.referralStatusLabel}</span>}
+        </div>
+      ) : (
+        <p className="mission-none">No warm contact here yet — use Find people to start ({mission.savedCount} saved).</p>
+      )}
+      <div className="mission-tasks">
+        {mission.tasks.map((t) => (
+          <label key={t.id} className={"mission-task" + (done[t.id] ? " on" : "")}>
+            <input type="checkbox" checked={!!done[t.id]} onChange={() => toggle(t.id)} /><span>{t.label}</span>
+          </label>
+        ))}
+      </div>
+      <button type="button" className="btn small" onClick={onFindPeople}>Find people</button>
     </div>
   );
 }
@@ -113,7 +187,7 @@ const PREP_ITEMS = [
   "Set notifications to instant",
 ];
 
-function RadarCard({ e, onApply, navigate }: { e: RadarEntry; onApply: (e: RadarEntry) => void; navigate: (p: string) => void }) {
+function RadarCard({ e, onApply, navigate, mission, onFindPeople }: { e: RadarEntry; onApply: (e: RadarEntry) => void; navigate: (p: string) => void; mission: Mission; onFindPeople: () => void }) {
   const f = e.forecast;
   return (
     <article className={`radar-card state-${e.state}`}>
@@ -149,6 +223,13 @@ function RadarCard({ e, onApply, navigate }: { e: RadarEntry; onApply: (e: Radar
           <details className="radar-prep">
             <summary>Pre-release checklist</summary>
             <PrepChecklist companyKey={e.company} />
+          </details>
+        )}
+
+        {mission.phase !== "watch" && (
+          <details className="radar-mission" open={mission.phase === "apply"}>
+            <summary>Networking mission · {PHASE_LABEL[mission.phase]}</summary>
+            <MissionBlock company={e.company} mission={mission} onFindPeople={onFindPeople} />
           </details>
         )}
 

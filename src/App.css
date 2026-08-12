@@ -1230,9 +1230,23 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .radar-window b { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
 .radar-window .mon { font-family: var(--mono); font-size: 11px; color: var(--accent-ink); }
 
-.radar-why, .radar-prep { margin-top: 9px; }
-.radar-why summary, .radar-prep summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); list-style: none; }
-.radar-why summary::-webkit-details-marker, .radar-prep summary::-webkit-details-marker { display: none; }
+.radar-why, .radar-prep, .radar-mission { margin-top: 9px; }
+.radar-why summary, .radar-prep summary, .radar-mission summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); list-style: none; }
+.radar-why summary::-webkit-details-marker, .radar-prep summary::-webkit-details-marker, .radar-mission summary::-webkit-details-marker { display: none; }
+.radar-mission summary { color: var(--accent-ink); }
+
+.mission { margin-top: 10px; padding: 12px 13px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--surface-2); }
+.mission-head { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.mission-best { margin-bottom: 10px; }
+.mission-bp { display: flex; align-items: center; gap: 9px; margin-top: 3px; }
+.mission-bp b { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.35; }
+.mission-score { flex: none; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent); }
+.mission-ref { display: block; margin-top: 4px; font-size: 11.5px; color: var(--slate); }
+.mission-none { margin: 0 0 10px; font-size: 12.5px; color: var(--slate); }
+.mission-tasks { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.mission-task { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; padding: 3px 0; }
+.mission-task input { width: auto; }
+.mission-task.on span { color: var(--slate-2); text-decoration: line-through; }
 .radar-why summary::before, .radar-prep summary::before { content: "▸ "; color: var(--slate-2); }
 .radar-why[open] summary::before, .radar-prep[open] summary::before { content: "▾ "; }
 .radar-why ul { list-style: none; margin: 8px 0 2px; padding: 9px 12px; background: var(--surface-2); border-radius: 8px; }
