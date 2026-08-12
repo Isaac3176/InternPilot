@@ -57,3 +57,36 @@ jobs:
           releaseBody: "Download the installer for your platform below, then sign in with your InternPilot account."
           releaseDraft: true
           prerelease: false
+
+      # Also publish a stable, version-less copy of each installer, so the README's
+      # `releases/latest/download/InternPilot-Setup.exe` links always point at the
+      # newest build (a true one-click download that never needs updating).
+      - name: Publish stable-named Windows installer
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          exe=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe | head -n1)
+          cp "$exe" "InternPilot-Setup.exe"
+          gh release upload "${{ github.ref_name }}" "InternPilot-Setup.exe" --clobber
+
+      - name: Publish stable-named macOS installer
+        if: matrix.platform == 'macos-latest' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dmg=$(ls src-tauri/target/release/bundle/dmg/*.dmg | head -n1)
+          cp "$dmg" "InternPilot.dmg"
+          gh release upload "${{ github.ref_name }}" "InternPilot.dmg" --clobber
+
+      - name: Publish stable-named Linux installer
+        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          appimage=$(ls src-tauri/target/release/bundle/appimage/*.AppImage | head -n1)
+          cp "$appimage" "InternPilot.AppImage"
+          gh release upload "${{ github.ref_name }}" "InternPilot.AppImage" --clobber

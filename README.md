@@ -14,12 +14,13 @@ OAs and interviews. Sign in and your data is the same across **desktop, web, and
 ### 💻 Install the desktop app
 The full experience, including **browser-extension autofill**.
 
-**[⬇ Download for Windows](https://github.com/Isaac3176/InternPilot/releases/latest)** ·
-**[macOS](https://github.com/Isaac3176/InternPilot/releases/latest)** ·
-**[Linux](https://github.com/Isaac3176/InternPilot/releases/latest)**
+**[⬇ Download for Windows](https://github.com/Isaac3176/InternPilot/releases/latest/download/InternPilot-Setup.exe)** ·
+**[macOS (Apple Silicon)](https://github.com/Isaac3176/InternPilot/releases/latest/download/InternPilot.dmg)** ·
+**[Linux (AppImage)](https://github.com/Isaac3176/InternPilot/releases/latest/download/InternPilot.AppImage)**
 
-> Pick the installer for your OS on the release page — Windows `.exe`/`.msi`, macOS `.dmg`,
-> Linux `.AppImage`/`.deb`. It's an **unsigned beta**, so your OS warns on first launch
+> One click downloads the installer directly. Need a different format (`.msi`, `.deb`,
+> `.rpm`, Intel Mac)? Grab it from **[all installers](https://github.com/Isaac3176/InternPilot/releases/latest)**.
+> It's an **unsigned beta**, so your OS warns on first launch
 > (Windows: *More info → Run anyway*; macOS: right-click → *Open*).
 
 ### 🌐 Use it in your browser — nothing to install
