@@ -83,13 +83,19 @@ async function validResumeId(id: number | null | undefined): Promise<number | nu
   return rows.length > 0 ? id : null;
 }
 
+// A blank date must become NULL — Postgres rejects "" for a `date` column
+// (and SQLite is cleaner storing null than an empty string).
+function dateOrNull(s: string | null | undefined): string | null {
+  return s && s.trim() ? s : null;
+}
+
 export async function createApplication(input: ApplicationInput): Promise<number | null> {
   const companyId = await upsertCompany(input.company_name);
   const resumeId = await validResumeId(input.resume_version_id);
   if (cloudMode()) {
     const { data, error } = await supabase.from("applications").insert({
       company_id: companyId, role_title: input.role_title, job_link: input.job_link ?? null,
-      location: input.location ?? null, status: input.status, date_applied: input.date_applied ?? null,
+      location: input.location ?? null, status: input.status, date_applied: dateOrNull(input.date_applied),
       resume_version_id: resumeId, job_description: input.job_description ?? null,
       notes: input.notes ?? null, referral: input.referral ?? null,
     }).select("id").single();
@@ -103,7 +109,7 @@ export async function createApplication(input: ApplicationInput): Promise<number
         resume_version_id, job_description, notes, referral)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [companyId, input.role_title, input.job_link ?? null, input.location ?? null, input.status,
-      input.date_applied ?? null, resumeId, input.job_description ?? null, input.notes ?? null, input.referral ?? null],
+      dateOrNull(input.date_applied), resumeId, input.job_description ?? null, input.notes ?? null, input.referral ?? null],
   );
   return res.lastInsertId ?? null;
 }
@@ -114,7 +120,7 @@ export async function updateApplication(id: number, input: ApplicationInput): Pr
   if (cloudMode()) {
     const { error } = await supabase.from("applications").update({
       company_id: companyId, role_title: input.role_title, job_link: input.job_link ?? null,
-      location: input.location ?? null, status: input.status, date_applied: input.date_applied ?? null,
+      location: input.location ?? null, status: input.status, date_applied: dateOrNull(input.date_applied),
       resume_version_id: resumeId, job_description: input.job_description ?? null,
       notes: input.notes ?? null, referral: input.referral ?? null,
     }).eq("id", id);
@@ -128,7 +134,7 @@ export async function updateApplication(id: number, input: ApplicationInput): Pr
        date_applied = ?, resume_version_id = ?, job_description = ?, notes = ?, referral = ?
      WHERE id = ?`,
     [companyId, input.role_title, input.job_link ?? null, input.location ?? null, input.status,
-      input.date_applied ?? null, resumeId, input.job_description ?? null, input.notes ?? null, input.referral ?? null, id],
+      dateOrNull(input.date_applied), resumeId, input.job_description ?? null, input.notes ?? null, input.referral ?? null, id],
   );
 }
 

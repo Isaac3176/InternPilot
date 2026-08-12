@@ -47,6 +47,7 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
         resume_version_id: initial.resume_version_id,
         job_description: initial.job_description ?? "",
         notes: initial.notes ?? "",
+        referral: initial.referral ?? "",
       });
     }
   }, [initial]);
