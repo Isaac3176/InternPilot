@@ -5,8 +5,9 @@
  * you have — "You → Centre College → alumnus → Backend Engineer — 88/100" — and
  * flag outreach that's gone stale.
  */
-import { scoreContact, type ScoredContact } from "./connections";
+import { scoreContact, extractTeam, type ScoredContact } from "./connections";
 import type { TeamExtract } from "./connections";
+import type { ContactEmployment } from "../db/contactHistory";
 import type { ContactRow, Profile, ReferralRow, RelationshipType } from "../db/types";
 
 /** The "via" hop of a path — how you know this person. */
@@ -66,4 +67,40 @@ export function networkPaths(contacts: ContactRow[], profile: Profile | null): P
   return [...byVia.entries()]
     .map(([via, e]) => ({ via, count: e.companies.size, companies: [...e.companies].sort() }))
     .sort((a, b) => b.count - a.count);
+}
+
+// ── network map: You → channel → companies (each under its strongest path) ──
+export interface MapCompany { name: string; score: number }
+export interface MapChannel { via: string; companies: MapCompany[] }
+
+/** Build the You→channel→companies map, placing each company under the channel
+ *  of its strongest contact and scoring it with the best-path score. Uses current
+ *  company AND employment history, so people who moved jobs still map correctly. */
+export function networkMap(contacts: ContactRow[], employment: ContactEmployment[], profile: Profile | null): MapChannel[] {
+  const empByContact = new Map<number, string[]>();
+  for (const e of employment) { const a = empByContact.get(e.contact_id) ?? []; a.push(e.company); empByContact.set(e.contact_id, a); }
+
+  const display = new Map<string, string>(); // lowercased → display name
+  const byCompany = new Map<string, ContactRow[]>();
+  const add = (name: string, c: ContactRow) => {
+    const lc = name.trim().toLowerCase(); if (!lc) return;
+    if (!display.has(lc)) display.set(lc, name.trim());
+    const a = byCompany.get(lc) ?? []; if (!a.includes(c)) a.push(c); byCompany.set(lc, a);
+  };
+  for (const c of contacts) {
+    if (c.company_name) add(c.company_name, c);
+    for (const comp of empByContact.get(c.id) ?? []) add(comp, c);
+  }
+
+  const team = extractTeam("Software Engineer Intern");
+  const channels = new Map<string, MapCompany[]>();
+  for (const [lc, cs] of byCompany) {
+    const best = bestConnection(cs, team, profile);
+    if (!best) continue;
+    const via = relationshipVia(best.scored.contact.relationship_type, profile);
+    (channels.get(via) ?? channels.set(via, []).get(via)!).push({ name: display.get(lc)!, score: best.scored.score });
+  }
+  return [...channels.entries()]
+    .map(([via, comps]) => ({ via, companies: comps.sort((a, b) => b.score - a.score) }))
+    .sort((a, b) => b.companies.length - a.companies.length);
 }
