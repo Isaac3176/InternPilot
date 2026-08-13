@@ -9,7 +9,11 @@ import { getProfile } from "../db/profile";
 import { getAnswers, ensureSeededAnswers, type ApplicationAnswer } from "../apply/answers";
 import { extractExperiences, type ExtractedExp } from "../ai/resumeExtract";
 import { hasApiKey } from "../ai/settings";
+import { TRACK_LABEL, type ResumeTrack } from "../ranking/companies";
+import { getTrackResumes, setTrackResume } from "../ranking/resumeTracks";
 import type { ResumeBullet, ExperienceRow, ResumeVersion } from "../db/types";
+
+const TRACKS: ResumeTrack[] = ["general", "infra", "ai", "fullstack"];
 import "./Toolkit.css";
 
 const TABS = [
@@ -92,10 +96,13 @@ function ResumesTab() {
   const [bullets, setBullets] = useState<ResumeBullet[]>([]);
   const [cov, setCov] = useState<Coverage | null>(null);
   const [answers, setAnswers] = useState<ApplicationAnswer[]>([]);
+  const [versions, setVersions] = useState<ResumeVersion[]>([]);
+  const [trackMap, setTrackMap] = useState(getTrackResumes());
 
   useEffect(() => {
     getResumeVersionPerformance().then(setPerf).catch(() => setPerf([]));
     listResumeBullets().then(setBullets).catch(() => {});
+    listResumeVersions().then(setVersions).catch(() => {});
     computeCoverage().then(setCov).catch(() => setCov(null));
     ensureSeededAnswers();
     setAnswers(getAnswers());
@@ -170,6 +177,22 @@ function ResumesTab() {
               )}
             </>
           )}
+        </div>
+
+        <div className="tk-panel">
+          <div className="tk-panelhead"><h3>Résumé per track</h3></div>
+          <p className="tk-muted">Pick the résumé to lead with for each track. When a target company opens, InternPilot auto-selects it at apply time.</p>
+          {versions.length === 0 ? (
+            <p className="tk-muted">Add a résumé version first (<button type="button" className="tk-link" onClick={() => navigate("/resumes")}>Résumé Center</button>).</p>
+          ) : TRACKS.map((t) => (
+            <div className="tk-trackrow" key={t}>
+              <span>{TRACK_LABEL[t]}</span>
+              <select value={trackMap[t] ?? ""} onChange={(e) => { setTrackResume(t, e.target.value ? Number(e.target.value) : null); setTrackMap(getTrackResumes()); }}>
+                <option value="">— none —</option>
+                {versions.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+          ))}
         </div>
 
         <div className="tk-panel">

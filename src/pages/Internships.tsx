@@ -8,14 +8,15 @@ import { listAllEmployment, type ContactEmployment } from "../db/contactHistory"
 import { extractTeam } from "../networking/connections";
 import { bestConnection } from "../networking/graph";
 import { matchCompany, trackFor, TRACK_LABEL, PRIORITY_LABEL, type TargetCompany } from "../ranking/companies";
+import { resumeIdForCompany } from "../ranking/resumeTracks";
 import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
 import { jdSkillMatch } from "../listings/match";
 import { assessEligibility } from "../listings/eligibility";
-import { getResumeVersion } from "../db/resumes";
+import { getResumeVersion, listResumeVersions } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
-import type { ApplicationRow, ContactRow, Profile, ReferralRow, Status } from "../db/types";
+import type { ApplicationRow, ContactRow, Profile, ReferralRow, ResumeVersion, Status } from "../db/types";
 import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
 import CompanyLogo from "../components/CompanyLogo";
@@ -136,6 +137,7 @@ export default function Internships() {
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [employment, setEmployment] = useState<ContactEmployment[]>([]);
   const [preferredResumeId, setPreferredResumeId] = useState<number | null>(null);
+  const [resumeVersions, setResumeVersions] = useState<ResumeVersion[]>([]);
   const [mySkills, setMySkills] = useState<string[]>([]);
   const [resumeHay, setResumeHay] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -189,6 +191,7 @@ export default function Internships() {
       setProfile(profile);
       const preferredId = profile?.preferred_resume_id ?? null;
       setPreferredResumeId(preferredId);
+      listResumeVersions().then(setResumeVersions).catch(() => {});
       setMySkills((profile?.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean));
       const resumeContent = preferredId ? (await getResumeVersion(preferredId))?.content ?? "" : "";
       setResumeHay(`${resumeContent} ${profile?.skills ?? ""}`.toLowerCase());
@@ -255,7 +258,8 @@ export default function Internships() {
     if (existing) return existing.id;
     const id = await createApplication({
       company_name: l.company, role_title: l.title, job_link: l.url,
-      location: l.locations.join(", "), status: "interested", resume_version_id: preferredResumeId,
+      location: l.locations.join(", "), status: "interested",
+      resume_version_id: resumeIdForCompany(l.company) ?? preferredResumeId,
     });
     await refreshApps();
     return id;
@@ -284,6 +288,7 @@ export default function Internships() {
   // Warm contacts here = current company matches OR they've worked here before (history).
   const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === companyLc || histContactIds.has(c.id)) : [];
   const selTarget = selected ? matchCompany(selected.company) : null;
+  const resumeNameForCompany = (company: string) => resumeVersions.find((v) => v.id === resumeIdForCompany(company))?.name ?? null;
 
   // Tier-A openings: brand-new postings from your instant/high watchlist companies, not yet applied.
   const targetOpenings = useMemo(() => {
@@ -374,7 +379,7 @@ export default function Internships() {
                   <b>{l.company}</b>
                   <span>{l.title}</span>
                 </span>
-                <span className="to-track" title={`Lead with your ${TRACK_LABEL[trackFor(l.company)]} résumé`}>Use {TRACK_LABEL[trackFor(l.company)]}</span>
+                <span className="to-track" title={`Lead with your ${TRACK_LABEL[trackFor(l.company)]} résumé`}>Use {resumeNameForCompany(l.company) ?? TRACK_LABEL[trackFor(l.company)]}</span>
               </button>
             ))}
           </div>
@@ -589,7 +594,9 @@ export default function Internships() {
               {selTarget && (selTarget.priority === "instant" || selTarget.priority === "high") && (
                 <div className="panel tierA">
                   <div className="panel-head"><span className="lbl">Tier-A playbook</span><span className={`to-tier ${selTarget.priority}`}>{PRIORITY_LABEL[selTarget.priority]}</span></div>
-                  <p className="tierA-track">Lead with your <b>{TRACK_LABEL[trackFor(selected.company)]}</b> résumé — don't rebuild it.</p>
+                  <p className="tierA-track">{resumeNameForCompany(selected.company)
+                    ? <>Lead with <b>{resumeNameForCompany(selected.company)}</b> ({TRACK_LABEL[trackFor(selected.company)]}) — auto-selected when you apply.</>
+                    : <>Lead with your <b>{TRACK_LABEL[trackFor(selected.company)]}</b> track — <button type="button" className="linklike" onClick={() => navigate("/toolkit")}>map it to a résumé</button>.</>}</p>
                   <TierPlaybook company={selected.company} onFindPeople={() => setPeopleOpen(true)} onApply={() => apply(selected)} />
                 </div>
               )}

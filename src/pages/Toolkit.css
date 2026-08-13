@@ -83,3 +83,7 @@
 .tk-imp-h { font-size: 13px; font-weight: 600; letter-spacing: -.01em; margin-bottom: 6px; }
 .tk-imp-b { display: flex; align-items: flex-start; gap: 9px; padding: 4px 0; font-size: 13px; line-height: 1.5; color: var(--tk-ink-2); cursor: pointer; }
 .tk-imp-b input { width: auto; margin-top: 3px; flex: none; }
+
+.tk-trackrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.tk-trackrow span { flex: none; width: 96px; font-size: 12.5px; font-weight: 500; color: var(--tk-ink-2); }
+.tk-trackrow select { flex: 1; min-width: 0; height: 32px; border: 1px solid var(--tk-line); border-radius: 8px; padding: 0 9px; font-size: 12.5px; background: var(--tk-surface); color: var(--tk-ink); }
