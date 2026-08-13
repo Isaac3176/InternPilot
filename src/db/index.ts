@@ -17,6 +17,23 @@ export function getDb(): Promise<Database> {
 }
 
 /**
+ * Coerce a blank/whitespace string to null. Essential before writing to a typed
+ * Postgres column (date, timestamptz, integer, real) in cloud mode — Postgres
+ * rejects "" for those, while SQLite silently stored it. Use for every optional
+ * date/number field fed from a form input.
+ */
+export function blankToNull(v: string | null | undefined): string | null {
+  return v != null && v.trim() ? v : null;
+}
+
+/** Coerce to a finite number or null (blank strings / NaN → null) for integer/real columns. */
+export function numOrNull(v: number | string | null | undefined): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
  * Return `id` only if a row with that id still exists in `table`, else null.
  * Use for nullable foreign-key columns so a stale/wrong id can't trip a
  * FOREIGN KEY constraint (SQLite 787). `table` is always a trusted literal.

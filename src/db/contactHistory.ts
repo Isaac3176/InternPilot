@@ -1,4 +1,4 @@
-import { getDb } from "./index";
+import { getDb, blankToNull } from "./index";
 import { cloudMode, supabase } from "../cloud/supabase";
 
 /** One role a contact has held — lets us preserve a person as they change jobs. */
@@ -55,7 +55,7 @@ export async function addEmployment(input: EmploymentInput): Promise<number | nu
   if (cloudMode()) {
     const { data } = await supabase.from("contact_employment_history").insert({
       contact_id: input.contact_id, company: input.company, title: input.title ?? null, team: input.team ?? null,
-      start_date: input.start_date ?? null, end_date: input.end_date ?? null, is_current: cur, source: input.source ?? null,
+      start_date: blankToNull(input.start_date), end_date: blankToNull(input.end_date), is_current: cur, source: input.source ?? null,
     }).select("id").single();
     return (data?.id as number) ?? null;
   }
@@ -63,7 +63,7 @@ export async function addEmployment(input: EmploymentInput): Promise<number | nu
   const res = await db.execute(
     `INSERT INTO contact_employment_history (contact_id, company, title, team, start_date, end_date, is_current, source)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [input.contact_id, input.company, input.title ?? null, input.team ?? null, input.start_date ?? null, input.end_date ?? null, cur, input.source ?? null],
+    [input.contact_id, input.company, input.title ?? null, input.team ?? null, blankToNull(input.start_date), blankToNull(input.end_date), cur, input.source ?? null],
   );
   return res.lastInsertId ?? null;
 }

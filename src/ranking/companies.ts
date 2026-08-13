@@ -172,15 +172,21 @@ export function addCompanyByName(name: string, priority: CompanyPriority): Targe
   return c;
 }
 
-/** Match a listing's company name to a watchlist entry (alias-aware, fuzzy). */
+/**
+ * Match a listing's company name to a watchlist entry (alias-aware). Exact match,
+ * or a PREFIX match — a company name is the leading token ("Amazon Robotics" →
+ * Amazon). Prefix matches require ≥5 chars so short names like "meta"/"visa"/"okta"
+ * don't substring-match unrelated listings (e.g. "Metaverse Labs", "Engineering…").
+ */
 export function matchCompany(listingName: string): TargetCompany | null {
   const l = norm(listingName);
-  if (!l) return null;
+  if (l.length < 3) return null;
   for (const c of getWatchlist()) {
-    const candidates = [c.name, ...(ALIASES[c.name.toLowerCase()] ?? [])].map(norm).filter(Boolean);
+    const candidates = [c.name, ...(ALIASES[c.name.toLowerCase()] ?? [])].map(norm).filter((x) => x.length >= 3);
     for (const cand of candidates) {
-      if (cand.length < 3) continue;
-      if (l === cand || l.includes(cand) || cand.includes(l)) return c;
+      if (l === cand) return c;
+      if (cand.length >= 5 && l.startsWith(cand)) return c; // "amazon" + "robotics"
+      if (l.length >= 5 && cand.startsWith(l)) return c;     // "capital" ⊂ "capitalone"
     }
   }
   return null;

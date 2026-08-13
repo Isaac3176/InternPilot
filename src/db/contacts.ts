@@ -1,4 +1,4 @@
-import { getDb } from "./index";
+import { getDb, numOrNull } from "./index";
 import { upsertCompany } from "./companies";
 import { cloudMode, supabase } from "../cloud/supabase";
 import type { ContactRow, RelationshipType } from "./types";
@@ -40,7 +40,7 @@ function row(input: ContactInput, companyId: number | null): Record<string, unkn
   return {
     name: input.name, company_id: companyId, title: input.title ?? null, team: input.team ?? null,
     email: input.email ?? null, linkedin: input.linkedin ?? null,
-    relationship_type: input.relationship_type ?? null, relationship_strength: input.relationship_strength ?? null,
+    relationship_type: input.relationship_type ?? null, relationship_strength: numOrNull(input.relationship_strength),
     how_you_know: input.how_you_know ?? null, contact_again: input.contact_again === false ? 0 : 1,
     notes: input.notes ?? null,
   };

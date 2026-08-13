@@ -1,4 +1,4 @@
-import { getDb, validFk } from "./index";
+import { getDb, validFk, blankToNull } from "./index";
 import { cloudMode, supabase } from "../cloud/supabase";
 import type { ReferralRow, ReferralStatus, Status } from "./types";
 
@@ -29,8 +29,8 @@ async function withValidFks(input: ReferralInput): Promise<ReferralInput> {
 function row(input: ReferralInput): Record<string, unknown> {
   return {
     contact_id: input.contact_id, application_id: input.application_id, company_id: input.company_id,
-    status: input.status, first_contacted: input.first_contacted ?? null, last_interaction: input.last_interaction ?? null,
-    next_follow_up: input.next_follow_up ?? null, confirmation_note: input.confirmation_note ?? null,
+    status: input.status, first_contacted: blankToNull(input.first_contacted), last_interaction: blankToNull(input.last_interaction),
+    next_follow_up: blankToNull(input.next_follow_up), confirmation_note: input.confirmation_note ?? null,
     referral_link: input.referral_link ?? null, thank_you_sent: input.thank_you_sent ? 1 : 0, notes: input.notes ?? null,
   };
 }

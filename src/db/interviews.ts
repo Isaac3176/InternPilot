@@ -1,4 +1,4 @@
-import { getDb, validFk } from "./index";
+import { getDb, validFk, blankToNull } from "./index";
 import { cloudMode, supabase } from "../cloud/supabase";
 import type { InterviewRow, InterviewType, PrepStatus } from "./types";
 
@@ -39,7 +39,7 @@ export async function listInterviews(): Promise<InterviewRow[]> {
 export async function createInterview(input: InterviewInput): Promise<number | null> {
   if (cloudMode()) {
     const { data, error } = await supabase.from("interviews")
-      .insert({ application_id: input.application_id, type: input.type, date: input.date ?? null, notes: input.notes ?? null, prep_status: "not_started" })
+      .insert({ application_id: input.application_id, type: input.type, date: blankToNull(input.date), notes: input.notes ?? null, prep_status: "not_started" })
       .select("id").single();
     if (error) throw error;
     return (data?.id as number) ?? null;
@@ -47,7 +47,7 @@ export async function createInterview(input: InterviewInput): Promise<number | n
   const db = await getDb();
   const res = await db.execute(
     "INSERT INTO interviews (application_id, type, date, notes, prep_status) VALUES (?, ?, ?, ?, 'not_started')",
-    [await validFk("applications", input.application_id), input.type, input.date ?? null, input.notes ?? null],
+    [await validFk("applications", input.application_id), input.type, blankToNull(input.date), input.notes ?? null],
   );
   return res.lastInsertId ?? null;
 }
