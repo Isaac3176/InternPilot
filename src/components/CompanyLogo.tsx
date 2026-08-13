@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { companyDomain, isLogosOn, logoUrls } from "../listings/logo";
+import { isLogosOn, logoSources } from "../listings/logo";
 
 const LOGO_COLORS = [
   "#1F6FEB", "#7C5CFF", "#157F5F", "#B03D2A", "#A9761C",
@@ -30,12 +30,11 @@ function initialsFor(name: string): string {
  * existing `.logo` styles so sizing matches wherever it's dropped in.
  */
 export default function CompanyLogo({ company, className }: { company: string; className?: string }) {
-  const domain = useMemo(() => companyDomain(company), [company]);
-  const urls = useMemo(() => (domain ? logoUrls(domain) : []), [domain]);
+  const urls = useMemo(() => logoSources(company), [company]);
   const [idx, setIdx] = useState(0);
 
-  // Restart from the first source when the company (domain) changes.
-  useEffect(() => setIdx(0), [domain]);
+  // Restart from the first source when the company changes.
+  useEffect(() => setIdx(0), [company]);
 
   const showImg = isLogosOn() && idx < urls.length;
   const cls = "logo" + (showImg ? " img" : "") + (className ? ` ${className}` : "");

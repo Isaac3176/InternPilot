@@ -30,7 +30,7 @@ import {
   setSimplifyUrl,
 } from "../listings/config";
 import { probeSources, clearListingsCache, type SourceProbe } from "../listings/sources";
-import { isLogosOn, setLogosOn } from "../listings/logo";
+import { isLogosOn, setLogosOn, getLogoToken, setLogoToken } from "../listings/logo";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
 import { getPhoneAccess } from "../mobile/sync";
@@ -41,6 +41,7 @@ import { getDb } from "../db";
 
 export default function Settings() {
   const [apiKey, setApiKeyState] = useState(getApiKey());
+  const [logoToken, setLogoTokenState] = useState(getLogoToken());
   const [model, setModelState] = useState(getModel());
   const [saved, setSaved] = useState(false);
 
@@ -156,6 +157,7 @@ export default function Settings() {
   function save() {
     setApiKey(apiKey.trim());
     setModel(model.trim() || DEFAULT_MODEL);
+    setLogoToken(logoToken.trim());
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   }
@@ -259,6 +261,25 @@ export default function Settings() {
         <div className="field">
           <label htmlFor="s-model">Model</label>
           <input id="s-model" value={model} onChange={(e) => setModelState(e.target.value)} placeholder={DEFAULT_MODEL} />
+        </div>
+        <button type="button" onClick={save}>{saved ? "Saved ✓" : "Save settings"}</button>
+      </div>
+
+      <div className="card">
+        <h2>Company logos</h2>
+        <div className="field">
+          <label htmlFor="s-logo">Logo.dev token <span className="hint" style={{ fontWeight: 400 }}>(optional, recommended)</span></label>
+          <input
+            id="s-logo"
+            value={logoToken}
+            onChange={(e) => setLogoTokenState(e.target.value)}
+            placeholder="pk_..."
+          />
+          <p className="hint">
+            For professional, high-coverage logos across the feed. Grab a free publishable token at{" "}
+            <b>logo.dev</b> (it's client-safe). Without it, logos come from free sources (unavatar + DuckDuckGo)
+            and fall back to a colored monogram — decent, but spottier. Saved locally on this device.
+          </p>
         </div>
         <button type="button" onClick={save}>{saved ? "Saved ✓" : "Save settings"}</button>
       </div>

@@ -1,72 +1,96 @@
 /**
- * Company logo helpers for the Discover feed. We resolve a best-guess domain
- * from the company name and load the icon from DuckDuckGo (falling back to
- * Google's favicon service); the UI always falls back to a colored monogram
- * when there's no domain or both sources 404. (Clearbit's logo API was shut
- * down after the HubSpot acquisition, so it's no longer usable.)
+ * Company logos for the feed. Two problems make this hard: guessing the right
+ * domain from a messy company name, and finding a real logo for it. We (1) resolve
+ * a best-guess domain (overrides + suffix-stripping + a first-word fallback), then
+ * (2) try several logo sources in order — an optional Logo.dev token (best,
+ * Simplify-grade), the unavatar aggregator, then DuckDuckGo — before the UI falls
+ * back to a colored monogram. Set a Logo.dev token in Settings for full coverage.
  */
 
 // Names that don't slugify cleanly to "{name}.com".
 const OVERRIDES: Record<string, string> = {
-  "two sigma": "twosigma.com",
-  "jane street": "janestreet.com",
-  "d. e. shaw": "deshaw.com",
-  "de shaw": "deshaw.com",
-  "hudson river trading": "hudsonrivertrading.com",
-  "jump trading": "jumptrading.com",
-  "citadel securities": "citadelsecurities.com",
-  "goldman sachs": "goldmansachs.com",
-  "morgan stanley": "morganstanley.com",
-  "jpmorgan chase": "jpmorganchase.com",
-  "jp morgan": "jpmorganchase.com",
-  "bank of america": "bankofamerica.com",
-  "capital one": "capitalone.com",
-  "general motors": "gm.com",
-  "lockheed martin": "lockheedmartin.com",
-  "l3harris": "l3harris.com",
-  "northrop grumman": "northropgrumman.com",
-  "texas instruments": "ti.com",
-  "procter & gamble": "pg.com",
-  "johnson & johnson": "jnj.com",
-  "state farm": "statefarm.com",
-  "meta": "meta.com",
-  "alphabet": "abc.xyz",
-  "x (twitter)": "x.com",
+  "two sigma": "twosigma.com", "jane street": "janestreet.com",
+  "d. e. shaw": "deshaw.com", "de shaw": "deshaw.com",
+  "hudson river trading": "hudsonrivertrading.com", "jump trading": "jumptrading.com",
+  "citadel securities": "citadelsecurities.com", "goldman sachs": "goldmansachs.com",
+  "morgan stanley": "morganstanley.com", "jpmorgan chase": "jpmorganchase.com", "jp morgan": "jpmorganchase.com",
+  "bank of america": "bankofamerica.com", "capital one": "capitalone.com",
+  "general motors": "gm.com", "lockheed martin": "lockheedmartin.com", "l3harris": "l3harris.com",
+  "northrop grumman": "northropgrumman.com", "texas instruments": "ti.com",
+  "procter & gamble": "pg.com", "johnson & johnson": "jnj.com", "state farm": "statefarm.com",
+  "meta": "meta.com", "alphabet": "abc.xyz", "x (twitter)": "x.com",
+  "tmeic": "tmeic.com", "tmeic corporation americas": "tmeic.com",
+  "assured guaranty": "assuredguaranty.com", "dv trading": "dvtrading.co",
+  "rtx": "rtx.com", "raytheon": "rtx.com", "walmart global tech": "walmart.com",
+  "palo alto networks": "paloaltonetworks.com", "amazon web services": "aws.amazon.com",
+  "aws": "aws.amazon.com", "cotiviti": "cotiviti.com", "oracle": "oracle.com",
 };
 
-// Company-name suffixes to strip before slugifying.
-const SUFFIXES = /\b(inc|llc|ltd|corp|corporation|co|company|technologies|technology|labs|group|holdings|systems|solutions)\b/g;
-
-// If the name already looks like a domain (e.g. "SiMa.ai"), use it as-is.
+// Corporate suffixes/qualifiers to strip before slugifying (so "TMEIC Corporation
+// Americas" → "tmeic"). Global for replace; a separate word-form for filtering.
+const SUFFIXES = /\b(incorporated|inc|llc|l\.l\.c|ltd|limited|plc|corp(oration)?|company|technolog(ies|y)|labs?|group|holdings?|systems?|solutions?|americas?|international|global|worldwide|usa|na|company|co|gmbh|ag|sa|the)\b/g;
+const SUFFIX_WORD = /^(incorporated|inc|llc|ltd|limited|plc|corp|corporation|company|technologies|technology|labs?|group|holdings?|systems?|solutions?|americas?|international|global|worldwide|usa|na|co|gmbh|ag|sa|the)$/i;
 const DOMAINISH = /^[a-z0-9-]+\.(ai|io|com|co|dev|xyz|so|app|tech|net|org)$/;
 
-/** Best-guess registrable domain for a company name, or null if we can't. */
-export function companyDomain(company: string): string | null {
-  const key = company.trim().toLowerCase();
-  if (!key) return null;
-  if (OVERRIDES[key]) return OVERRIDES[key];
-  if (DOMAINISH.test(key)) return key;
+function slug(name: string): string {
+  return name.replace(/&/g, "and").replace(SUFFIXES, "").replace(/[^a-z0-9]/g, "");
+}
 
-  const slug = key
-    .replace(/&/g, "and")
-    .replace(SUFFIXES, "")
-    .replace(/[^a-z0-9]/g, "");
-  return slug ? `${slug}.com` : null;
+/** Best-guess registrable domains for a company name, best first (may be empty). */
+export function companyDomains(company: string): string[] {
+  const key = company.trim().toLowerCase();
+  if (!key) return [];
+  if (OVERRIDES[key]) return [OVERRIDES[key]];
+  if (DOMAINISH.test(key)) return [key];
+
+  const out: string[] = [];
+  const full = slug(key);
+  if (full.length >= 2) out.push(`${full}.com`);
+  // First significant word — handles multi-word names whose domain is just the core.
+  const words = key.replace(/&/g, "and").split(/[^a-z0-9]+/).filter((w) => w && !SUFFIX_WORD.test(w));
+  if (words[0] && words[0].length >= 3) {
+    const fw = `${words[0]}.com`;
+    if (!out.includes(fw)) out.push(fw);
+  }
+  return out;
+}
+
+/** Back-compat single best domain. */
+export function companyDomain(company: string): string | null {
+  return companyDomains(company)[0] ?? null;
+}
+
+const LOGO_TOKEN_KEY = "internpilot.logo.token";
+/** Optional Logo.dev publishable token (client-safe) for professional-grade logos. */
+export function getLogoToken(): string {
+  try { return localStorage.getItem(LOGO_TOKEN_KEY) ?? ""; } catch { return ""; }
+}
+export function setLogoToken(value: string): void {
+  try {
+    if (value.trim()) localStorage.setItem(LOGO_TOKEN_KEY, value.trim());
+    else localStorage.removeItem(LOGO_TOKEN_KEY);
+  } catch { /* ignore */ }
 }
 
 /**
- * Icon URL(s) to try for a domain. DuckDuckGo returns a real icon and a proper
- * 404 for unknown domains, so a wrong domain guess falls cleanly through to the
- * colored monogram. We deliberately DON'T chain Google's favicon service: it
- * returns a generic globe placeholder (not a 404) for unknown domains, which
- * looked worse than the monogram for the many companies we can't resolve.
+ * Ordered logo image URLs to try for a company, best first. The <img> walks this
+ * list on error; when it's exhausted the UI shows a monogram. unavatar aggregates
+ * many sources and `fallback=false` makes it 404 cleanly on a real miss.
  */
-export function logoUrls(domain: string): string[] {
-  return [`https://icons.duckduckgo.com/ip3/${domain}.ico`];
+export function logoSources(company: string): string[] {
+  const domains = companyDomains(company);
+  if (!domains.length) return [];
+  const token = getLogoToken();
+  const urls: string[] = [];
+  for (const d of domains) {
+    if (token) urls.push(`https://img.logo.dev/${d}?token=${encodeURIComponent(token)}&size=128&format=png&retina=true`);
+    urls.push(`https://unavatar.io/${encodeURIComponent(d)}?fallback=false`);
+    urls.push(`https://icons.duckduckgo.com/ip3/${d}.ico`);
+  }
+  return urls;
 }
 
 const K_LOGOS_ON = "internpilot.listings.logosOn";
-
 /** Whether to load remote company logos (default on). */
 export function isLogosOn(): boolean {
   return localStorage.getItem(K_LOGOS_ON) !== "0";
