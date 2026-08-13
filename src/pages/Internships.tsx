@@ -368,13 +368,13 @@ export default function Internships() {
           </div>
           <div className="to-list">
             {targetOpenings.map(({ l, tc }) => (
-              <button type="button" className="to-item" key={l.id} onClick={() => { setListView("browse"); setSelectedId(l.id); }}>
+              <button type="button" className={`to-item ${tc.priority}`} key={l.id} title={`${l.company} · ${PRIORITY_LABEL[tc.priority]}`} onClick={() => { setListView("browse"); setSelectedId(l.id); }}>
                 <CompanyLogo company={l.company} />
                 <span className="to-tx">
-                  <b>{l.company}<span className={`to-tier ${tc.priority}`}>{PRIORITY_LABEL[tc.priority]}</span></b>
+                  <b>{l.company}</b>
                   <span>{l.title}</span>
                 </span>
-                <span className="to-track">Use {TRACK_LABEL[trackFor(l.company)]}</span>
+                <span className="to-track" title={`Lead with your ${TRACK_LABEL[trackFor(l.company)]} résumé`}>Use {TRACK_LABEL[trackFor(l.company)]}</span>
               </button>
             ))}
           </div>
