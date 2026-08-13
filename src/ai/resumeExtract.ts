@@ -14,37 +14,48 @@ export interface ExtractedExp {
   bullets: string[];
 }
 
-const SECTION_RE = /^(summary|objective|education|skills|technical skills|coursework|certifications|awards|interests|references|contact)\b/i;
-const BULLET_RE = /^[\s]*[•\-*▪◦·‣–]\s+/;
+const BULLET_RE = /^[\s]*[•\-*▪◦·‣–—]\s+/;
+// Bullets in real résumés almost always start with a past-tense action verb; PDF
+// extraction frequently drops the bullet glyph, so we detect them this way too.
+const ACTION_VERB = /^(built|created|developed|designed|shipped|launched|led|implemented|improved|increased|reduced|optimi[sz]ed|automated|architected|engineered|delivered|deployed|scaled|migrated|refactored|analy[sz]ed|drove|owned|initiated|spearheaded|managed|collaborated|wrote|programmed|debugged|integrated|maintained|researched|tested|achieved|coordinated|facilitated|streamlined|enhanced|established|generated|investigated|resolved|supported|trained|utili[sz]ed|contributed|enabled|executed|performed|produced|reviewed|constructed|configured|handled|assisted|helped|worked)\b/i;
+const EXP_SECTION = /\b(experience|employment|work history|projects?|professional experience|relevant experience)\b/i;
+const STOP_SECTION = /\b(education|skills|technical skills|certifications?|awards?|interests|references|coursework|activities|leadership|volunteer|summary|objective|publications?|languages)\b/i;
 
-/** Offline heuristic: group bullet lines under the nearest preceding header line. */
+/**
+ * Offline heuristic, hardened for PDF-extracted text (which usually loses bullet
+ * glyphs): normalise inline bullets, skip Education/Skills sections, and treat a
+ * line as a bullet if it's glyph-led, verb-led, or a substantial quantified line.
+ */
 function stubExtract(text: string): ExtractedExp[] {
-  const lines = text.split(/\r?\n/);
+  const lines = text.replace(/\s*[•▪◦‣·]\s+/g, "\n").split(/\r?\n/).map((l) => l.trim());
   const exps: ExtractedExp[] = [];
   let cur: ExtractedExp | null = null;
+  let inStop = false;
 
-  for (const raw of lines) {
-    const line = raw.trim();
+  const isHeading = (l: string) => l.length <= 64 && /[A-Za-z]/.test(l) && !/[.]$/.test(l);
+
+  for (const line of lines) {
     if (!line) continue;
 
-    if (BULLET_RE.test(line)) {
-      const b = line.replace(BULLET_RE, "").trim();
-      if (b.length >= 8) {
-        if (!cur) { cur = { company: "Experience", role: "", summary: "", bullets: [] }; exps.push(cur); }
-        cur.bullets.push(b);
-      }
-      continue;
+    // Section tracking (a short heading toggles whether we're in an experience block).
+    if (isHeading(line) && line.split(/\s+/).length <= 5) {
+      if (STOP_SECTION.test(line)) { inStop = true; cur = null; continue; }
+      if (EXP_SECTION.test(line)) { inStop = false; cur = null; continue; }
     }
+    if (inStop) continue;
 
-    // A non-bullet, reasonably short line starts a new experience — unless it's a
-    // top-level résumé section heading.
-    if (line.length <= 90 && /[A-Za-z]/.test(line) && !SECTION_RE.test(line)) {
+    const clean = line.replace(BULLET_RE, "").trim();
+    const looksBullet = BULLET_RE.test(line) || ACTION_VERB.test(clean) || (clean.length >= 45 && /\d|%/.test(clean));
+
+    if (looksBullet && clean.length >= 8) {
+      if (!cur) { cur = { company: "Experience", role: "", summary: "", bullets: [] }; exps.push(cur); }
+      cur.bullets.push(clean);
+    } else if (isHeading(line)) {
       const parts = line.split(/\s[|•–—@]\s|\s{2,}|,\s/).map((s) => s.trim()).filter(Boolean);
       cur = { company: parts[0] ?? line, role: parts[1] ?? "", summary: "", bullets: [] };
       exps.push(cur);
     }
   }
-  // Keep only entries that actually have bullets.
   return exps.filter((e) => e.bullets.length > 0);
 }
 

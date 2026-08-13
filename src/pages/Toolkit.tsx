@@ -207,7 +207,12 @@ function ResumeImport({ onDone }: { onDone: () => void }) {
     setBusy("extract"); setErr("");
     try {
       const exps = await extractExperiences(selected.content);
-      if (exps.length === 0) { setErr("Couldn't find experiences with bullet points in this résumé."); setResult(null); }
+      if (exps.length === 0) {
+        setErr(hasApiKey()
+          ? "Couldn't find experiences in this résumé's text."
+          : "Couldn't parse this résumé offline (common with PDF text, which loses bullet formatting). Add an OpenAI key in Settings for reliable extraction.");
+        setResult(null);
+      }
       else { setResult(exps); setInclude(Object.fromEntries(exps.flatMap((e, i) => e.bullets.map((_, j) => [`${i}-${j}`, true])))); }
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(""); }
