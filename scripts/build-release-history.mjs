@@ -17,12 +17,18 @@ import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-const REPO = "SimplifyJobs/Summer2027-Internships";
+// Multiple SOURCES multiply the data: each prior SimplifyJobs season repo shares
+// the identical listings.json format, so sampling their git history recovers real
+// first-post dates for MORE cycles per company (the biggest accuracy lever — the
+// backtest shows 2-cycle companies beat 1-cycle by ~10 days of error). Missing
+// repos/commits are skipped gracefully, so it's safe to list optimistically.
 const FILE = ".github/scripts/listings.json";
-const SAMPLE_DATES = [
-  "2023-11-15", "2024-01-15", "2024-04-15",
-  "2025-01-15", "2025-04-15",
-  "2026-01-15", "2026-04-15", "2026-08-01",
+const SOURCES = [
+  { repo: "SimplifyJobs/Summer2027-Internships", dates: ["2026-08-01", "2026-10-15", "2027-01-15", "2027-04-15"] },
+  { repo: "SimplifyJobs/Summer2026-Internships", dates: ["2025-08-01", "2025-10-15", "2026-01-15", "2026-04-15"] },
+  { repo: "SimplifyJobs/Summer2025-Internships", dates: ["2024-08-01", "2024-10-15", "2025-01-15", "2025-04-15"] },
+  { repo: "SimplifyJobs/Summer2024-Internships", dates: ["2023-08-01", "2023-10-15", "2024-01-15", "2024-04-15"] },
+  { repo: "pittcsc/Summer2024-Internships", dates: ["2023-08-01", "2023-10-15", "2024-01-15"] },
 ];
 
 const token = process.env.GITHUB_TOKEN;
@@ -40,29 +46,41 @@ function family(cat, title) {
 
 const agg = new Map(); // key: `${ck}|${fam}|${season}` -> { e, ids:Set, name }
 
-for (const date of SAMPLE_DATES) {
-  const cRes = await gh(`https://api.github.com/repos/${REPO}/commits?path=${encodeURIComponent(FILE)}&until=${date}T00:00:00Z&per_page=1`);
-  const commits = await cRes.json();
-  const sha = Array.isArray(commits) && commits[0]?.sha;
-  if (!sha) { console.warn(`${date}: no commit`); continue; }
-  const raw = await fetch(`https://raw.githubusercontent.com/${REPO}/${sha}/${FILE}`);
-  const rows = await raw.json();
-  let kept = 0;
-  for (const r of rows) {
-    if (!r.date_posted || !r.company_name) continue;
-    const season = (r.terms || []).find((t) => t.toLowerCase().startsWith("summer"));
-    if (!season) continue;
-    const fam = family(r.category, r.title);
-    if (fam !== "software" && fam !== "ml-data") continue;
-    const key = `${norm(r.company_name)}|${fam}|${season}`;
-    const a = agg.get(key) ?? { e: r.date_posted, ids: new Set(), name: r.company_name };
-    a.e = Math.min(a.e, r.date_posted);
-    a.ids.add(r.id ?? `${r.title}:${r.date_posted}`);
-    if (r.company_name.length < a.name.length) a.name = r.company_name;
-    agg.set(key, a);
-    kept++;
+let snapshots = 0;
+for (const src of SOURCES) {
+  for (const date of src.dates) {
+    let rows;
+    try {
+      const cRes = await gh(`https://api.github.com/repos/${src.repo}/commits?path=${encodeURIComponent(FILE)}&until=${date}T00:00:00Z&per_page=1`);
+      const commits = await cRes.json();
+      const sha = Array.isArray(commits) && commits[0]?.sha;
+      if (!sha) { console.warn(`${src.repo} @ ${date}: no commit — skipped`); continue; }
+      const raw = await fetch(`https://raw.githubusercontent.com/${src.repo}/${sha}/${FILE}`);
+      if (!raw.ok) { console.warn(`${src.repo} @ ${date}: no ${FILE} — skipped`); continue; }
+      rows = await raw.json();
+      if (!Array.isArray(rows)) { console.warn(`${src.repo} @ ${date}: unexpected format — skipped`); continue; }
+    } catch (err) {
+      console.warn(`${src.repo} @ ${date}: ${err.message ?? err} — skipped`);
+      continue;
+    }
+    let kept = 0;
+    for (const r of rows) {
+      if (!r.date_posted || !r.company_name) continue;
+      const season = (r.terms || []).find((t) => t.toLowerCase().startsWith("summer"));
+      if (!season) continue;
+      const fam = family(r.category, r.title);
+      if (fam !== "software" && fam !== "ml-data") continue;
+      const key = `${norm(r.company_name)}|${fam}|${season}`;
+      const a = agg.get(key) ?? { e: r.date_posted, ids: new Set(), name: r.company_name };
+      a.e = Math.min(a.e, r.date_posted);
+      a.ids.add(r.id ?? `${r.title}:${r.date_posted}`);
+      if (r.company_name.length < a.name.length) a.name = r.company_name;
+      agg.set(key, a);
+      kept++;
+    }
+    snapshots++;
+    console.log(`${src.repo} @ ${date}: rows=${rows.length} kept=${kept}`);
   }
-  console.log(`${date}: sha=${sha.slice(0, 8)} rows=${rows.length} kept=${kept}`);
 }
 
 const companies = {};
@@ -76,7 +94,7 @@ for (const [key, a] of agg) {
 
 const out = {
   generatedAt: new Date().toISOString().slice(0, 10),
-  source: `SimplifyJobs ${REPO} git history (${SAMPLE_DATES.length} snapshots)`,
+  source: `${SOURCES.length} tracker repos, ${snapshots} git snapshots`,
   companies,
 };
 const dest = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "release", "release-history.json");

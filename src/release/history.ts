@@ -66,7 +66,10 @@ export function seasonYearOf(tsSeconds: number): number {
 }
 
 const RECENCY = 0.65; // weight decay per cycle into the past
-export const OUTREACH_LEAD_DAYS = 14; // start reaching out this far before the early edge
+// Start reaching out this far before the predicted early edge. Backtest-calibrated
+// (scripts/backtest-release-history.mjs): 21d lands outreach BEFORE the actual open
+// ~74% of the time with a ~37-day median runway — a safe early bias for networking.
+export const OUTREACH_LEAD_DAYS = 21;
 interface Cycle { e: number; year: number; n: number }
 
 // ── cohort prior: a typical opening date from all well-observed companies, so a
