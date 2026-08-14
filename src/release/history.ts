@@ -66,12 +66,15 @@ export function seasonYearOf(tsSeconds: number): number {
 }
 
 const RECENCY = 0.65; // weight decay per cycle into the past
-// Start reaching out this far before the predicted early edge. Backtest-calibrated
-// on the 4-season dataset (scripts/backtest-release-history.mjs): 30d lands outreach
-// BEFORE the actual open ~70% of the time with a ~35-day median runway. Central error
-// is an irreducible ~45d (year-over-year first-post noise), so we bias early on
-// purpose — for networking, too-early is cheap and too-late costs the relationship.
-export const OUTREACH_LEAD_DAYS = 30;
+// Start reaching out this far before the predicted early edge. Calibrated on the
+// DRIFT-AWARE backtest (scripts/backtest-release-history.mjs) — i.e. how the
+// deployed Radar actually behaves, with cohort-drift applied: 21d lands outreach
+// BEFORE the real open ~73% of the time with a ~45-day median runway. Central error
+// is an irreducible ~45d (per-company year-over-year noise that drift can't fix, it
+// only corrects cohort-wide shift), so we bias early on purpose — for networking,
+// too-early is cheap and too-late costs the relationship. Drift already nudges
+// predictions earlier (cycles trend earlier), so a bigger lead just over-shoots.
+export const OUTREACH_LEAD_DAYS = 21;
 interface Cycle { e: number; year: number; n: number }
 
 // ── cohort prior: a typical opening date from all well-observed companies, so a

@@ -51,9 +51,7 @@ function predict(trainPts, targetYear) {
   return { typical, spreadDays: Math.sqrt(wvar) / DAY };
 }
 
-const rows = []; // { typical, spreadDays, actual, n }
-const errors = [];
-const byN = new Map(); // train-cycle-count -> [errorDays]
+const rows = []; // { typical, spreadDays, actual, n, targetYear }
 
 for (const rec of Object.values(bundle.companies)) {
   for (const fam of ["software", "ml-data"]) {
@@ -65,21 +63,47 @@ for (const rec of Object.values(bundle.companies)) {
     const train = cycles.slice(0, -1);
     const { typical, spreadDays } = predict(train, heldout.year);
     const actual = toCycleDate(heldout.e, heldout.year);
-    rows.push({ typical, spreadDays, actual, n: train.length });
-    const errDays = Math.abs(typical - actual) / DAY;
-    errors.push(errDays);
-    (byN.get(errDays >= 0 ? train.length : train.length) ?? byN.set(train.length, []).get(train.length)).push(errDays);
+    rows.push({ typical, spreadDays, actual, n: train.length, targetYear: heldout.year });
   }
 }
 
 if (rows.length === 0) { console.log("Not enough multi-cycle companies to backtest."); process.exit(0); }
-const mae = errors.reduce((a, b) => a + b, 0) / errors.length;
+
+// --- Cohort drift, the CAUSAL way the deployed Radar sees it ---
+// When you'd reach out to a company, the only same-cycle signal you have is the
+// companies that ALREADY opened. So estimate this cycle's systematic shift from
+// peers whose actual open is EARLIER than this company's, and correct the cold
+// estimate by it. Mirrors radar.ts: 0.75x median offset, clamped +/-21d, needs >=3.
+const DRIFT_MIN_PEERS = 3, DRIFT_CLAMP = 21 * DAY, DRIFT_DAMP = 0.75;
+const byYear = new Map();
+for (const r of rows) (byYear.get(r.targetYear) ?? byYear.set(r.targetYear, []).get(r.targetYear)).push(r);
+for (const r of rows) {
+  const peers = byYear.get(r.targetYear).filter((p) => p !== r && p.actual < r.actual);
+  if (peers.length >= DRIFT_MIN_PEERS) {
+    const raw = DRIFT_DAMP * median(peers.map((p) => p.actual - p.typical));
+    const drift = Math.max(-DRIFT_CLAMP, Math.min(DRIFT_CLAMP, raw));
+    r.pred = r.typical + drift;
+    r.drifted = true;
+  } else {
+    r.pred = r.typical; // too early in the cycle to know — fall back to cold
+    r.drifted = false;
+  }
+}
+
+const errCold = rows.map((r) => Math.abs(r.typical - r.actual) / DAY);
+const errDrift = rows.map((r) => Math.abs(r.pred - r.actual) / DAY);
+const maeCold = errCold.reduce((a, b) => a + b, 0) / errCold.length;
+const maeDrift = errDrift.reduce((a, b) => a + b, 0) / errDrift.length;
+const driftedRows = rows.filter((r) => r.drifted);
+const errDriftOnly = driftedRows.map((r) => Math.abs(r.pred - r.actual) / DAY);
+const errColdOnDrifted = driftedRows.map((r) => Math.abs(r.typical - r.actual) / DAY);
+
 console.log(`\nRelease Radar backtest  (dataset: ${bundle.generatedAt})`);
-console.log(`  companies scored:     ${rows.length}`);
-console.log(`  central estimate MAE: ${mae.toFixed(1)}d   median: ${median(errors).toFixed(1)}d`);
-console.log(`  by training cycles available:`);
-for (const [k, errs] of [...byN.entries()].sort((a, b) => a[0] - b[0])) {
-  console.log(`    ${k} cycle${k === 1 ? "" : "s"}: n=${errs.length}, median err ${median(errs).toFixed(0)}d`);
+console.log(`  companies scored:     ${rows.length}   (drift-correctable: ${driftedRows.length})`);
+console.log(`  COLD  model:  MAE ${maeCold.toFixed(1)}d   median ${median(errCold).toFixed(1)}d`);
+console.log(`  DEPLOYED (+drift): MAE ${maeDrift.toFixed(1)}d   median ${median(errDrift).toFixed(1)}d`);
+if (driftedRows.length) {
+  console.log(`  on the ${driftedRows.length} drift-corrected only: cold median ${median(errColdOnDrifted).toFixed(1)}d -> drift median ${median(errDriftOnly).toFixed(1)}d`);
 }
 
 // --- What matters for outreach: how often is "reach out by" actually EARLY? ---
@@ -93,7 +117,7 @@ for (const widthMult of [1.0, 1.5]) {
     for (const leadDays of [14, 21, 30]) {
       let early = 0; const leads = [];
       for (const r of rows) {
-        const outreachBy = r.typical - (widthMult * r.spreadDays + floorDays + leadDays) * DAY;
+        const outreachBy = r.pred - (widthMult * r.spreadDays + floorDays + leadDays) * DAY;
         const leadD = (r.actual - outreachBy) / DAY; // +ve = we were early
         if (leadD >= 0) early++;
         leads.push(leadD);
