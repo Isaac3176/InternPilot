@@ -67,9 +67,11 @@ export function seasonYearOf(tsSeconds: number): number {
 
 const RECENCY = 0.65; // weight decay per cycle into the past
 // Start reaching out this far before the predicted early edge. Backtest-calibrated
-// (scripts/backtest-release-history.mjs): 21d lands outreach BEFORE the actual open
-// ~74% of the time with a ~37-day median runway — a safe early bias for networking.
-export const OUTREACH_LEAD_DAYS = 21;
+// on the 4-season dataset (scripts/backtest-release-history.mjs): 30d lands outreach
+// BEFORE the actual open ~70% of the time with a ~35-day median runway. Central error
+// is an irreducible ~45d (year-over-year first-post noise), so we bias early on
+// purpose — for networking, too-early is cheap and too-late costs the relationship.
+export const OUTREACH_LEAD_DAYS = 30;
 interface Cycle { e: number; year: number; n: number }
 
 // ── cohort prior: a typical opening date from all well-observed companies, so a
