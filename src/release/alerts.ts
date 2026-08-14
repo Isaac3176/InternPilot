@@ -8,15 +8,15 @@ import { getReleaseRadar, type RadarEntry } from "./radar";
 import { notify } from "../lib/notify";
 import { getPrefs } from "../ranking/prefs";
 
-/** Top-tier watchlist companies about to open: inside/near the window or high near-term probability. */
+/** Top-tier watchlist companies where it's time to START reaching out (before they open). */
 export async function getOpeningSoon(): Promise<RadarEntry[]> {
   const entries = await getReleaseRadar();
   return entries
     .filter((e) =>
       (e.priority === "instant" || e.priority === "high") &&
       e.state !== "open" && // already-open targets have their own alert
-      ((e.daysUntilWindow != null && e.daysUntilWindow <= 7 && e.daysUntilWindow >= -10) || e.probabilityNext7 >= 0.4))
-    .sort((a, b) => (a.daysUntilWindow ?? 999) - (b.daysUntilWindow ?? 999));
+      ((e.daysUntilOutreach != null && e.daysUntilOutreach <= 7 && e.daysUntilWindow != null && e.daysUntilWindow >= -10) || e.probabilityNext7 >= 0.4))
+    .sort((a, b) => (a.daysUntilOutreach ?? 999) - (b.daysUntilOutreach ?? 999));
 }
 
 /** Fire a notification for newly-imminent companies (deduped per season). Desktop-only caller. */
@@ -33,11 +33,9 @@ export async function checkRadarAndNotify(): Promise<void> {
   if (fresh.length === 0) return;
 
   const top = fresh[0];
-  const when = top.daysUntilWindow != null && top.daysUntilWindow > 0
-    ? `window starts in ~${top.daysUntilWindow} days`
-    : "in its opening window now";
-  const extra = fresh.length > 1 ? ` +${fresh.length - 1} more opening soon.` : "";
-  await notify(`${top.company} is opening soon`, `${top.company} — ${when}.${extra} Line up your résumé and contacts before the rush.`);
+  const opensIn = top.daysUntilWindow != null && top.daysUntilWindow > 0 ? `likely opens in ~${top.daysUntilWindow} days` : "opening imminent";
+  const extra = fresh.length > 1 ? ` +${fresh.length - 1} more.` : "";
+  await notify(`Time to reach out — ${top.company}`, `${top.company} — start reaching out now (${opensIn}).${extra} Line up contacts before the rush.`);
 
   fresh.forEach((e) => seen.add(e.company));
   try { localStorage.setItem(key, JSON.stringify([...seen])); } catch { /* ignore */ }

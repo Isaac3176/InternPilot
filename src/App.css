@@ -1292,6 +1292,10 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 .radar-window { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 7px; font-size: 12.5px; color: var(--slate); }
 .radar-window b { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+.radar-reachout { flex-basis: 100%; display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; margin-bottom: 4px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 8px; }
+.radar-reachout .eyebrow { color: var(--accent-ink); }
+.radar-reachout b { font-size: 14px; color: var(--accent-ink); }
+.radar-reachout em { font-style: normal; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); margin-left: auto; }
 .radar-window .mon { font-family: var(--mono); font-size: 11px; color: var(--accent-ink); }
 
 .radar-why, .radar-prep, .radar-mission { margin-top: 9px; }

@@ -15,15 +15,15 @@ export default function OpeningSoonBanner() {
   return (
     <div className="opening-soon">
       <div className="os-head">
-        <b>📡 Opening this week</b>
-        <span>{soon.length} watchlist {soon.length === 1 ? "company is" : "companies are"} entering their window — get ready before they post</span>
+        <b>📡 Time to reach out</b>
+        <span>{soon.length} target {soon.length === 1 ? "company is" : "companies are"} near their opening — start networking before they post</span>
         <button type="button" className="os-x" onClick={() => setDismissed(true)} aria-label="Dismiss">✕</button>
       </div>
       <div className="os-list">
         {soon.slice(0, 6).map((e) => (
           <button type="button" className="os-item" key={e.company} onClick={() => navigate("/radar")} title={e.reasons[0]}>
             <b>{e.company}</b>
-            <span>{e.daysUntilWindow != null && e.daysUntilWindow > 0 ? `~${e.daysUntilWindow}d` : "now"}</span>
+            <span>{e.daysUntilWindow != null && e.daysUntilWindow > 0 ? `opens ~${e.daysUntilWindow}d` : "now"}</span>
           </button>
         ))}
       </div>

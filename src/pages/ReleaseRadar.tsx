@@ -206,8 +206,15 @@ function RadarCard({ e, onApply, navigate, mission, onFindPeople }: { e: RadarEn
 
         {f ? (
           <div className="radar-window">
+            {e.state !== "open" && (
+              <div className="radar-reachout">
+                <span className="eyebrow">Reach out by</span>
+                <b>{fmt(f.outreachBy)}</b>
+                {e.daysUntilOutreach != null && <em>{e.daysUntilOutreach > 0 ? `~${e.daysUntilOutreach} days` : "now — don't wait"}</em>}
+              </div>
+            )}
             <b>{fmt(f.windowStart)} – {fmt(f.windowEnd)}</b>
-            <span>typical {fmt(f.typical)} · {confidenceLabel(f.confidence)} ({f.confidence}%)</span>
+            <span>likely opening · typical {fmt(f.typical)} · {confidenceLabel(f.confidence)} ({f.confidence}%)</span>
             {e.state !== "open" && <span className="mon">Monitoring: {e.monitoring}</span>}
           </div>
         ) : (

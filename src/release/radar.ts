@@ -21,6 +21,7 @@ export interface RadarEntry {
   forecast: ReleaseForecast | null;
   probabilityNext7: number; // 0-1
   daysUntilWindow: number | null; // to window start; negative if inside/after
+  daysUntilOutreach: number | null; // to the "start reaching out" date; negative if it's time
   monitoring: "High" | "Medium" | "Low" | "—";
   openListingUrl?: string;
   openListing?: { id: string; title: string; url: string; location: string | null };
@@ -101,7 +102,7 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
     const c = r.c;
     const applyDrift = !!r.forecast && !r.openMatch && Math.abs(driftDays) >= 2;
     const forecast: ReleaseForecast | null = applyDrift && r.forecast
-      ? { ...r.forecast, typical: r.forecast.typical + drift, windowStart: r.forecast.windowStart + drift, windowEnd: r.forecast.windowEnd + drift }
+      ? { ...r.forecast, typical: r.forecast.typical + drift, windowStart: r.forecast.windowStart + drift, windowEnd: r.forecast.windowEnd + drift, outreachBy: r.forecast.outreachBy + drift }
       : r.forecast;
     const { openMatch, recent } = r;
 
@@ -113,6 +114,7 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
 
     const prob = forecast ? probNext7(now, forecast) : 0;
     const daysUntil = forecast ? Math.round((forecast.windowStart - now) / DAY) : null;
+    const daysUntilOutreach = forecast ? Math.round((forecast.outreachBy - now) / DAY) : null;
     const inWindow = forecast ? now >= forecast.windowStart && now <= forecast.windowEnd : false;
 
     let monitoring: RadarEntry["monitoring"] = "Low";
@@ -128,6 +130,11 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
         : daysUntil != null && daysUntil > 0
           ? `Likely window begins in ~${daysUntil} days (${humanDate(forecast.windowStart)})`
           : `Typical opening was ${humanDate(forecast.typical)} (window may have passed)`);
+      if (state !== "open") {
+        reasons.push(daysUntilOutreach != null && daysUntilOutreach > 0
+          ? `Start reaching out by ${humanDate(forecast.outreachBy)} (~${daysUntilOutreach} days) — before the rush`
+          : `Time to reach out — outreach window is open (target ${humanDate(forecast.windowStart)})`);
+      }
       reasons.push(`Based on ${forecast.cycleCount} past cycle${forecast.cycleCount === 1 ? "" : "s"} (${forecast.sampleSize} roles) · ${forecast.confidence}% confidence`);
       if (forecast.trendDaysPerYear && Math.abs(forecast.trendDaysPerYear) >= 2) {
         reasons.push(`Trend: opening ~${Math.abs(forecast.trendDaysPerYear)} days ${forecast.trendDaysPerYear < 0 ? "earlier" : "later"} each year`);
@@ -147,7 +154,7 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
 
     entries.push({
       company: c.name, priority: c.priority, state, forecast,
-      probabilityNext7: prob, daysUntilWindow: daysUntil, monitoring,
+      probabilityNext7: prob, daysUntilWindow: daysUntil, daysUntilOutreach, monitoring,
       openListingUrl: openMatch?.url,
       openListing: openMatch ? { id: openMatch.id, title: openMatch.title, url: openMatch.url, location: openMatch.location } : undefined,
       reasons,

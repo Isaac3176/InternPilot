@@ -32,6 +32,7 @@ export interface ReleaseForecast {
   windowEnd: number; // predictive interval end (ms)
   earliest: number; // earliest observed (mapped)
   latest: number; // latest observed (mapped)
+  outreachBy: number; // when to START reaching out — the early edge minus a lead (ms)
   confidence: number; // 0-100, calibrated by leave-one-out backtest
   trendDaysPerYear?: number; // negative = opening earlier each year
 }
@@ -65,6 +66,7 @@ export function seasonYearOf(tsSeconds: number): number {
 }
 
 const RECENCY = 0.65; // weight decay per cycle into the past
+export const OUTREACH_LEAD_DAYS = 14; // start reaching out this far before the early edge
 interface Cycle { e: number; year: number; n: number }
 
 // ── cohort prior: a typical opening date from all well-observed companies, so a
@@ -122,8 +124,10 @@ function computeForecast(name: string, family: RoleFamily, cycles: Cycle[], targ
     }
   }
 
+  // Tighter predictive band (a ~central estimate, not the full range) — companies
+  // with real data get a narrow, actionable window; sparse ones widen honestly.
   const wvar = pts.reduce((a, p, i) => a + w[i] * (p.mapped - wmean) ** 2, 0) / wsum;
-  let halfWidthDays = Math.max(5, Math.sqrt(wvar) / DAY + 16 / cycleCount);
+  let halfWidthDays = Math.max(4, 0.7 * (Math.sqrt(wvar) / DAY) + 8 / cycleCount);
 
   // Cohort shrinkage: for 1–2 cycle companies, pull toward the prior (fades to 0 at 3+ cycles).
   const prior = globalPrior(targetYear);
@@ -131,10 +135,11 @@ function computeForecast(name: string, family: RoleFamily, cycles: Cycle[], targ
   let shrunk = false;
   if (prior && priorW > 0) {
     typical = (typical * cycleCount + prior.typical * priorW) / (cycleCount + priorW);
-    halfWidthDays = Math.max(halfWidthDays, prior.spreadDays * 0.8); // don't claim tighter than the cohort
+    halfWidthDays = Math.max(halfWidthDays, prior.spreadDays * 0.6); // don't claim tighter than the cohort
     shrunk = true;
   }
   const halfWidth = halfWidthDays * DAY;
+  const windowStart = Math.round(typical - halfWidth);
   const mappedSorted = pts.map((p) => p.mapped).sort((a, b) => a - b);
 
   let confidence: number;
@@ -156,10 +161,11 @@ function computeForecast(name: string, family: RoleFamily, cycles: Cycle[], targ
   return {
     companyKey: normName(name), company: name, family, cycleCount, sampleSize,
     typical: Math.round(typical),
-    windowStart: Math.round(typical - halfWidth),
+    windowStart,
     windowEnd: Math.round(typical + halfWidth),
     earliest: mappedSorted[0],
     latest: mappedSorted[mappedSorted.length - 1],
+    outreachBy: windowStart - OUTREACH_LEAD_DAYS * DAY,
     confidence, trendDaysPerYear,
   };
 }
