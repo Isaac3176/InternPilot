@@ -90,6 +90,37 @@ export function logoSources(company: string): string[] {
   return urls;
 }
 
+/**
+ * Resolved-logo cache: once a company's logo resolves (or is confirmed to have
+ * none), remember it so scrolling/refreshing doesn't re-walk the source chain —
+ * faster feed and far fewer live requests (which also eases rate-limiting). The
+ * cache is keyed by whether a Logo.dev token is set, so adding/removing one
+ * re-resolves everything.
+ */
+const CACHE_KEY = "internpilot.logo.cache";
+const CACHE_SIG_KEY = "internpilot.logo.cache.sig";
+const cacheSig = () => (getLogoToken() ? "t" : "n");
+function readCache(): Record<string, string | null> {
+  try {
+    if (localStorage.getItem(CACHE_SIG_KEY) !== cacheSig()) return {};
+    return JSON.parse(localStorage.getItem(CACHE_KEY) ?? "{}") as Record<string, string | null>;
+  } catch { return {}; }
+}
+function writeCache(map: Record<string, string | null>): void {
+  try { localStorage.setItem(CACHE_SIG_KEY, cacheSig()); localStorage.setItem(CACHE_KEY, JSON.stringify(map)); } catch { /* ignore */ }
+}
+/** Cached resolution: a URL (works), null (no logo → monogram), or undefined (unknown). */
+export function logoCacheGet(company: string): string | null | undefined {
+  const m = readCache(); const k = company.trim().toLowerCase();
+  return k in m ? m[k] : undefined;
+}
+export function logoCacheSet(company: string, url: string | null): void {
+  const m = readCache(); m[company.trim().toLowerCase()] = url; writeCache(m);
+}
+export function logoCacheClear(company: string): void {
+  const m = readCache(); delete m[company.trim().toLowerCase()]; writeCache(m);
+}
+
 const K_LOGOS_ON = "internpilot.listings.logosOn";
 /** Whether to load remote company logos (default on). */
 export function isLogosOn(): boolean {

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { isLogosOn, logoSources } from "../listings/logo";
+import { useEffect, useState } from "react";
+import { isLogosOn, logoSources, logoCacheGet, logoCacheSet, logoCacheClear } from "../listings/logo";
 
 const LOGO_COLORS = [
   "#1F6FEB", "#7C5CFF", "#157F5F", "#B03D2A", "#A9761C",
@@ -25,24 +25,42 @@ function initialsFor(name: string): string {
 }
 
 /**
- * Company avatar: a DuckDuckGo icon when logos are enabled and a domain can be
- * guessed, otherwise (or on load failure) a gradient monogram. Reuses the
- * existing `.logo` styles so sizing matches wherever it's dropped in.
+ * Company avatar: a real logo when one resolves (cached after first success),
+ * otherwise a gradient monogram. Reuses the existing `.logo` styles.
  */
+function initialUrls(company: string): string[] {
+  if (!isLogosOn()) return [];
+  const cached = logoCacheGet(company);
+  if (typeof cached === "string") return [cached]; // known-good → straight to it
+  if (cached === null) return [];                  // known-none → monogram, no requests
+  return logoSources(company);                     // unknown → walk the chain
+}
+
 export default function CompanyLogo({ company, className }: { company: string; className?: string }) {
-  const urls = useMemo(() => logoSources(company), [company]);
+  const [urls, setUrls] = useState<string[]>(() => initialUrls(company));
   const [idx, setIdx] = useState(0);
 
-  // Restart from the first source when the company changes.
-  useEffect(() => setIdx(0), [company]);
+  useEffect(() => { setUrls(initialUrls(company)); setIdx(0); }, [company]);
 
-  const showImg = isLogosOn() && idx < urls.length;
+  const showImg = idx < urls.length;
   const cls = "logo" + (showImg ? " img" : "") + (className ? ` ${className}` : "");
 
   if (showImg) {
+    const src = urls[idx];
     return (
       <div className={cls}>
-        <img src={urls[idx]} alt="" loading="lazy" onError={() => setIdx((i) => i + 1)} />
+        <img
+          src={src} alt="" loading="lazy"
+          onLoad={() => { if (logoCacheGet(company) !== src) logoCacheSet(company, src); }}
+          onError={() => {
+            if (idx + 1 < urls.length) { setIdx(idx + 1); return; }
+            // Exhausted: a stale single cached URL → clear so it re-resolves next
+            // mount; a full-chain miss → remember there's no logo.
+            if (urls.length === 1 && logoCacheGet(company) === src) logoCacheClear(company);
+            else logoCacheSet(company, null);
+            setIdx(urls.length); // → monogram
+          }}
+        />
       </div>
     );
   }
