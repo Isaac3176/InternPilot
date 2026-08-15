@@ -373,13 +373,14 @@ export default function Internships() {
           </div>
           <div className="to-list">
             {targetOpenings.map(({ l, tc }) => (
-              <button type="button" className={`to-item ${tc.priority}`} key={l.id} title={`${l.company} · ${PRIORITY_LABEL[tc.priority]}`} onClick={() => { setListView("browse"); setSelectedId(l.id); }}>
+              <button type="button" className={`to-item ${tc.priority}`} key={l.id} title={`Apply to ${l.company} — opens the posting & starts your tailored apply flow`} onClick={() => apply(l)}>
                 <CompanyLogo company={l.company} />
                 <span className="to-tx">
                   <b>{l.company}</b>
                   <span>{l.title}</span>
                 </span>
                 <span className="to-track" title={`Lead with your ${TRACK_LABEL[trackFor(l.company)]} résumé`}>Use {resumeNameForCompany(l.company) ?? TRACK_LABEL[trackFor(l.company)]}</span>
+                <span className="to-go" aria-hidden>↗</span>
               </button>
             ))}
           </div>
