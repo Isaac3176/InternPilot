@@ -6,6 +6,9 @@ import { createApplication } from "../db/applications";
 import { buildPacket, getChecklist, setChecklistItem, PACKET_CHECKLIST, type ApplicationPacket } from "../apply/packet";
 import { getReusableAnswers, type ApplicationAnswer } from "../apply/answers";
 import { coldEmail } from "../ai/coldEmail";
+import { tailorForJob, type TailorResult } from "../apply/tailor";
+import { suggestBulletRewrites, type BulletRewrite } from "../ai/tailorBullets";
+import { listResumeBullets } from "../db/resumes";
 import type { Status } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
 
@@ -23,6 +26,10 @@ export default function Packet() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
+  const [tailor, setTailor] = useState<TailorResult | null>(null);
+  const [bulletTexts, setBulletTexts] = useState<string[]>([]);
+  const [rewrites, setRewrites] = useState<BulletRewrite[] | null>(null);
+  const [rewriteBusy, setRewriteBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -30,8 +37,14 @@ export default function Packet() {
       const listing = listings.find((l) => l.id === jobId);
       if (!listing) { setState("missing"); return; }
       setChecked(getChecklist(jobId));
-      setPacket(await buildPacket(listing));
+      const pk = await buildPacket(listing);
+      setPacket(pk);
       setState("ready");
+      try {
+        const bullets = await listResumeBullets();
+        setBulletTexts(bullets.map((b) => (b.improved_text ?? b.original_text ?? "").trim()).filter(Boolean));
+        setTailor(tailorForJob(pk.jdOk ? pk.jd : listing.title, bullets));
+      } catch (e) { console.error("tailor failed", e); }
     })().catch((e) => { console.error(e); setState("missing"); });
   }, [jobId]);
 
@@ -98,6 +111,18 @@ export default function Packet() {
     finally { setEmailBusy(false); }
   }
 
+  async function genRewrites() {
+    const pk = packet;
+    if (!pk || !tailor) return;
+    setRewriteBusy(true);
+    try {
+      const r = await suggestBulletRewrites(pk.jdOk ? pk.jd : pk.listing.title, bulletTexts, tailor.gaps);
+      setRewrites(r);
+      if (r.length === 0) setStatus("No honest rewrites found — those gaps likely need new experience, not rephrasing.");
+    } catch (e) { setStatus(e instanceof Error ? e.message : String(e)); }
+    finally { setRewriteBusy(false); }
+  }
+
   return (
     <div className="packet">
       <div className="page-header">
@@ -147,6 +172,63 @@ export default function Packet() {
               </>
             ) : (
               <p className="hint">No résumé versions yet. <button type="button" className="linklike" onClick={() => navigate("/resumes")}>Add one</button> to unlock matching.</p>
+            )}
+          </section>
+
+          {/* Tailor bullets to this job */}
+          <section className="pk-card pk-tailor">
+            <h2>Tailor your bullets</h2>
+            {!tailor ? (
+              <p className="hint">Reading your bullet library…</p>
+            ) : tailor.jdSkillCount === 0 ? (
+              <p className="hint">Couldn't detect specific skills in this posting to match against.</p>
+            ) : bulletTexts.length === 0 ? (
+              <p className="hint">No bullets yet. <button type="button" className="linklike" onClick={() => navigate("/toolkit/bullets")}>Build your bullet library</button> and this will rank them for each job.</p>
+            ) : (
+              <>
+                <p className="pk-tailor-sum">Your bullets cover <b>{tailor.covered.length} of {tailor.jdSkillCount}</b> skills this job asks for.</p>
+
+                {tailor.leadWith.length > 0 && (
+                  <div className="pk-lead">
+                    <span className="lbl">Lead with these — your strongest matches</span>
+                    {tailor.leadWith.map((b) => (
+                      <div className="pk-lead-item" key={b.id}>
+                        <p>{b.text}</p>
+                        <div className="pk-lead-foot">
+                          <div className="chips">{b.skills.map((s) => <span key={s} className="chip on">{s}</span>)}</div>
+                          <button type="button" className="btn small" onClick={() => copy(b.text)}>Copy</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {tailor.gaps.length > 0 && (
+                  <div className="pk-gaps">
+                    <div className="pk-ans-h">
+                      <span className="lbl">Gaps to weave in — no bullet covers these</span>
+                      <button type="button" className="btn small" onClick={genRewrites} disabled={rewriteBusy}>{rewriteBusy ? "Thinking…" : "✨ Suggest rewrites"}</button>
+                    </div>
+                    <div className="chips">{tailor.gaps.slice(0, 14).map((s) => <span key={s} className="chip">{s}</span>)}</div>
+                  </div>
+                )}
+
+                {rewrites && rewrites.length > 0 && (
+                  <div className="pk-rewrites">
+                    <span className="lbl">Suggested rewrites — review, keep only what's true</span>
+                    {rewrites.map((r, i) => (
+                      <div className="pk-rewrite" key={i}>
+                        <p className="pk-rw-old">{r.original}</p>
+                        <p className="pk-rw-new">{r.suggested}</p>
+                        <div className="pk-lead-foot">
+                          <div className="chips">{r.addresses.map((s) => <span key={s} className="chip on">{s}</span>)}</div>
+                          <button type="button" className="btn small" onClick={() => copy(r.suggested)}>Copy</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
 
