@@ -1,15 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { listApplications } from "../db/applications";
+import { getProfile } from "../db/profile";
 import { computeDiagnostics, MIN_SEGMENT, type Segment, type Bucket } from "../diagnostics/recruiting";
-import type { ApplicationRow } from "../db/types";
+import { fastRejections, screeningItems, humanDuration, type FastRejection, type AuditItem } from "../diagnostics/questionAudit";
+import type { ApplicationRow, Profile } from "../db/types";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 export default function DiagnosticsPage() {
   const [apps, setApps] = useState<ApplicationRow[] | null>(null);
-  useEffect(() => { listApplications().then(setApps).catch(() => setApps([])); }, []);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => {
+    listApplications().then(setApps).catch(() => setApps([]));
+    getProfile().then(setProfile).catch(() => {});
+  }, []);
 
   const d = useMemo(() => (apps ? computeDiagnostics(apps) : null), [apps]);
+  const fast = useMemo(() => (apps ? fastRejections(apps, profile) : []), [apps, profile]);
+  const standingRisks = useMemo(() => screeningItems(profile).filter((i) => i.risk), [profile]);
 
   if (!d) return <div className="diag"><div className="page-header"><div><h1>Recruiting Diagnostics</h1></div></div><p className="hint">Reading your applications…</p></div>;
 
@@ -60,10 +68,67 @@ export default function DiagnosticsPage() {
         {d.rejection.undated > 0 && <p className="diag-sub">{d.rejection.undated} older rejection(s) lack a result date and aren't timed here.</p>}
       </section>
 
+      {/* Question audit */}
+      <section className="diag-card">
+        <h2>Automatic-screen review</h2>
+        <p className="diag-sub">Most screening answers come from your profile's autofill. When a rejection comes back fast, these are the answers that could have tripped a mechanical filter — worth a check before you blame the résumé.</p>
+
+        {standingRisks.length > 0 && (
+          <div className="qa-standing">
+            <span className="eyebrow">Answers that auto-filter you across the board</span>
+            <div className="qa-chips">
+              {standingRisks.map((i) => <span key={i.category} className="qa-chip risk" title={i.note}>{i.label}: {i.value}</span>)}
+            </div>
+          </div>
+        )}
+
+        {fast.length === 0 ? (
+          <p className="diag-empty">No fast rejections detected (need a rejection with an apply + result date within 24h). This section fills in as results land.</p>
+        ) : (
+          <div className="qa-list">{fast.map((f) => <FastRejectionCard key={f.app.id} f={f} />)}</div>
+        )}
+      </section>
+
       <p className="diag-caveat">
         These are associations in your own data — not proof of cause. A résumé version, a timing window, or a referral that looks better here may just have landed on easier roles. Use it to form hypotheses, then test them.
       </p>
     </div>
+  );
+}
+
+function FastRejectionCard({ f }: { f: FastRejection }) {
+  const risks = f.items.filter((i) => i.risk);
+  const verify = f.items.filter((i) => !i.risk);
+  return (
+    <div className={`qa-card ${f.likelihood === "very likely" ? "vlikely" : ""}`}>
+      <div className="qa-head">
+        <b>{f.app.company_name ?? "Unknown"}{f.app.role_title ? ` · ${f.app.role_title}` : ""}</b>
+        <span className="qa-time">Rejected {humanDuration(f.hoursToResult)} after submit</span>
+      </div>
+      <p className="qa-verdict">{f.likelihood === "very likely" ? "Very likely an automated eligibility screen" : "Possibly an automated screen"} — <b>résumé-quality signal: low confidence</b></p>
+      {risks.length > 0 ? (
+        <>
+          <span className="eyebrow">Review these answers</span>
+          <ul className="qa-items">
+            {risks.map((i) => <AuditRow key={i.category} i={i} />)}
+          </ul>
+        </>
+      ) : (
+        <p className="qa-none">No obvious auto-screen trigger in your profile for this one — it may have been a genuine (fast) review or high volume.</p>
+      )}
+      {verify.length > 0 && (
+        <div className="qa-verify"><span className="eyebrow">Also verify</span>{verify.map((i) => <span key={i.category} className="qa-chip">{i.label}</span>)}</div>
+      )}
+    </div>
+  );
+}
+
+function AuditRow({ i }: { i: AuditItem }) {
+  return (
+    <li className="qa-item">
+      <span className="qa-item-dot" aria-hidden />
+      <div><b>{i.label}: {i.value}</b><span>{i.note}</span></div>
+    </li>
   );
 }
 
