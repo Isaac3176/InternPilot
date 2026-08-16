@@ -87,6 +87,7 @@ export default function ReleaseRadar() {
       await createApplication({
         company_name: e.company, role_title: ol.title, job_link: ol.url,
         location: ol.location, status: "applied", date_applied: new Date().toISOString().slice(0, 10),
+        source: "radar", company_priority: e.priority,
       });
     } catch (err) { console.error(err); }
     openExternal(ol.url).catch(console.error);
@@ -188,6 +189,8 @@ function LiveOpenings() {
       await createApplication({
         company_name: o.company, role_title: o.title, job_link: o.url,
         location: o.location, status: "applied", date_applied: new Date().toISOString().slice(0, 10),
+        source: "live-ats", company_priority: o.priority,
+        posting_posted_at: o.postedAt ? new Date(o.postedAt * 1000).toISOString() : null,
       });
     } catch (err) { console.error(err); }
     openExternal(o.url).catch(console.error);

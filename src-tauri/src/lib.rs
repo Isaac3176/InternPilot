@@ -453,6 +453,30 @@ pub fn run() {
                   CREATE INDEX IF NOT EXISTS idx_ceh_company ON contact_employment_history(company);",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "recruiting_diagnostics",
+            sql: "ALTER TABLE applications ADD COLUMN discovered_at TEXT;
+                  ALTER TABLE applications ADD COLUMN applied_at TEXT;
+                  ALTER TABLE applications ADD COLUMN posting_posted_at TEXT;
+                  ALTER TABLE applications ADD COLUMN match_score INTEGER;
+                  ALTER TABLE applications ADD COLUMN eligibility TEXT;
+                  ALTER TABLE applications ADD COLUMN source TEXT;
+                  ALTER TABLE applications ADD COLUMN company_priority TEXT;
+                  ALTER TABLE applications ADD COLUMN furthest_stage TEXT;
+                  ALTER TABLE applications ADD COLUMN result_date TEXT;
+                  CREATE TABLE IF NOT EXISTS application_answers (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+                    category       TEXT,
+                    question       TEXT NOT NULL,
+                    answer         TEXT,
+                    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+                  );
+                  CREATE INDEX IF NOT EXISTS idx_appans_app ON application_answers(application_id);
+                  CREATE INDEX IF NOT EXISTS idx_appans_cat ON application_answers(category);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let bridge: SharedBridge = Arc::new(Mutex::new(BridgeState::default()));

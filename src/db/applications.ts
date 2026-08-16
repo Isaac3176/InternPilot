@@ -14,7 +14,18 @@ export interface ApplicationInput {
   job_description?: string | null;
   notes?: string | null;
   referral?: string | null;
+  // Recruiting-diagnostics signals — captured by the apply flows; all optional.
+  discovered_at?: string | null;
+  applied_at?: string | null;
+  posting_posted_at?: string | null;
+  match_score?: number | null;
+  eligibility?: string | null;
+  source?: string | null;
+  company_priority?: string | null;
 }
+
+const FUNNEL_RANK: Record<string, number> = { interested: 0, applied: 1, oa: 2, interview: 3, offer: 4 };
+const nowIso = () => new Date().toISOString();
 
 export async function listApplications(opts?: {
   search?: string;
@@ -92,12 +103,23 @@ function dateOrNull(s: string | null | undefined): string | null {
 export async function createApplication(input: ApplicationInput): Promise<number | null> {
   const companyId = await upsertCompany(input.company_name);
   const resumeId = await validResumeId(input.resume_version_id);
+  // Diagnostics signals: default the timestamps so every new row is measurable.
+  const discovered = input.discovered_at ?? nowIso();
+  const applied = input.applied_at ?? (input.status === "applied" ? nowIso() : null);
+  const furthest = FUNNEL_RANK[input.status] != null ? input.status : "applied";
+  const diag = {
+    discovered_at: discovered, applied_at: applied,
+    posting_posted_at: input.posting_posted_at ?? null,
+    match_score: input.match_score ?? null, eligibility: input.eligibility ?? null,
+    source: input.source ?? null, company_priority: input.company_priority ?? null,
+    furthest_stage: furthest,
+  };
   if (cloudMode()) {
     const { data, error } = await supabase.from("applications").insert({
       company_id: companyId, role_title: input.role_title, job_link: input.job_link ?? null,
       location: input.location ?? null, status: input.status, date_applied: dateOrNull(input.date_applied),
       resume_version_id: resumeId, job_description: input.job_description ?? null,
-      notes: input.notes ?? null, referral: input.referral ?? null,
+      notes: input.notes ?? null, referral: input.referral ?? null, ...diag,
     }).select("id").single();
     if (error) throw error;
     return (data?.id as number) ?? null;
@@ -106,10 +128,13 @@ export async function createApplication(input: ApplicationInput): Promise<number
   const res = await db.execute(
     `INSERT INTO applications
        (company_id, role_title, job_link, location, status, date_applied,
-        resume_version_id, job_description, notes, referral)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        resume_version_id, job_description, notes, referral,
+        discovered_at, applied_at, posting_posted_at, match_score, eligibility, source, company_priority, furthest_stage)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [companyId, input.role_title, input.job_link ?? null, input.location ?? null, input.status,
-      dateOrNull(input.date_applied), resumeId, input.job_description ?? null, input.notes ?? null, input.referral ?? null],
+      dateOrNull(input.date_applied), resumeId, input.job_description ?? null, input.notes ?? null, input.referral ?? null,
+      diag.discovered_at, diag.applied_at, diag.posting_posted_at, diag.match_score, diag.eligibility,
+      diag.source, diag.company_priority, diag.furthest_stage],
   );
   return res.lastInsertId ?? null;
 }
@@ -149,11 +174,31 @@ export async function deleteApplication(id: number): Promise<void> {
 }
 
 export async function setApplicationStatus(id: number, status: Status): Promise<void> {
+  // Also advance the diagnostics signals: keep the deepest funnel stage ever
+  // reached (so a rejection still remembers it got to OA/interview), stamp
+  // applied_at on first apply, and record result_date on a terminal outcome.
+  const patch: Record<string, unknown> = { status };
+  let cur: { furthest_stage?: string | null; applied_at?: string | null } | null = null;
   if (cloudMode()) {
-    const { error } = await supabase.from("applications").update({ status }).eq("id", id);
+    const { data } = await supabase.from("applications").select("furthest_stage, applied_at").eq("id", id).maybeSingle();
+    cur = (data as typeof cur) ?? null;
+  } else {
+    const rows = await (await getDb()).select<{ furthest_stage: string | null; applied_at: string | null }[]>(
+      "SELECT furthest_stage, applied_at FROM applications WHERE id = ? LIMIT 1", [id]);
+    cur = rows[0] ?? null;
+  }
+  const curRank = cur?.furthest_stage != null ? FUNNEL_RANK[cur.furthest_stage] ?? -1 : -1;
+  if (FUNNEL_RANK[status] != null && FUNNEL_RANK[status] > curRank) patch.furthest_stage = status;
+  if (status === "applied" && !cur?.applied_at) patch.applied_at = nowIso();
+  if (status === "offer" || status === "rejected") patch.result_date = nowIso();
+
+  if (cloudMode()) {
+    const { error } = await supabase.from("applications").update(patch).eq("id", id);
     if (error) throw error;
     return;
   }
   const db = await getDb();
-  await db.execute("UPDATE applications SET status = ? WHERE id = ?", [status, id]);
+  const cols = Object.keys(patch);
+  const set = cols.map((c) => `${c} = ?`).join(", ");
+  await db.execute(`UPDATE applications SET ${set} WHERE id = ?`, [...cols.map((c) => patch[c]), id]);
 }

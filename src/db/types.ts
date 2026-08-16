@@ -52,6 +52,26 @@ export interface Application {
   notes: string | null;
   referral: string | null;
   created_at: string;
+  // Recruiting-diagnostics signals (v11) — captured at apply time, nullable for old rows.
+  discovered_at?: string | null;
+  applied_at?: string | null;
+  posting_posted_at?: string | null;
+  match_score?: number | null;
+  eligibility?: string | null;
+  source?: string | null;
+  company_priority?: string | null;
+  furthest_stage?: string | null;
+  result_date?: string | null;
+}
+
+/** One screening question + the answer given on a specific application (v11). */
+export interface ApplicationAnswer {
+  id: number;
+  application_id: number;
+  category: string | null;
+  question: string;
+  answer: string | null;
+  created_at: string;
 }
 
 /** Application joined with its company name and resume version name for display. */

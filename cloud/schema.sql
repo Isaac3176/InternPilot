@@ -48,6 +48,30 @@ create table if not exists applications (
   created_at        timestamptz not null default now()
 );
 
+-- Recruiting-diagnostics signals (v11). Idempotent so re-running is safe.
+alter table applications add column if not exists discovered_at     timestamptz;
+alter table applications add column if not exists applied_at        timestamptz;
+alter table applications add column if not exists posting_posted_at timestamptz;
+alter table applications add column if not exists match_score       integer;
+alter table applications add column if not exists eligibility       text;
+alter table applications add column if not exists source            text;
+alter table applications add column if not exists company_priority  text;
+alter table applications add column if not exists furthest_stage    text;
+alter table applications add column if not exists result_date       timestamptz;
+
+-- Exactly what you answered to each application's screening questions (v11).
+create table if not exists application_answers (
+  id             bigint generated always as identity primary key,
+  user_id        uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  application_id bigint not null references applications(id) on delete cascade,
+  category       text,
+  question       text not null,
+  answer         text,
+  created_at     timestamptz not null default now()
+);
+create index if not exists idx_appans_app on application_answers(application_id);
+create index if not exists idx_appans_cat on application_answers(category);
+
 create table if not exists resume_bullets (
   id              bigint generated always as identity primary key,
   user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -201,7 +225,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'companies','resume_versions','applications','resume_bullets','interviews',
+    'companies','resume_versions','applications','application_answers','resume_bullets','interviews',
     'interview_experiences','emails','tasks','contacts','referrals',
     'contact_employment_history','profiles','user_settings'
   ] loop

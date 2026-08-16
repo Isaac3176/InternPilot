@@ -9,6 +9,7 @@ import { coldEmail } from "../ai/coldEmail";
 import { tailorForJob, type TailorResult } from "../apply/tailor";
 import { suggestBulletRewrites, type BulletRewrite } from "../ai/tailorBullets";
 import { listResumeBullets } from "../db/resumes";
+import { matchCompany } from "../ranking/companies";
 import type { Status } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
 
@@ -65,6 +66,12 @@ export default function Packet() {
       company_name: l.company, role_title: l.title, job_link: l.url,
       location: l.locations[0] ?? null, status,
       date_applied: status === "applied" ? new Date().toISOString().slice(0, 10) : null,
+      resume_version_id: packet.resume?.id ?? null,
+      match_score: packet.match?.score ?? null,
+      eligibility: packet.eligibility.level,
+      source: l.source,
+      company_priority: matchCompany(l.company)?.priority ?? null,
+      posting_posted_at: l.datePosted ? new Date(l.datePosted * 1000).toISOString() : null,
     });
   }
   async function applyNow() {

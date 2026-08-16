@@ -260,6 +260,12 @@ export default function Internships() {
       company_name: l.company, role_title: l.title, job_link: l.url,
       location: l.locations.join(", "), status: "interested",
       resume_version_id: resumeIdForCompany(l.company) ?? preferredResumeId,
+      // Diagnostics signals captured at the moment you engage the listing.
+      match_score: l.score,
+      eligibility: assessEligibility(profile, l).level,
+      source: l.source,
+      company_priority: matchCompany(l.company)?.priority ?? null,
+      posting_posted_at: l.datePosted ? new Date(l.datePosted * 1000).toISOString() : null,
     });
     await refreshApps();
     return id;
