@@ -72,6 +72,24 @@ create table if not exists application_answers (
 create index if not exists idx_appans_app on application_answers(application_id);
 create index if not exists idx_appans_cat on application_answers(category);
 
+-- OA debriefs: a structured post-mortem per assessment (v12).
+create table if not exists oa_attempts (
+  id             bigint generated always as identity primary key,
+  user_id        uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  application_id bigint references applications(id) on delete set null,
+  company        text,
+  role_title     text,
+  taken_on       date,
+  duration_min   integer,
+  num_questions  integer,
+  questions      jsonb,
+  primary_lesson text,
+  next_rule      text,
+  topics_review  jsonb,
+  created_at     timestamptz not null default now()
+);
+create index if not exists idx_oa_app on oa_attempts(application_id);
+
 create table if not exists resume_bullets (
   id              bigint generated always as identity primary key,
   user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -227,7 +245,7 @@ begin
   foreach t in array array[
     'companies','resume_versions','applications','application_answers','resume_bullets','interviews',
     'interview_experiences','emails','tasks','contacts','referrals',
-    'contact_employment_history','profiles','user_settings'
+    'contact_employment_history','profiles','user_settings','oa_attempts'
   ] loop
     execute format('alter table %I enable row level security;', t);
     execute format('drop policy if exists own_rows on %I;', t);

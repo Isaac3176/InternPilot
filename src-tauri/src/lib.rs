@@ -477,6 +477,26 @@ pub fn run() {
                   CREATE INDEX IF NOT EXISTS idx_appans_cat ON application_answers(category);",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "create_oa_attempts",
+            sql: "CREATE TABLE IF NOT EXISTS oa_attempts (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+                    company        TEXT,
+                    role_title     TEXT,
+                    taken_on       TEXT,
+                    duration_min   INTEGER,
+                    num_questions  INTEGER,
+                    questions      TEXT,
+                    primary_lesson TEXT,
+                    next_rule      TEXT,
+                    topics_review  TEXT,
+                    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+                  );
+                  CREATE INDEX IF NOT EXISTS idx_oa_app ON oa_attempts(application_id);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let bridge: SharedBridge = Arc::new(Mutex::new(BridgeState::default()));

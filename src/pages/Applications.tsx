@@ -207,7 +207,8 @@ export default function Applications() {
     if (!celebrate) return;
     const { kind, row } = celebrate;
     dismissCelebrate();
-    if (kind === "applied" || kind === "oa") navigate("/toolkit");
+    if (kind === "oa") navigate("/oa");
+    else if (kind === "applied") navigate("/toolkit");
     else if (kind === "interview" || kind === "ghosted") navigate("/networking");
     else if (kind === "offer") openEdit(row);
     else navigate("/");
