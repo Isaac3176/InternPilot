@@ -81,24 +81,34 @@ export default function Watchlist() {
               <div className="wl-chips">
                 {companies.map((c) => (
                   <div className={`wl-chip ${t}`} key={c.id}>
-                    <span className="wl-name">{c.name}</span>
-                    <select
-                      value={c.priority}
-                      onChange={(e) => { setCompanyPriority(c.id, e.target.value as CompanyPriority); reload(); }}
-                      aria-label={`Priority for ${c.name}`}
-                    >
-                      {TIERS.map((x) => <option key={x} value={x}>{PRIORITY_LABEL[x]}</option>)}
-                    </select>
-                    <select
-                      className="wl-track"
-                      value={c.track ?? inferTrack(c.name)}
-                      onChange={(e) => { setCompanyTrack(c.id, e.target.value as ResumeTrack); reload(); }}
-                      aria-label={`Résumé track for ${c.name}`}
-                      title="Résumé track to lead with"
-                    >
-                      {TRACKS.map((x) => <option key={x} value={x}>{TRACK_LABEL[x]}</option>)}
-                    </select>
-                    <button type="button" className="wl-x" onClick={() => { removeCompany(c.id); reload(); }} title="Remove">✕</button>
+                    <div className="wl-chip-top">
+                      <span className="wl-name" title={c.name}>{c.name}</span>
+                      <button type="button" className="wl-x" onClick={() => { removeCompany(c.id); reload(); }} title={`Remove ${c.name}`} aria-label={`Remove ${c.name}`}>✕</button>
+                    </div>
+                    <div className="wl-chip-ctrls">
+                      <label className="wl-field">
+                        <span>Alert</span>
+                        <select
+                          value={c.priority}
+                          onChange={(e) => { setCompanyPriority(c.id, e.target.value as CompanyPriority); reload(); }}
+                          aria-label={`Priority for ${c.name}`}
+                        >
+                          {TIERS.map((x) => <option key={x} value={x}>{PRIORITY_LABEL[x]}</option>)}
+                        </select>
+                      </label>
+                      <label className="wl-field">
+                        <span>Résumé</span>
+                        <select
+                          className="wl-track"
+                          value={c.track ?? inferTrack(c.name)}
+                          onChange={(e) => { setCompanyTrack(c.id, e.target.value as ResumeTrack); reload(); }}
+                          aria-label={`Résumé track for ${c.name}`}
+                          title="Résumé track to lead with"
+                        >
+                          {TRACKS.map((x) => <option key={x} value={x}>{TRACK_LABEL[x]}</option>)}
+                        </select>
+                      </label>
+                    </div>
                   </div>
                 ))}
               </div>
