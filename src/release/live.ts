@@ -6,6 +6,7 @@
  */
 import { fetchCompanyPostings, type AtsPosting } from "./ats";
 import { getWatchlist, type CompanyPriority } from "../ranking/companies";
+import { notify } from "../lib/notify";
 
 export interface LiveOpening {
   company: string;
@@ -95,4 +96,20 @@ export async function getLiveOpenings(): Promise<LiveOpening[]> {
   const cached = getCachedLiveOpenings();
   if (cached && Date.now() - cached.polledAt < CACHE_TTL) return cached.openings;
   return detectLiveOpenings();
+}
+
+/**
+ * Poll and fire a desktop notification for postings that appeared since last poll.
+ * Silent on the very first run (empty seen-set) so we seed instead of flooding.
+ * Desktop-only caller.
+ */
+export async function checkLiveAndNotify(): Promise<void> {
+  const firstRun = readSeen().size === 0;
+  const openings = await detectLiveOpenings(); // marks seen
+  if (firstRun) return;
+  const fresh = openings.filter((o) => o.isNew);
+  if (fresh.length === 0) return;
+  const top = fresh[0];
+  const extra = fresh.length > 1 ? ` +${fresh.length - 1} more just posted.` : "";
+  await notify(`${top.company} just posted — ${top.title}`, `Live on their careers page.${extra} Apply before the rush.`);
 }

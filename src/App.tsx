@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { checkRadarAndNotify } from "./release/alerts";
+import { checkLiveAndNotify } from "./release/live";
 import { pushProfileToBridge, pushAnswersToBridge, startBridgeListener } from "./bridge";
 import { pushSnapshotToBridge, startMobileBridge } from "./mobile/sync";
 import { isTauri } from "./lib/env";
@@ -34,6 +35,7 @@ export default function App() {
     if (!isTauri()) return;
     checkNewListingsAndNotify();
     checkRadarAndNotify();
+    checkLiveAndNotify();
     pushProfileToBridge();
     pushAnswersToBridge();
     startBridgeListener();
