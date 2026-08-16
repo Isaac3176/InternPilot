@@ -240,6 +240,57 @@ td .muted { color: var(--text-faint); }
 .badge.offer      { background: #e7f6ec; color: #15803d; }
 .badge.rejected   { background: #fdeaea; color: #c81e2b; }
 
+/* Inline status picker — a badge you can change in place */
+.status-pick {
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+  padding: 4px 24px 4px 10px; border-radius: 999px; font-weight: 600; font-size: 11.5px;
+  border: 1px solid transparent; line-height: 1.2;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'><path d='M3 4.5L6 7.5L9 4.5' stroke='currentColor' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat; background-position: right 8px center;
+  transition: filter .12s, box-shadow .12s;
+}
+.status-pick:hover { filter: brightness(0.97); box-shadow: var(--shadow-sm); }
+.status-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Row kebab menu */
+.apps-menu-cell { position: relative; overflow: visible; }
+.row-menu { position: relative; }
+.row-menu-btn { border: none; background: none; cursor: pointer; color: var(--slate-2); font-size: 18px; line-height: 1; padding: 2px 7px; border-radius: 7px; }
+.row-menu-btn:hover { background: var(--surface-2); color: var(--ink); }
+.row-menu-pop { position: absolute; top: 100%; left: 0; z-index: 30; margin-top: 4px; min-width: 140px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,.12)); padding: 5px; display: flex; flex-direction: column; }
+.row-menu-pop button { text-align: left; border: none; background: none; cursor: pointer; font-size: 13px; color: var(--ink); padding: 8px 10px; border-radius: 7px; }
+.row-menu-pop button:hover { background: var(--surface-2); }
+.row-menu-pop button.danger { color: var(--alert); }
+.row-menu-pop button.danger:hover { background: var(--alert-soft); }
+
+/* Milestone celebration (Strava-style) */
+.mc-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(17, 22, 33, .55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: mc-fade .18s ease; }
+@keyframes mc-fade { from { opacity: 0; } to { opacity: 1; } }
+.mc-card { position: relative; width: 100%; max-width: 440px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.28); animation: mc-pop .32s cubic-bezier(.2,.9,.3,1.3); }
+@keyframes mc-pop { from { opacity: 0; transform: translateY(14px) scale(.94); } to { opacity: 1; transform: none; } }
+.mc-body { padding: 30px 28px 24px; text-align: center; position: relative; z-index: 2; }
+.mc-emoji { font-size: 56px; line-height: 1; margin-bottom: 10px; animation: mc-bounce .6s ease .1s both; }
+@keyframes mc-bounce { 0% { transform: scale(0) rotate(-15deg); } 60% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
+.mc-title { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.mc-co { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--accent); }
+.mc-sub { margin: 0 auto 18px; max-width: 340px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.mc-next { text-align: left; background: var(--surface-2); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; }
+.mc-next .lbl { display: block; margin-bottom: 8px; }
+.mc-next ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+.mc-next li { font-size: 13px; line-height: 1.45; color: var(--ink); }
+.mc-actions { display: flex; gap: 8px; justify-content: center; }
+.mc-actions .btn { min-width: 110px; }
+/* Tiers: brighter, bigger headers for the further milestones */
+.mc-mega .mc-title { font-size: 27px; background: linear-gradient(90deg,#6d5efc,#e11d48,#f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mc-mega .mc-emoji { font-size: 68px; }
+.mc-big .mc-title { font-size: 24px; color: #6d28d9; }
+.mc-soft .mc-emoji { font-size: 46px; }
+.mc-soft .mc-title { font-size: 20px; }
+/* Confetti */
+.mc-confetti { position: absolute; inset: 0; overflow: hidden; z-index: 1; pointer-events: none; }
+.mc-confetti span { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: .9; animation-name: mc-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes mc-fall { 0% { transform: translateY(-20px) rotate(0); opacity: 1; } 100% { transform: translateY(520px) rotate(540deg); opacity: 0; } }
+
 /* ---------- Forms / buttons ---------- */
 input, textarea, select {
   width: 100%;
