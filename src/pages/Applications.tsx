@@ -1,12 +1,19 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteApplication, listApplications, setApplicationStatus } from "../db/applications";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import { matchCompany } from "../ranking/companies";
 import { APP_RECORDED_EVENT } from "../bridge";
 import ApplicationModal from "../components/ApplicationModal";
-import MilestoneCelebration, { isMilestone } from "../components/MilestoneCelebration";
+import MilestoneCelebration, { isMilestone, type Kind, type Terminal } from "../components/MilestoneCelebration";
 import CompanyLogo from "../components/CompanyLogo";
+
+const JOURNEY_LABELS = ["Saved", "Applied", "OA", "Interview", "Offer"];
+const journeyIndex = (s: Status): number =>
+  s === "interested" ? 0 : s === "applied" ? 1 : s === "oa" ? 2 : s === "interview" ? 3 : s === "offer" ? 4 : 1;
+const GHOST_DAYS = 21;
+const GHOST_ACK_KEY = "internpilot.ghosted.ack.v1";
+interface Celebrate { kind: Kind; row: ApplicationRow; reach: number; terminal: Terminal; }
 
 const NEXT: Record<Status, Status | null> = {
   interested: "applied", applied: "oa", oa: "interview", interview: "offer", offer: null, rejected: null,
@@ -60,7 +67,8 @@ export default function Applications() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ApplicationRow | null>(null);
   const [openPop, setOpenPop] = useState<number | null>(null);
-  const [celebrate, setCelebrate] = useState<{ row: ApplicationRow; status: Status } | null>(null);
+  const [celebrate, setCelebrate] = useState<Celebrate | null>(null);
+  const ghostShownRef = useRef(false);
 
   const load = useCallback(() => {
     listApplications({ search, status: "all" }).then(setAll).catch(console.error);
@@ -137,32 +145,79 @@ export default function Applications() {
     setAll((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
     try {
       await setApplicationStatus(row.id, next);
-      if (isMilestone(next)) setCelebrate({ row: { ...row, status: next }, status: next });
+      if (isMilestone(next)) {
+        const reach = next === "rejected" ? journeyIndex(row.status) : journeyIndex(next);
+        const terminal: Terminal = next === "rejected" ? "rejected" : null;
+        setCelebrate({ kind: next, row: { ...row, status: next }, reach, terminal });
+      }
     } catch (e) { console.error(e); load(); }
   }
   function advance(row: ApplicationRow) { const n = NEXT[row.status]; if (n) changeStatus(row, n); }
 
-  function statsFor(status: Status, row: ApplicationRow): [string, string][] {
-    const total = all.length;
-    const live = all.filter((r) => r.status !== "rejected" && r.status !== "offer").length;
-    const reached = all.filter((r) => r.status === "interview" || r.status === "offer").length;
-    const oaCount = all.filter((r) => r.status === "oa").length;
-    const rate = total ? Math.round((reached / total) * 100) : 0;
-    const age = daysSince(row.date_applied ?? row.date_saved ?? row.created_at);
-    const firstAges = all.map((r) => daysSince(r.date_applied)).filter((x): x is number => x != null);
-    const firstAge = firstAges.length ? Math.max(...firstAges) : null;
-    if (status === "oa") return [[String(Math.max(oaCount, 1)), "OAs in flight"], [age != null ? `${age}d` : "—", "since you applied"], [String(live), "apps still live"]];
-    if (status === "interview") return [[`1 of ${total}`, "applications"], [`${rate}%`, "reach interview+"], [String(live), "still live"]];
-    if (status === "offer") return [[String(total), "applications"], [firstAge != null ? `${firstAge}d` : "—", "first app → offer"], [row.resume_version_name ?? "—", "résumé that did it"]];
-    return [[String(live), "still live"], [String(total), "total tracked"], ["↑", "keep sending"]];
+  // Ghosting fires on its own — no one marks an application as ignored. Once per
+  // session, surface the oldest applied role past the quiet line that we haven't
+  // already acknowledged.
+  function ghostAck(): Set<number> {
+    try { return new Set(JSON.parse(localStorage.getItem(GHOST_ACK_KEY) ?? "[]")); } catch { return new Set(); }
+  }
+  useEffect(() => {
+    if (ghostShownRef.current || celebrate || modalOpen || all.length === 0) return;
+    const ack = ghostAck();
+    const quiet = all
+      .filter((r) => r.status === "applied" && !ack.has(r.id) && (daysSince(r.date_applied ?? r.date_saved) ?? 0) >= GHOST_DAYS)
+      .sort((a, b) => (daysSince(b.date_applied ?? b.date_saved) ?? 0) - (daysSince(a.date_applied ?? a.date_saved) ?? 0));
+    if (quiet.length) {
+      ghostShownRef.current = true;
+      setCelebrate({ kind: "ghosted", row: quiet[0], reach: 1, terminal: "ghosted" });
+    }
+  }, [all, celebrate, modalOpen]);
+
+  function closeGhost(row: ApplicationRow) {
+    const ack = ghostAck(); ack.add(row.id);
+    try { localStorage.setItem(GHOST_ACK_KEY, JSON.stringify([...ack])); } catch { /* ignore */ }
   }
 
-  function onMilestonePrimary(status: Status, row: ApplicationRow) {
+  function statsFor(c: Celebrate): [string, string][] {
+    const { kind, row, reach } = c;
+    const total = all.length;
+    const live = all.filter((r) => r.status !== "rejected" && r.status !== "offer").length;
+    const closed = all.filter((r) => r.status === "rejected").length;
+    const reached = all.filter((r) => r.status === "interview" || r.status === "offer").length;
+    const oaCount = all.filter((r) => r.status === "oa").length;
+    const quiet = all.filter((r) => r.status === "applied" && (daysSince(r.date_applied ?? r.date_saved) ?? 0) >= GHOST_DAYS).length;
+    const rate = total ? Math.round((reached / total) * 100) : 0;
+    const age = daysSince(row.date_applied ?? row.date_saved ?? row.created_at);
+    const ageStr = age != null ? `${age}d` : "—";
+    const firstAges = all.map((r) => daysSince(r.date_applied)).filter((x): x is number => x != null);
+    const firstAge = firstAges.length ? Math.max(...firstAges) : null;
+    const resume = row.resume_version_name ?? "—";
+    if (kind === "applied") return [[String(total), "applications"], [String(live), "still live"], [resume, "résumé attached"]];
+    if (kind === "oa") return [[String(Math.max(oaCount, 1)), "OAs in flight"], [ageStr, "since you applied"], [String(live), "apps still live"]];
+    if (kind === "interview") return [[`1 of ${total}`, "applications"], [`${rate}%`, "reach interview+"], [String(live), "still live"]];
+    if (kind === "offer") return [[String(total), "applications"], [firstAge != null ? `${firstAge}d` : "—", "first app → offer"], [resume, "résumé that did it"]];
+    if (kind === "ghosted") return [[ageStr, "since you applied"], [String(quiet), "gone quiet"], [String(live), "still live"]];
+    return [[String(closed), "closed"], [String(live), "still live"], [JOURNEY_LABELS[reach] ?? "—", "stage it ended"]];
+  }
+
+  function dismissCelebrate() {
+    if (celebrate?.kind === "ghosted") closeGhost(celebrate.row);
     setCelebrate(null); load();
-    if (status === "oa") navigate("/toolkit");
-    else if (status === "interview") navigate("/networking");
-    else if (status === "offer") openEdit(row);
+  }
+  function onMilestonePrimary() {
+    if (!celebrate) return;
+    const { kind, row } = celebrate;
+    dismissCelebrate();
+    if (kind === "applied" || kind === "oa") navigate("/toolkit");
+    else if (kind === "interview" || kind === "ghosted") navigate("/networking");
+    else if (kind === "offer") openEdit(row);
     else navigate("/");
+  }
+  async function onGhostClosed() {
+    if (!celebrate) return;
+    const row = celebrate.row;
+    closeGhost(row);
+    try { await setApplicationStatus(row.id, "rejected"); } catch (e) { console.error(e); }
+    setCelebrate(null); load();
   }
 
   const chips: (Status | "all")[] = ["all", ...STATUSES];
@@ -306,14 +361,17 @@ export default function Applications() {
         />
       )}
 
-      {celebrate && isMilestone(celebrate.status) && (
+      {celebrate && (
         <MilestoneCelebration
-          status={celebrate.status}
+          kind={celebrate.kind}
           company={celebrate.row.company_name ?? "This company"}
           role={celebrate.row.role_title}
-          stats={statsFor(celebrate.status, celebrate.row)}
-          onClose={() => { setCelebrate(null); load(); }}
-          onPrimary={() => onMilestonePrimary(celebrate.status, celebrate.row)}
+          stats={statsFor(celebrate)}
+          reach={celebrate.reach}
+          terminal={celebrate.terminal}
+          onClose={dismissCelebrate}
+          onPrimary={onMilestonePrimary}
+          onSecondary={celebrate.kind === "ghosted" ? onGhostClosed : undefined}
         />
       )}
     </div>
