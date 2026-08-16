@@ -11,6 +11,7 @@ import { listReferrals } from "../db/referrals";
 import { listAllEmployment, type ContactEmployment } from "../db/contactHistory";
 import { getProfile } from "../db/profile";
 import { buildMission, PHASE_LABEL, getMissionState, setMissionState, type Mission } from "../release/missions";
+import { getLiveOpenings, detectLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../release/live";
 import PeopleFinder from "../components/PeopleFinder";
 import CompanyLogo from "../components/CompanyLogo";
 import type { ContactRow, Profile, ReferralRow } from "../db/types";
@@ -109,6 +110,8 @@ export default function ReleaseRadar() {
         flags public early signals, and helps you get ready before {targetSeason} roles open.
       </p>
 
+      <LiveOpenings />
+
       <Section title="Already open" hint="A target-season role is posted right now.">
         {open.length === 0 ? <Empty text="Nothing from your watchlist is open yet." /> :
           open.map((e) => <RadarCard key={e.company} e={e} onApply={applyOpen} navigate={navigate} mission={missionFor(e)} onFindPeople={() => setPeopleTarget({ company: e.company, contacts: companyContactsFor(e.company) })} />)}
@@ -134,6 +137,98 @@ export default function ReleaseRadar() {
           onSaved={refreshNetwork}
           onClose={() => setPeopleTarget(null)}
         />
+      )}
+    </div>
+  );
+}
+
+function agoLabel(sec: number | null): string {
+  if (!sec) return "";
+  const hrs = Math.floor((Date.now() / 1000 - sec) / 3600);
+  if (hrs < 1) return "just posted";
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "yesterday" : `${days}d ago`;
+}
+function polledLabel(ms: number | null): string {
+  if (!ms) return "";
+  const min = Math.floor((Date.now() - ms) / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  return `${Math.floor(min / 60)}h ago`;
+}
+
+/**
+ * Ground truth: real internship postings read live from watchlist companies' ATS
+ * boards (see release/live.ts). A hit here beats every forecast — the role is open
+ * today, with a direct apply link.
+ */
+function LiveOpenings() {
+  const [items, setItems] = useState<LiveOpening[] | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [polledAt, setPolledAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    const cached = getCachedLiveOpenings();
+    if (cached) { setItems(cached.openings); setPolledAt(cached.polledAt); }
+    getLiveOpenings()
+      .then((o) => { setItems(o); setPolledAt(getCachedLiveOpenings()?.polledAt ?? Date.now()); })
+      .catch(() => setItems((prev) => prev ?? []));
+  }, []);
+
+  async function refresh() {
+    setPolling(true);
+    try { setItems(await detectLiveOpenings()); setPolledAt(Date.now()); }
+    catch { /* keep prior */ }
+    finally { setPolling(false); }
+  }
+
+  async function applyLive(o: LiveOpening) {
+    try {
+      await createApplication({
+        company_name: o.company, role_title: o.title, job_link: o.url,
+        location: o.location, status: "applied", date_applied: new Date().toISOString().slice(0, 10),
+      });
+    } catch (err) { console.error(err); }
+    openExternal(o.url).catch(console.error);
+  }
+
+  const newCount = items?.filter((o) => o.isNew).length ?? 0;
+
+  return (
+    <div className="radar-section radar-live">
+      <div className="radar-sec-head">
+        <h2>Live now {items && items.length > 0 && <span className="live-dot" aria-hidden />}</h2>
+        <span>
+          Real postings read from your watchlist's career pages{newCount > 0 ? ` · ${newCount} new` : ""}
+          {polledAt ? ` · checked ${polledLabel(polledAt)}` : ""}
+        </span>
+        <button type="button" className="btn small" onClick={refresh} disabled={polling} style={{ marginLeft: "auto" }}>
+          {polling ? "Checking…" : "Check now"}
+        </button>
+      </div>
+      {items === null ? (
+        <p className="hint">Checking company career pages…</p>
+      ) : items.length === 0 ? (
+        <Empty text="No live internship postings on your watchlist's boards right now. This reads Greenhouse/Lever/Ashby directly — add more target companies to widen coverage." />
+      ) : (
+        <div className="live-list">
+          {items.slice(0, 12).map((o) => (
+            <div className={`live-item ${o.priority}`} key={o.url}>
+              <CompanyLogo company={o.company} />
+              <div className="live-tx">
+                <div className="live-co">
+                  <b>{o.company}</b>
+                  {o.isNew && <span className="live-new">NEW</span>}
+                  {o.postedAt && <span className="live-age">{agoLabel(o.postedAt)}</span>}
+                </div>
+                <span className="live-title">{o.title}</span>
+                {o.location && <span className="live-loc">{o.location}</span>}
+              </div>
+              <button type="button" className="btn small primary" onClick={() => applyLive(o)}>Apply ↗</button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

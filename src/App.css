@@ -1274,6 +1274,25 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .radar-sec-head span { font-size: 12.5px; color: var(--slate); }
 .radar-list { display: flex; flex-direction: column; gap: 10px; }
 
+/* Live openings (real ATS postings) */
+.radar-live { padding: 14px 14px 4px; border: 1px solid var(--accent-line); border-radius: 14px; background: var(--accent-soft); }
+.radar-live .radar-sec-head { align-items: center; }
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok, #1a9d5a); margin-left: 6px; vertical-align: middle; box-shadow: 0 0 0 0 rgba(26,157,90,.5); animation: livepulse 2s infinite; }
+@keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(26,157,90,.45); } 70% { box-shadow: 0 0 0 6px rgba(26,157,90,0); } 100% { box-shadow: 0 0 0 0 rgba(26,157,90,0); } }
+.live-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; padding-bottom: 10px; }
+.live-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 10px; background: var(--card); min-width: 0; }
+.live-item.instant { border-left-color: var(--alert); }
+.live-item.high { border-left-color: var(--accent); }
+.live-item .logo { width: 30px; height: 30px; flex: none; }
+.live-tx { flex: 1; min-width: 0; }
+.live-co { display: flex; align-items: center; gap: 6px; }
+.live-co b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-new { flex: none; font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .04em; color: #fff; background: var(--ok, #1a9d5a); border-radius: 4px; padding: 1px 5px; }
+.live-age { flex: none; font-size: 10.5px; color: var(--slate); }
+.live-title { display: block; font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-loc { display: block; font-size: 11px; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-item .btn { flex: none; }
+
 .radar-card { display: grid; grid-template-columns: 38px 1fr; gap: 13px; align-items: start; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 15px 17px; }
 .radar-card.state-open { border-left: 3px solid var(--beacon); }
 .radar-card.state-signal { border-left: 3px solid var(--warn); }
