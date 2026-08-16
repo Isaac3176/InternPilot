@@ -56,6 +56,7 @@ export const NAV: NavItem[] = [
     id: "tracker", label: "Tracker", to: "/applications", icon: ListIcon, alertBadge: "needsAction",
     children: [
       { label: "Active", to: "/applications", end: true },
+      { label: "Diagnostics", to: "/diagnostics" },
       { label: "Replies", to: "/emails", badge: "replies" },
     ],
   },

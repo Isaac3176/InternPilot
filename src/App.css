@@ -1985,3 +1985,44 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .oa-addq { align-self: flex-start; border: 1px dashed var(--line); background: #fff; box-shadow: none; color: var(--slate); font-size: 12.5px; font-weight: 600; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
 .oa-addq:hover { border-color: var(--accent-line); color: var(--accent-ink); background: var(--accent-soft); }
 .oa-form-acts { display: flex; justify-content: flex-end; gap: 9px; margin-top: 6px; }
+
+/* ================= Recruiting Diagnostics ================= */
+.diag { max-width: 1080px; margin: 0 auto; }
+.diag-note { background: var(--warn-soft); border: 1px solid var(--warn-line, #ebdcba); color: var(--warn); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 18px; }
+.diag-card { background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 13px; padding: 16px 18px; margin-bottom: 16px; }
+.diag-card h2 { margin: 0 0 3px; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+.diag-sub { margin: 4px 0 0; font-size: 12px; color: var(--slate); line-height: 1.45; }
+.diag-empty { margin: 12px 0 2px; font-size: 12.5px; color: var(--slate-2); }
+.diag-caveat { font-size: 11.5px; color: var(--slate); line-height: 1.5; max-width: 80ch; margin: 4px 2px 0; }
+
+/* Funnel */
+.funnel { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin: 16px 0 10px; padding-bottom: 2px; }
+.funnel-stage { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 6px; }
+.funnel-bar { width: 100%; max-width: 120px; background: linear-gradient(180deg, var(--accent), var(--accent-ink)); border-radius: 8px 8px 4px 4px; display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; min-height: 6px; transition: height .3s ease; }
+.funnel-bar b { color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.funnel-lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.funnel-rate { font-family: var(--mono); font-size: 11px; color: var(--slate); }
+
+/* Segment tables */
+.seg-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.seg-table th { text-align: right; font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--slate); padding: 0 0 8px; }
+.seg-table th:first-child { text-align: left; }
+.seg-table td { padding: 8px 0; border-top: 1px solid var(--line-soft, #eef1f5); text-align: right; font-size: 13px; }
+.seg-table td.mono { font-family: var(--mono); }
+.seg-table td.seg-name { text-align: left; font-weight: 500; color: var(--ink); }
+.seg-table tr.thin td { color: var(--slate-2); }
+.seg-rate { font-weight: 600; color: var(--accent-ink); }
+.seg-warn { margin-left: 8px; font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); border-radius: 4px; padding: 1px 6px; }
+
+/* Rejection histogram */
+.rej-hist { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.rej-row { display: grid; grid-template-columns: 130px 1fr 30px; align-items: center; gap: 10px; }
+.rej-lbl { font-size: 12.5px; color: var(--ink-2); }
+.rej-track { height: 20px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.rej-fill { display: block; height: 100%; background: var(--slate-2); border-radius: 5px; min-width: 2px; transition: width .3s ease; }
+.rej-n { text-align: right; font-size: 12.5px; color: var(--ink-2); }
+.rej-row.alert .rej-fill { background: var(--alert); }
+.rej-row.alert .rej-lbl { color: var(--alert); font-weight: 600; }
+.rej-row.muted .rej-fill { background: #cdd5de; }
+.rej-hint { grid-column: 2 / -1; font-size: 11px; color: var(--alert); margin-top: -2px; }
+.rej-row.muted .rej-hint { color: var(--slate); }
