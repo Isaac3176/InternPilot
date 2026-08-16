@@ -2,112 +2,101 @@ import { useEffect } from "react";
 import type { Status } from "../db/types";
 
 /**
- * A moment of celebration when an application advances to a milestone — like the
- * summary card Strava shows after a run. Bigger and louder the further you get:
- * OA → interview → offer. Rejections get a supportive "onward" variant instead.
- * Each ends with concrete next steps so the momentum turns into action.
+ * A "finish screen" when an application advances to a milestone — like Strava's
+ * post-run summary. It scales with the win (OA → interview → offer) and always
+ * ends in a concrete next action, because the point of the screen is to start the
+ * next thing, not just to congratulate you. Rejection gets a neutral, honest
+ * variant instead of confetti — celebrating it would be insulting, ignoring it
+ * wastes the one moment you're actually thinking about the search.
  */
 
-type Tier = "mega" | "big" | "mid" | "soft";
-interface Milestone {
-  emoji: string;
-  title: string;
-  sub: (company: string) => string;
-  next: string[];
+type Tier = "oa" | "interview" | "offer" | "rejected";
+interface Step { ic: "a" | "b" | "c" | "d" | "n"; emoji: string; t: string; s: string }
+interface Content {
+  glyph: string;
+  eyebrow: string;
+  title: (c: string) => string;
+  sub: string;
+  h3: string;
+  steps: Step[];
+  wisdom: string;
+  wc: string;
   cta: string;
-  tier: Tier;
+  alt: string;
+  confetti?: boolean;
 }
 
-const CONTENT: Partial<Record<Status, Milestone>> = {
+const CONTENT: Record<Tier, Content> = {
   oa: {
-    emoji: "🎯",
-    title: "Online assessment unlocked",
-    sub: (c) => `${c} liked your résumé enough to test you. Now show them the code.`,
-    next: [
-      "Time-box practice: arrays, strings, hashmaps, two-pointers, recursion.",
-      "Search this company's OA on LeetCode Discuss & Glassdoor for the format.",
-      "Re-read the JD — solve in the language/stack they use.",
+    glyph: "🎯", eyebrow: "Assessment unlocked",
+    title: (c) => `${c} sent you an OA`,
+    sub: "You cleared the résumé screen — the filter most applications die at.",
+    h3: "Do these before you open it",
+    steps: [
+      { ic: "b", emoji: "⏰", t: "Block 90 minutes this week", s: "Most OAs expire in 5–7 days. Schedule it, don't improvise." },
+      { ic: "a", emoji: "💻", t: "Warm up on their format", s: "Two timed problems at the difficulty this company usually asks." },
+      { ic: "n", emoji: "📄", t: "Reread the JD you applied with", s: "OA topics track the posting more often than people expect." },
     ],
-    cta: "Let's prep",
-    tier: "mid",
+    wisdom: "An OA isn't an exam you cram for the night before — it's a rehearsal you've either been doing all along or you haven't. The work from the two weeks before this email is what shows up.",
+    wc: "var(--violet)", cta: "Prep now", alt: "Later",
   },
   interview: {
-    emoji: "🎤",
-    title: "You landed an interview!",
-    sub: (c) => `You're in the room at ${c}. This is the part that gets offers.`,
-    next: [
-      "Write 4–5 STAR stories you can bend to any behavioral question.",
-      "Drill the fundamentals + one system-design walkthrough out loud.",
-      "Look up your interviewers and prep 2 sharp questions to ask them.",
+    glyph: "🎤", eyebrow: "Interview scheduled",
+    title: (c) => `You're interviewing at ${c}`,
+    sub: "Out of everyone who applied to this posting, you're in the room.",
+    h3: "Before the interview",
+    steps: [
+      { ic: "d", emoji: "🗣️", t: "Pick one project to go deep on", s: "You'll be asked to walk through something. Choose it now." },
+      { ic: "a", emoji: "🔍", t: "Read past-candidate write-ups", s: "Check what this company's loop has looked like before." },
+      { ic: "c", emoji: "👥", t: "Prepare two questions for them", s: "Not about the role — about what the team is actually building." },
     ],
-    cta: "Start prep",
-    tier: "big",
+    wisdom: "Interviewers aren't checking whether you know the answer. They're checking what you do in the ninety seconds where you don't. Practice thinking out loud, not just solving.",
+    wc: "var(--warn)", cta: "Line up an insider", alt: "Later",
   },
   offer: {
-    emoji: "🎉",
-    title: "YOU GOT AN OFFER!",
-    sub: (c) => `${c} wants you. Take a second — you earned this one.`,
-    next: [
-      "Get the full offer in writing before you respond to anything.",
-      "Check the numbers on levels.fyi — you have more leverage than you think.",
-      "It's normal (and expected) to negotiate. Ask for time to decide.",
+    glyph: "🎉", eyebrow: "Offer",
+    title: (c) => `${c} made you an offer`,
+    sub: "Take a second — you earned this one before you turn it into a decision.",
+    h3: "Before you answer",
+    steps: [
+      { ic: "c", emoji: "📄", t: "Read the whole offer, twice", s: "Pay, dates, return-offer terms, and the deadline to respond." },
+      { ic: "a", emoji: "⏳", t: "Ask for time if you need it", s: "Two weeks is normal to request. Asking is not a red flag." },
+      { ic: "d", emoji: "📣", t: "Tell your live applications", s: "Companies mid-process can move faster when there's a deadline." },
     ],
-    cta: "🥳 Let's go",
-    tier: "mega",
+    wisdom: "Feel good about this before you turn it into a decision. You earned the right to have a choice — the choosing can wait until tomorrow.",
+    wc: "var(--good)", cta: "Log the details", alt: "Close", confetti: true,
   },
   rejected: {
-    emoji: "💪",
-    title: "Onward.",
-    sub: (c) => `${c} wasn't it. Every no clears the path to the yes.`,
-    next: [
-      "Reply once, kindly, and ask for any feedback — some recruiters share it.",
-      "Keep the door open: connect on LinkedIn for the next cycle.",
-      "Your other applications are still live. Back to the queue.",
+    glyph: "↺", eyebrow: "Closed out",
+    title: (c) => `${c} passed`,
+    sub: "Logged. Nothing about this one needs your attention right now.",
+    h3: "Worth doing while it's fresh",
+    steps: [
+      { ic: "n", emoji: "📝", t: "Note what stage it ended at", s: "A résumé screen and a final round are different problems." },
+      { ic: "a", emoji: "🔎", t: "Find similar roles", s: "Same stack, same season — you already have the tailored résumé." },
+      { ic: "n", emoji: "🌙", t: "Nothing else tonight", s: "One rejection isn't a signal. Don't rewrite your résumé over it." },
     ],
-    cta: "Keep going",
-    tier: "soft",
+    wisdom: "A handful of applications is too few to learn anything from a single rejection — you'd need dozens at the same stage before a pattern means more than luck. Until then, the only correct response is to send the next one.",
+    wc: "var(--muted)", cta: "Find similar roles", alt: "Close",
   },
 };
 
-/** Which status changes are worth celebrating. */
-export function isMilestone(status: Status): boolean {
-  return status in CONTENT;
+/** Which status changes get a finish screen. */
+export function isMilestone(status: Status): status is Tier {
+  return status === "oa" || status === "interview" || status === "offer" || status === "rejected";
 }
 
-function Confetti({ count }: { count: number }) {
-  const colors = ["#6d5efc", "#15803d", "#f59e0b", "#e11d48", "#0ea5e9", "#a855f7"];
-  return (
-    <div className="mc-confetti" aria-hidden>
-      {Array.from({ length: count }, (_, i) => {
-        const left = (i * 97 + 13) % 100;
-        const delay = (i % 10) * 0.18;
-        const dur = 2.4 + (i % 5) * 0.4;
-        const rot = (i * 53) % 360;
-        return (
-          <span
-            key={i}
-            style={{
-              left: `${left}%`,
-              background: colors[i % colors.length],
-              animationDelay: `${delay}s`,
-              animationDuration: `${dur}s`,
-              transform: `rotate(${rot}deg)`,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
+const CONFETTI_COLORS = ["#f3b24e", "#5fd3a5", "#7fb0f7", "#f08a7a", "#ffffff"];
 
 export default function MilestoneCelebration({
-  status, company, role, onClose, onDetails,
+  status, company, role, stats, onClose, onPrimary,
 }: {
-  status: Status;
+  status: Tier;
   company: string;
   role: string;
+  stats: [string, string][];
   onClose: () => void;
-  onDetails?: () => void;
+  onPrimary: () => void;
 }) {
   const m = CONTENT[status];
   useEffect(() => {
@@ -115,29 +104,54 @@ export default function MilestoneCelebration({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  if (!m) return null;
 
   return (
-    <div className="mc-overlay" onClick={onClose}>
-      <div className={`mc-card mc-${m.tier}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={m.title}>
-        {(m.tier === "mega" || m.tier === "big") && <Confetti count={m.tier === "mega" ? 40 : 24} />}
-        <div className="mc-body">
-          <div className="mc-emoji">{m.emoji}</div>
-          <h2 className="mc-title">{m.title}</h2>
-          <p className="mc-co">{company}{role ? ` · ${role}` : ""}</p>
-          <p className="mc-sub">{m.sub(company)}</p>
+    <div className="ms-scrim" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="ms-modal" role="dialog" aria-modal="true" aria-label={m.title(company)}>
+        <div className={`ms-hero ${status}`}>
+          {m.confetti && (
+            <div className="ms-confetti" aria-hidden>
+              {Array.from({ length: 26 }, (_, i) => (
+                <i key={i} style={{
+                  left: `${(i * 37 + 5) % 100}%`,
+                  background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+                  animationDelay: `${((i % 9) * 0.1).toFixed(2)}s`,
+                }} />
+              ))}
+            </div>
+          )}
+          <div className="ms-ring">{m.glyph}</div>
+          <span className="eyebrow">{m.eyebrow}</span>
+          <h2>{m.title(company)}</h2>
+          <p>{role || m.sub}</p>
+        </div>
 
-          <div className="mc-next">
-            <span className="lbl">{status === "rejected" ? "Keep going" : "Next up"}</span>
-            <ul>{m.next.map((t, i) => <li key={i}>{t}</li>)}</ul>
-          </div>
+        <div className="ms-stats">
+          {stats.map(([b, s], i) => (
+            <div className="ms-stat" key={i}><b>{b}</b><span>{s}</span></div>
+          ))}
+        </div>
 
-          <div className="mc-actions">
-            {onDetails && status !== "rejected" && (
-              <button type="button" className="btn" onClick={onDetails}>Add details</button>
-            )}
-            <button type="button" className="btn primary" onClick={onClose}>{m.cta}</button>
-          </div>
+        <div className="ms-body">
+          <h3>{m.h3}</h3>
+          <ul className="ms-steps">
+            {m.steps.map((s, i) => (
+              <li key={i}>
+                <span className={`ic ${s.ic}`}>{s.emoji}</span>
+                <span className="tx"><b>{s.t}</b><span>{s.s}</span></span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="ms-wisdom" style={{ "--c": m.wc } as React.CSSProperties}>
+          <span className="eyebrow">Worth remembering</span>
+          <p>{m.wisdom}</p>
+        </div>
+
+        <div className="ms-foot">
+          <button type="button" className="btn" onClick={onClose}>{m.alt}</button>
+          <button type="button" className="btn primary" onClick={onPrimary}>{m.cta}</button>
         </div>
       </div>
     </div>
