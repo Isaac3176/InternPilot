@@ -1719,7 +1719,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .apps .search input { border: none; outline: none; background: none; font: inherit; width: 100%; }
 .apps .search input::placeholder { color: var(--muted-2); }
 .apps .search svg { color: var(--muted); flex: none; }
-.apps .fchip { height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 500; color: var(--ink-2); display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer; }
+.apps .fchip { height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line); background: #fff; box-shadow: none; font-size: 13px; font-weight: 500; color: var(--ink-2); display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer; }
 .apps .fchip:hover { border-color: #cbd4de; }
 .apps .fchip.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink); font-weight: 600; }
 .apps .fchip i { width: 7px; height: 7px; border-radius: 2px; background: var(--c); font-style: normal; }
@@ -1757,7 +1757,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 /* status control */
 .apps .statuscell { position: relative; }
-.apps .status { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 9px 0 8px; border-radius: 8px; font-size: 12.5px; font-weight: 600; border: 1px solid transparent; transition: border-color .12s, background .12s; cursor: pointer; }
+.apps .status { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 9px 0 8px; border-radius: 8px; font-size: 12.5px; font-weight: 600; border: 1px solid transparent; box-shadow: none; transition: border-color .12s, background .12s; cursor: pointer; }
 .apps .status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; font-style: normal; flex: none; }
 .apps .status svg { opacity: 0; transition: opacity .12s; margin-left: -2px; }
 .apps tr:hover .status svg { opacity: .55; }
@@ -1768,7 +1768,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .apps .status.offer { background: var(--good-soft); color: var(--good); }
 .apps .status.rejected { background: var(--risk-soft); color: var(--risk); }
 .apps .status:hover { border-color: currentColor; }
-.apps .quick { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; margin-left: 7px; border: 1px dashed var(--line); color: var(--muted); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .12s, border-color .12s, color .12s, background .12s; cursor: pointer; }
+.apps .quick { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; margin-left: 7px; border: 1px dashed var(--line); background: #fff; box-shadow: none; color: var(--muted); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .12s, border-color .12s, color .12s, background .12s; cursor: pointer; }
 .apps tr:hover .quick { opacity: 1; }
 .apps .quick:hover { border-style: solid; border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
 
@@ -1786,14 +1786,14 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 /* row actions */
 .apps .rowacts { display: flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity .12s; }
 .apps tr:hover .rowacts, .apps tr:focus-within .rowacts { opacity: 1; }
-.apps .ibtn { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: var(--muted); border: none; background: none; cursor: pointer; }
+.apps .ibtn { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: var(--muted); border: none; background: none; box-shadow: none; cursor: pointer; }
 .apps .ibtn:hover { background: var(--line-soft); color: var(--ink); }
 .apps .ibtn.danger:hover { background: var(--risk-soft); color: var(--risk); }
 
 /* status popover */
 .apps .pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; width: 236px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-pop); padding: 6px; }
 .apps .pop .lab { padding: 7px 9px 5px; display: block; }
-.apps .popitem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 9px; border-radius: 8px; font-size: 13.5px; font-weight: 500; border: none; background: none; cursor: pointer; }
+.apps .popitem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 9px; border-radius: 8px; font-size: 13.5px; font-weight: 500; border: none; background: none; box-shadow: none; cursor: pointer; }
 .apps .popitem:hover { background: var(--surface-2); }
 .apps .popitem i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; font-style: normal; }
 .apps .popitem .lbl { flex: 1; min-width: 0; text-align: left; }
@@ -1816,7 +1816,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .ms-scrim .hero .eyebrow { color: rgba(255,255,255,.6); display: block; margin-bottom: 8px; position: relative; }
 .ms-scrim .hero h2 { margin: 0 0 7px; font-size: 24px; font-weight: 700; letter-spacing: -.032em; line-height: 1.18; position: relative; }
 .ms-scrim .hero p { margin: 0 auto; max-width: 33ch; font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,.76); position: relative; }
-.ms-scrim .hero .close { position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: rgba(255,255,255,.6); z-index: 3; border: none; background: none; cursor: pointer; }
+.ms-scrim .hero .close { position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: rgba(255,255,255,.6); z-index: 3; border: none; background: none; box-shadow: none; cursor: pointer; }
+.ms-scrim .note-top .shuffle { box-shadow: none; }
 .ms-scrim .hero .close:hover { background: rgba(255,255,255,.13); color: #fff; }
 .ms-scrim .hero.h-applied { background: linear-gradient(157deg,#1e5bc0,#0c2245); }
 .ms-scrim .hero.h-oa { background: linear-gradient(157deg,#4b2fa8,#221252); }
@@ -1882,7 +1883,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 /* foot */
 .ms-scrim .foot { padding: 16px 22px 20px; display: flex; gap: 9px; flex: none; }
-.ms-scrim .foot .btn { flex: 1; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-size: 14px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.ms-scrim .foot .btn { flex: 1; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; box-shadow: none; font-size: 14px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
 .ms-scrim .foot .btn:hover { border-color: #cbd4de; background: var(--surface-2); }
 .ms-scrim .foot .btn.primary { color: #fff; border-color: transparent; box-shadow: 0 2px 10px -2px rgba(15,27,45,.35); }
 .ms-scrim .foot .btn.primary:hover { filter: brightness(1.06); }
