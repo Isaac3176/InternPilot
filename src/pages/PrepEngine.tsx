@@ -3,6 +3,7 @@ import { createCodingProblem, deleteCodingProblem, listCodingProblems, updateCod
 import { listOAAttempts, type OAAttempt } from "../db/oaAttempts";
 import { buildOverview, scheduleReview, type PatternReadiness, type TodayItem } from "../prep/engine";
 import { DIFFICULTIES, FAILURE_REASONS, PATTERNS, RESULTS, SOLUTION_QUALITIES, type Difficulty, type FailureReason, type Pattern, type ProblemResult, type SolutionQuality } from "../prep/patterns";
+import OASimulation from "../components/OASimulation";
 
 type Tab = "today" | "progress" | "history";
 
@@ -11,9 +12,11 @@ export default function PrepEngine() {
   const [oas, setOas] = useState<OAAttempt[]>([]);
   const [tab, setTab] = useState<Tab>("today");
   const [logging, setLogging] = useState(false);
+  const [simming, setSimming] = useState(false);
 
   const reload = () => { listCodingProblems().then(setProblems).catch(console.error); };
-  useEffect(() => { reload(); listOAAttempts().then(setOas).catch(() => {}); }, []);
+  const reloadOas = () => { listOAAttempts().then(setOas).catch(() => {}); };
+  useEffect(() => { reload(); reloadOas(); }, []);
 
   const ov = useMemo(() => buildOverview(problems, oas), [problems, oas]);
 
@@ -30,7 +33,10 @@ export default function PrepEngine() {
     <div className="prep">
       <div className="page-header">
         <div><h1>Prep</h1><p>What to practice today, based on where you're actually failing.</p></div>
-        <button type="button" onClick={() => setLogging(true)}>+ Log a problem</button>
+        <div className="header-actions">
+          <button type="button" className="btn" onClick={() => setSimming(true)}>Start OA simulation</button>
+          <button type="button" onClick={() => setLogging(true)}>+ Log a problem</button>
+        </div>
       </div>
 
       <div className="prep-tabs">
@@ -44,6 +50,13 @@ export default function PrepEngine() {
       {tab === "history" && <HistoryTab problems={problems} oas={oas} onDelete={async (id) => { await deleteCodingProblem(id); reload(); }} />}
 
       {logging && <LogForm onClose={() => setLogging(false)} onSaved={() => { setLogging(false); reload(); }} />}
+      {simming && (
+        <OASimulation
+          weakPatterns={ov.needsWork.map((p) => p.pattern)}
+          onClose={() => setSimming(false)}
+          onLogged={reloadOas}
+        />
+      )}
     </div>
   );
 }
