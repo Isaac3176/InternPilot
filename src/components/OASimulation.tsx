@@ -32,6 +32,7 @@ export default function OASimulation({ weakPatterns, onClose, onLogged }: { weak
   const [useWeak, setUseWeak] = useState(true);
   const [questions, setQuestions] = useState<SimQ[]>([]);
   const [active, setActive] = useState(0);
+  const [snooze, setSnooze] = useState<{ idx: number; until: number } | null>(null);
   const activeRef = useRef(0);
   activeRef.current = active;
 
@@ -106,7 +107,8 @@ export default function OASimulation({ weakPatterns, onClose, onLogged }: { weak
   }
 
   const anyUnopened = questions.some((q) => q.status === "unopened");
-  const nudge = phase === "run" && questions[active]?.sec >= MOVE_ON_SEC && anyUnopened;
+  const snoozed = !!snooze && snooze.idx === active && (questions[active]?.sec ?? 0) < snooze.until;
+  const nudge = phase === "run" && (questions[active]?.sec ?? 0) >= MOVE_ON_SEC && anyUnopened && !snoozed;
   const unopenedList = questions.map((q, i) => (q.status === "unopened" ? i + 1 : null)).filter((x): x is number => x != null);
 
   return (
@@ -144,7 +146,7 @@ export default function OASimulation({ weakPatterns, onClose, onLogged }: { weak
             {nudge && (
               <div className="sim-nudge">
                 ⚠ {Math.floor(questions[active].sec / 60)} min on Q{active + 1}, and Q{unopenedList.join(", Q")} still unopened. Move on — a seen-but-unsolved question beats an unseen one.
-                <div className="sim-nudge-acts"><button type="button" className="sim-mv" onClick={moveOn}>Move on</button><button type="button" className="sim-keep" onClick={() => setQuestions((qs) => [...qs])}>Keep going</button></div>
+                <div className="sim-nudge-acts"><button type="button" className="sim-mv" onClick={moveOn}>Move on</button><button type="button" className="sim-keep" onClick={() => setSnooze({ idx: active, until: (questions[active]?.sec ?? 0) + 300 })}>Keep going (+5 min)</button></div>
               </div>
             )}
             <div className="sim-qs">

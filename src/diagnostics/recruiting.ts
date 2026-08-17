@@ -114,8 +114,10 @@ export function computeDiagnostics(apps: ApplicationRow[], now = Date.now()): Di
   const datedRej = rejected.filter((a) => parseTs(a.result_date) != null && rejStart(a) != null);
   const undated = rejected.length - datedRej.length;
   const b = { lt1h: 0, lt24h: 0, lt7d: 0, lt30d: 0, gt30d: 0 };
+  let negRej = 0;
   for (const a of datedRej) {
     const d = parseTs(a.result_date)! - rejStart(a)!;
+    if (d < 0) { negRej++; continue; } // result dated before apply — data ordering, not an instant screen
     if (d < HOUR) b.lt1h++;
     else if (d < DAY) b.lt24h++;
     else if (d < 7 * DAY) b.lt7d++;
@@ -136,8 +138,8 @@ export function computeDiagnostics(apps: ApplicationRow[], now = Date.now()): Di
       { label: "30+ days", count: b.gt30d },
       { label: "No response (14d+)", count: noResponse, kind: "muted" as const },
     ],
-    dated: datedRej.length,
-    undated,
+    dated: datedRej.length - negRej,
+    undated: undated + negRej,
   };
 
   return {

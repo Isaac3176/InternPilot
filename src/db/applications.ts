@@ -188,8 +188,10 @@ export function needsBackfill(a: ApplicationRow): boolean {
  * fabricated reject timestamp would poison the rejection-timing view.
  */
 export async function backfillDiagnostics(): Promise<number> {
-  const stageFor = (status: string, hasApplied: boolean): string =>
-    ["interested", "applied", "oa", "interview", "offer"].includes(status) ? status : hasApplied ? "applied" : "interested";
+  // Funnel statuses map to themselves; any terminal status (rejected) implies the
+  // role was at least Applied, so it counts toward the funnel base.
+  const stageFor = (status: string): string =>
+    ["interested", "applied", "oa", "interview", "offer"].includes(status) ? status : "applied";
 
   if (cloudMode()) {
     const { data } = await supabase.from("applications").select("id, status, date_saved, date_applied, discovered_at, applied_at, furthest_stage");
@@ -199,7 +201,7 @@ export async function backfillDiagnostics(): Promise<number> {
       const patch: Record<string, unknown> = {};
       if (!a.discovered_at && a.date_saved) patch.discovered_at = a.date_saved;
       if (!a.applied_at && a.date_applied) patch.applied_at = a.date_applied;
-      if (!a.furthest_stage) patch.furthest_stage = stageFor(a.status, !!a.date_applied);
+      if (!a.furthest_stage) patch.furthest_stage = stageFor(a.status);
       if (Object.keys(patch).length) {
         const { error } = await supabase.from("applications").update(patch).eq("id", a.id);
         if (!error) n++;
@@ -214,10 +216,11 @@ export async function backfillDiagnostics(): Promise<number> {
   const r3 = await db.execute(
     `UPDATE applications SET furthest_stage = CASE
         WHEN status IN ('interested','applied','oa','interview','offer') THEN status
-        WHEN date_applied IS NOT NULL THEN 'applied'
-        ELSE 'interested' END
+        ELSE 'applied' END
      WHERE furthest_stage IS NULL`);
-  return Math.max(r1.rowsAffected ?? 0, r2.rowsAffected ?? 0, r3.rowsAffected ?? 0);
+  // Every pre-capture row lacks furthest_stage, so r3 is the true count backfilled.
+  void r1; void r2;
+  return r3.rowsAffected ?? 0;
 }
 
 export async function setApplicationStatus(id: number, status: Status): Promise<void> {

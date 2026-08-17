@@ -24,8 +24,10 @@ export const PATTERNS = [
 ] as const;
 export type Pattern = (typeof PATTERNS)[number];
 
-export const DIFFICULTIES = ["easy", "medium", "hard"] as const;
-export type Difficulty = (typeof DIFFICULTIES)[number];
+// Single source of truth for difficulty lives in db/types; re-export so prep code
+// can keep importing it from here.
+export { DIFFICULTIES, type Difficulty } from "../db/types";
+import type { Difficulty } from "../db/types";
 
 export const RESULTS = ["solved", "partial", "failed"] as const;
 export type ProblemResult = (typeof RESULTS)[number];

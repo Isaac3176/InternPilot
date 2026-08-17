@@ -98,12 +98,10 @@ export function analyzeOA(attempts: OAAttempt[]): OADiagnostics | null {
     recommendations.push("2 × four-question timed assessments (full clock — practice moving on)");
     recommendations.push("Set a hard rule: move on after 15 min without meaningful progress");
   }
-  const namedTopics = new Set<string>();
   for (const wt of weakTopics.slice(0, 3)) {
     if (wt.topic === "Simulation / state machines") recommendations.push("5 simulation / state-machine problems");
     else if (wt.topic === "Implementation-heavy") recommendations.push("5 implementation-heavy problems");
     else recommendations.push(`5 ${wt.topic.toLowerCase()} problems`);
-    namedTopics.add(wt.topic);
   }
   if (recommendations.length === 0) recommendations.push("Keep logging OAs — a couple more and clear patterns will surface.");
 
