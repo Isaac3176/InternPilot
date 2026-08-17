@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createCodingProblem, deleteCodingProblem, listCodingProblems, updateCodingReview, type CodingProblem } from "../db/codingProblems";
 import { listOAAttempts, type OAAttempt } from "../db/oaAttempts";
+import { listInterviews } from "../db/interviews";
+import type { InterviewRow } from "../db/types";
 import { buildOverview, scheduleReview, type PatternReadiness, type TodayItem } from "../prep/engine";
+import { buildOAPlan, type OAPlan } from "../prep/plan";
 import { DIFFICULTIES, FAILURE_REASONS, PATTERNS, RESULTS, SOLUTION_QUALITIES, type Difficulty, type FailureReason, type Pattern, type ProblemResult, type SolutionQuality } from "../prep/patterns";
 import OASimulation from "../components/OASimulation";
 
@@ -10,15 +13,23 @@ type Tab = "today" | "progress" | "history";
 export default function PrepEngine() {
   const [problems, setProblems] = useState<CodingProblem[]>([]);
   const [oas, setOas] = useState<OAAttempt[]>([]);
+  const [interviews, setInterviews] = useState<InterviewRow[]>([]);
   const [tab, setTab] = useState<Tab>("today");
   const [logging, setLogging] = useState(false);
   const [simming, setSimming] = useState(false);
 
   const reload = () => { listCodingProblems().then(setProblems).catch(console.error); };
   const reloadOas = () => { listOAAttempts().then(setOas).catch(() => {}); };
-  useEffect(() => { reload(); reloadOas(); }, []);
+  useEffect(() => { reload(); reloadOas(); listInterviews().then(setInterviews).catch(() => {}); }, []);
 
   const ov = useMemo(() => buildOverview(problems, oas), [problems, oas]);
+  const plan = useMemo<OAPlan | null>(() => {
+    const now = Date.now();
+    const upcoming = interviews
+      .filter((i) => i.type === "oa" && i.date && Date.parse(i.date) >= now - 86_400_000)
+      .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!))[0];
+    return upcoming ? buildOAPlan(upcoming.company_name ?? "This company", upcoming.role_title ?? null, upcoming.date!, ov) : null;
+  }, [interviews, ov]);
 
   async function reSolve(problemId: number, result: ProblemResult) {
     const p = problems.find((x) => x.id === problemId);
@@ -45,7 +56,7 @@ export default function PrepEngine() {
         ))}
       </div>
 
-      {tab === "today" && <TodayTab ov={ov} onReSolve={reSolve} empty={ov.totalAttempts === 0} />}
+      {tab === "today" && <TodayTab ov={ov} plan={plan} onReSolve={reSolve} onStartSim={() => setSimming(true)} empty={ov.totalAttempts === 0} />}
       {tab === "progress" && <ProgressTab patterns={ov.patterns} />}
       {tab === "history" && <HistoryTab problems={problems} oas={oas} onDelete={async (id) => { await deleteCodingProblem(id); reload(); }} />}
 
@@ -74,12 +85,13 @@ function ReadinessRing({ value }: { value: number }) {
   );
 }
 
-function TodayTab({ ov, onReSolve, empty }: { ov: ReturnType<typeof buildOverview>; onReSolve: (id: number, r: ProblemResult) => void; empty: boolean }) {
+function TodayTab({ ov, plan, onReSolve, onStartSim, empty }: { ov: ReturnType<typeof buildOverview>; plan: OAPlan | null; onReSolve: (id: number, r: ProblemResult) => void; onStartSim: () => void; empty: boolean }) {
   const news = ov.today.filter((t) => t.kind === "new");
   const reviews = ov.today.filter((t) => t.kind === "review");
   const quick = ov.today.filter((t) => t.kind === "quick");
   return (
     <>
+      {plan && <OAPlanCard plan={plan} onStartSim={onStartSim} />}
       <section className="prep-hero">
         <div className="prep-hero-l">
           <ReadinessRing value={ov.overall} />
@@ -107,6 +119,40 @@ function TodayTab({ ov, onReSolve, empty }: { ov: ReturnType<typeof buildOvervie
         </section>
       )}
     </>
+  );
+}
+
+function OAPlanCard({ plan, onStartSim }: { plan: OAPlan; onStartSim: () => void }) {
+  return (
+    <section className="prep-plan">
+      <div className="prep-plan-head">
+        <div>
+          <span className="eyebrow">OA countdown</span>
+          <h2>{plan.company} OA <span className="prep-plan-days">{plan.daysUntil === 0 ? "today" : `${plan.daysUntil} day${plan.daysUntil === 1 ? "" : "s"} away`}</span></h2>
+          {plan.role && <p className="prep-plan-role">{plan.role} · {plan.dueLabel}</p>}
+        </div>
+        <div className="prep-plan-readiness"><b>{plan.readiness}%</b><span>readiness</span></div>
+      </div>
+
+      {plan.relevantWeak.length > 0 && (
+        <div className="prep-plan-weak">
+          <span className="eyebrow">Focus these</span>
+          {plan.relevantWeak.map((p) => <span key={p.pattern} className="prep-plan-chip">{p.pattern} {p.readiness}%</span>)}
+        </div>
+      )}
+
+      <div className="prep-plan-days-list">
+        {plan.days.map((d, i) => (
+          <div className={`prep-plan-day ${i === 0 ? "now" : ""} ${i === plan.days.length - 1 ? "oa" : ""}`} key={i}>
+            <span className="prep-plan-daylbl">{d.label}</span>
+            <div className="prep-plan-tasks">
+              {d.tasks.map((t, j) => <span key={j} className="prep-plan-task">{t}</span>)}
+              {d.sim && <button type="button" className="prep-mini ok" onClick={onStartSim}>Start simulation</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

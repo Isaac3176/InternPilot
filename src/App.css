@@ -2073,6 +2073,30 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .prep-rr-fill, .prep-w-fill { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width .3s ease; }
 .prep-rr-pct { font-size: 12px; color: var(--ink-2); text-align: right; }
 
+/* OA countdown plan */
+.prep-plan { background: linear-gradient(158deg, #1e2a3d, #0e1621); color: #fff; border-radius: 15px; padding: 18px 20px; margin-bottom: 16px; }
+.prep-plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.prep-plan .eyebrow { color: #8ea3bb; }
+.prep-plan h2 { margin: 4px 0 0; font-size: 18px; font-weight: 700; color: #fff; }
+.prep-plan-days { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: #f0b24e; margin-left: 6px; }
+.prep-plan-role { margin: 3px 0 0; font-size: 12.5px; color: #9fb0c2; }
+.prep-plan-readiness { text-align: right; flex: none; }
+.prep-plan-readiness b { display: block; font-family: var(--mono); font-size: 22px; font-weight: 600; color: #fff; }
+.prep-plan-readiness span { font-size: 10px; color: #8ea3bb; text-transform: uppercase; letter-spacing: .06em; }
+.prep-plan-weak { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 14px 0; }
+.prep-plan-weak .eyebrow { margin-right: 2px; }
+.prep-plan-chip { font-size: 11.5px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 2px 8px; color: #dbe4ee; }
+.prep-plan-days-list { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.prep-plan-day { display: grid; grid-template-columns: 84px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.08); align-items: baseline; }
+.prep-plan-daylbl { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: #9fb0c2; }
+.prep-plan-day.now .prep-plan-daylbl { color: #8fc5ff; }
+.prep-plan-day.oa .prep-plan-daylbl { color: #f0b24e; }
+.prep-plan-tasks { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+.prep-plan-task { font-size: 13px; color: #e7edf4; line-height: 1.4; }
+.prep-plan-day.oa .prep-plan-task { font-weight: 600; }
+.prep-plan-tasks .prep-mini { margin-top: 3px; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); color: #fff; }
+.prep-plan-tasks .prep-mini:hover { background: rgba(255,255,255,.18); }
+
 /* Today list */
 .prep-today-group { margin-top: 14px; }
 .prep-today-group .eyebrow { display: block; margin-bottom: 8px; }
