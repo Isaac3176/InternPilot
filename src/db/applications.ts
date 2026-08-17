@@ -173,6 +173,53 @@ export async function deleteApplication(id: number): Promise<void> {
   await db.execute("DELETE FROM applications WHERE id = ?", [id]);
 }
 
+/** True if a row is missing signals we can legitimately derive from its dates. */
+export function needsBackfill(a: ApplicationRow): boolean {
+  return (!a.discovered_at && !!a.date_saved) ||
+    (!a.applied_at && !!a.date_applied) ||
+    (!a.furthest_stage);
+}
+
+/**
+ * Fill diagnostics signals on pre-capture rows from dates we already have:
+ * discovered_at ← date_saved, applied_at ← date_applied, furthest_stage ← status
+ * (a rejection is assumed to have at least Applied). Only fills blanks — never
+ * overwrites captured data — and deliberately does NOT invent result_date, since a
+ * fabricated reject timestamp would poison the rejection-timing view.
+ */
+export async function backfillDiagnostics(): Promise<number> {
+  const stageFor = (status: string, hasApplied: boolean): string =>
+    ["interested", "applied", "oa", "interview", "offer"].includes(status) ? status : hasApplied ? "applied" : "interested";
+
+  if (cloudMode()) {
+    const { data } = await supabase.from("applications").select("id, status, date_saved, date_applied, discovered_at, applied_at, furthest_stage");
+    const rows = (data ?? []) as ApplicationRow[];
+    let n = 0;
+    for (const a of rows) {
+      const patch: Record<string, unknown> = {};
+      if (!a.discovered_at && a.date_saved) patch.discovered_at = a.date_saved;
+      if (!a.applied_at && a.date_applied) patch.applied_at = a.date_applied;
+      if (!a.furthest_stage) patch.furthest_stage = stageFor(a.status, !!a.date_applied);
+      if (Object.keys(patch).length) {
+        const { error } = await supabase.from("applications").update(patch).eq("id", a.id);
+        if (!error) n++;
+      }
+    }
+    return n;
+  }
+
+  const db = await getDb();
+  const r1 = await db.execute("UPDATE applications SET discovered_at = date_saved WHERE discovered_at IS NULL AND date_saved IS NOT NULL");
+  const r2 = await db.execute("UPDATE applications SET applied_at = date_applied WHERE applied_at IS NULL AND date_applied IS NOT NULL");
+  const r3 = await db.execute(
+    `UPDATE applications SET furthest_stage = CASE
+        WHEN status IN ('interested','applied','oa','interview','offer') THEN status
+        WHEN date_applied IS NOT NULL THEN 'applied'
+        ELSE 'interested' END
+     WHERE furthest_stage IS NULL`);
+  return Math.max(r1.rowsAffected ?? 0, r2.rowsAffected ?? 0, r3.rowsAffected ?? 0);
+}
+
 export async function setApplicationStatus(id: number, status: Status): Promise<void> {
   // Also advance the diagnostics signals: keep the deepest funnel stage ever
   // reached (so a rejection still remembers it got to OA/interview), stamp

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { listApplications } from "../db/applications";
+import { listApplications, backfillDiagnostics, needsBackfill } from "../db/applications";
 import { getProfile } from "../db/profile";
 import { computeDiagnostics, MIN_SEGMENT, type Segment, type Bucket } from "../diagnostics/recruiting";
 import { fastRejections, screeningItems, humanDuration, type FastRejection, type AuditItem } from "../diagnostics/questionAudit";
@@ -10,12 +10,22 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 export default function DiagnosticsPage() {
   const [apps, setApps] = useState<ApplicationRow[] | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [backfilling, setBackfilling] = useState(false);
+  const load = () => listApplications().then(setApps).catch(() => setApps([]));
   useEffect(() => {
-    listApplications().then(setApps).catch(() => setApps([]));
+    load();
     getProfile().then(setProfile).catch(() => {});
   }, []);
 
   const d = useMemo(() => (apps ? computeDiagnostics(apps) : null), [apps]);
+  const missing = useMemo(() => (apps ? apps.filter(needsBackfill).length : 0), [apps]);
+
+  async function runBackfill() {
+    setBackfilling(true);
+    try { await backfillDiagnostics(); await load(); }
+    catch (e) { console.error(e); }
+    finally { setBackfilling(false); }
+  }
   const fast = useMemo(() => (apps ? fastRejections(apps, profile) : []), [apps, profile]);
   const standingRisks = useMemo(() => screeningItems(profile).filter((i) => i.risk), [profile]);
 
@@ -31,6 +41,16 @@ export default function DiagnosticsPage() {
           <p>What actually happens to your applications — not just how many you sent.</p>
         </div>
       </div>
+
+      {missing > 0 && (
+        <div className="diag-backfill">
+          <div>
+            <b>{missing} application{missing === 1 ? "" : "s"} predate signal capture</b>
+            <span>Fill their funnel + timing from dates you already have (discovered ← saved, applied ← applied date). Won't invent reject times, so rejection-timing stays going-forward only.</span>
+          </div>
+          <button type="button" onClick={runBackfill} disabled={backfilling}>{backfilling ? "Filling…" : `Backfill ${missing}`}</button>
+        </div>
+      )}
 
       {d.applied < 10 && (
         <p className="diag-note">Only {d.applied} applied so far — treat everything below as directional. Patterns get trustworthy past ~10–15 per segment.</p>

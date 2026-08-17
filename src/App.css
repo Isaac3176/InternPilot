@@ -1989,6 +1989,10 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 /* ================= Recruiting Diagnostics ================= */
 .diag { max-width: 1080px; margin: 0 auto; }
 .diag-note { background: var(--warn-soft); border: 1px solid var(--warn-line, #ebdcba); color: var(--warn); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 18px; }
+.diag-backfill { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 11px; padding: 12px 16px; margin: 0 0 16px; }
+.diag-backfill b { display: block; font-size: 13.5px; color: var(--accent-ink); }
+.diag-backfill span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; line-height: 1.45; }
+.diag-backfill button { flex: none; }
 .diag-card { background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 13px; padding: 16px 18px; margin-bottom: 16px; }
 .diag-card h2 { margin: 0 0 3px; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
 .diag-sub { margin: 4px 0 0; font-size: 12px; color: var(--slate); line-height: 1.45; }
