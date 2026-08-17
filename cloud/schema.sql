@@ -90,6 +90,28 @@ create table if not exists oa_attempts (
 );
 create index if not exists idx_oa_app on oa_attempts(application_id);
 
+-- Prep Engine: one row per coding problem attempt (v13).
+create table if not exists coding_problems (
+  id               bigint generated always as identity primary key,
+  user_id          uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name             text not null,
+  url              text,
+  difficulty       text,
+  patterns         jsonb,
+  result           text,
+  time_minutes     integer,
+  hints_used       integer,
+  solution_quality text,
+  confidence       integer,
+  failure_reasons  jsonb,
+  source           text,
+  solved_at        timestamptz,
+  next_review_at   timestamptz,
+  review_stage     integer,
+  created_at       timestamptz not null default now()
+);
+create index if not exists idx_cp_review on coding_problems(next_review_at);
+
 create table if not exists resume_bullets (
   id              bigint generated always as identity primary key,
   user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -245,7 +267,7 @@ begin
   foreach t in array array[
     'companies','resume_versions','applications','application_answers','resume_bullets','interviews',
     'interview_experiences','emails','tasks','contacts','referrals',
-    'contact_employment_history','profiles','user_settings','oa_attempts'
+    'contact_employment_history','profiles','user_settings','oa_attempts','coding_problems'
   ] loop
     execute format('alter table %I enable row level security;', t);
     execute format('drop policy if exists own_rows on %I;', t);

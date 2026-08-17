@@ -73,6 +73,7 @@ export const NAV: NavItem[] = [
     id: "coach", label: "Coach", to: "/chat", icon: ChatIcon,
     children: [
       { label: "Ask", to: "/chat", end: true },
+      { label: "Prep", to: "/prep-engine" },
       { label: "Interview prep", to: "/prep" },
       { label: "OA Lab", to: "/oa" },
       { label: "Networking", to: "/networking" },

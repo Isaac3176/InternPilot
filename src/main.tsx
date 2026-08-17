@@ -23,6 +23,7 @@ const Networking = lazy(() => import("./pages/Networking"));
 const InterviewPrep = lazy(() => import("./pages/InterviewPrep"));
 const OALab = lazy(() => import("./pages/OALab"));
 const DiagnosticsPage = lazy(() => import("./pages/Diagnostics"));
+const PrepEngine = lazy(() => import("./pages/PrepEngine"));
 const Experiences = lazy(() => import("./pages/Experiences"));
 const ApplyAssist = lazy(() => import("./pages/ApplyAssist"));
 const Emails = lazy(() => import("./pages/Emails"));
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: "prep", element: <InterviewPrep /> },
       { path: "oa", element: <OALab /> },
       { path: "diagnostics", element: <DiagnosticsPage /> },
+      { path: "prep-engine", element: <PrepEngine /> },
       { path: "experiences", element: <Experiences /> },
       { path: "apply", element: <ApplyAssist /> },
       { path: "emails", element: <Emails /> },

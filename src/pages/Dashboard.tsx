@@ -18,6 +18,9 @@ import { listApplications } from "../db/applications";
 import { getReminders, type Reminder } from "../db/reminders";
 import { notifyNewReminders } from "../lib/notify";
 import { getStrategyRecommendation, type Strategy } from "../ai/strategy";
+import { listCodingProblems } from "../db/codingProblems";
+import { listOAAttempts } from "../db/oaAttempts";
+import { buildOverview } from "../prep/engine";
 import type { ApplicationRow, Status } from "../db/types";
 
 const WEEKLY_GOAL = 5;
@@ -234,6 +237,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <PrepWidget onOpen={() => navigate("/prep-engine")} />
+
       {/* ============ ROW: weekly + rates ============ */}
       <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">
@@ -412,4 +417,35 @@ function PlusIcon() {
 }
 function ArrowIcon() {
   return <svg width="15" height="10" viewBox="0 0 15 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M1 5h11M9 2l3.5 3L9 8" /></svg>;
+}
+
+function PrepWidget({ onOpen }: { onOpen: () => void }) {
+  const [ov, setOv] = useState<ReturnType<typeof buildOverview> | null>(null);
+  useEffect(() => {
+    Promise.all([listCodingProblems(), listOAAttempts()])
+      .then(([p, o]) => setOv(buildOverview(p, o)))
+      .catch(() => {});
+  }, []);
+  if (!ov || ov.totalAttempts === 0) return null;
+  return (
+    <div className="card prep-widget">
+      <div className="card-head">
+        <div><h2>Prep <span className="prep-w-pct">{ov.overall}%</span></h2>
+          <p className="sub">{ov.today.length} problems · ~{ov.todayMinutes} min today</p></div>
+        <button type="button" className="btn small primary" onClick={onOpen}>Start today's prep</button>
+      </div>
+      {ov.needsWork.length > 0 && (
+        <div className="prep-w-weak">
+          <span className="eyebrow">Weakest</span>
+          {ov.needsWork.slice(0, 3).map((p) => (
+            <span className="prep-w-row" key={p.pattern}>
+              <span className="prep-w-name">{p.pattern}</span>
+              <span className="prep-w-track"><span className="prep-w-fill" style={{ width: `${p.readiness}%` }} /></span>
+              <span className="prep-w-n mono">{p.readiness}%</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
