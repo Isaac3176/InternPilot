@@ -183,9 +183,15 @@ export function buildOverview(problems: CodingProblem[], oas: OAAttempt[], now =
     if (a.practiced !== b.practiced) return a.practiced ? -1 : 1;
     return a.readiness - b.readiness;
   });
-  const newItems: TodayItem[] = weakOrder.slice(0, 2).map((p) => ({
-    kind: "new", label: `${p.pattern} — Medium`, detail: p.practiced ? `Readiness ${p.readiness}%` : "Not practiced yet", minutes: 20, pattern: p.pattern, difficulty: "medium",
-  }));
+  // Adaptive difficulty: a very weak/unpracticed pattern starts easy to build the
+  // shape; a near-ready one gets pushed to hard. Practiced-but-mid stays medium.
+  const pick = (r: PatternReadiness): { d: Difficulty; m: number } =>
+    !r.practiced || r.readiness < 35 ? { d: "easy", m: 15 } : r.readiness < 65 ? { d: "medium", m: 20 } : { d: "hard", m: 30 };
+  const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+  const newItems: TodayItem[] = weakOrder.slice(0, 2).map((p) => {
+    const { d, m } = pick(p);
+    return { kind: "new", label: `${p.pattern} — ${cap(d)}`, detail: p.practiced ? `Readiness ${p.readiness}% · ${d === "easy" ? "rebuild the pattern" : d === "hard" ? "push to stress-test it" : "consolidate"}` : "Not practiced yet — start easy", minutes: m, pattern: p.pattern, difficulty: d };
+  });
 
   const today = [...newItems, ...review, ...quick];
   const todayMinutes = today.reduce((a, t) => a + t.minutes, 0);
