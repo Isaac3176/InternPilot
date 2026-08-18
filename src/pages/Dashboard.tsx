@@ -21,6 +21,9 @@ import { getStrategyRecommendation, type Strategy } from "../ai/strategy";
 import { listCodingProblems } from "../db/codingProblems";
 import { listOAAttempts } from "../db/oaAttempts";
 import { buildOverview } from "../prep/engine";
+import { getProfile } from "../db/profile";
+import { computeDiagnostics } from "../diagnostics/recruiting";
+import { fastRejections, screeningItems, humanDuration } from "../diagnostics/questionAudit";
 import type { ApplicationRow, Status } from "../db/types";
 
 const WEEKLY_GOAL = 5;
@@ -237,6 +240,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <DiagnosticsInsight onOpen={() => navigate("/diagnostics")} />
+
       <PrepWidget onOpen={() => navigate("/prep-engine")} />
 
       {/* ============ ROW: weekly + rates ============ */}
@@ -417,6 +422,40 @@ function PlusIcon() {
 }
 function ArrowIcon() {
   return <svg width="15" height="10" viewBox="0 0 15 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M1 5h11M9 2l3.5 3L9 8" /></svg>;
+}
+
+/**
+ * One diagnostic nudge on Home — the single most actionable signal, no charts.
+ * Priority: standing auto-screen risks → fast rejections → a funnel bottleneck.
+ * Renders nothing when there's no meaningful signal.
+ */
+function DiagnosticsInsight({ onOpen }: { onOpen: () => void }) {
+  const [insight, setInsight] = useState<{ tone: string; title: string; items: string[]; cta: string } | null>(null);
+  useEffect(() => {
+    Promise.all([listApplications(), getProfile()]).then(([apps, profile]) => {
+      const risks = screeningItems(profile).filter((i) => i.risk);
+      const fast = fastRejections(apps, profile);
+      const d = computeDiagnostics(apps);
+      if (risks.length > 0) {
+        setInsight({ tone: "warn", title: `${risks.length} answer${risks.length === 1 ? "" : "s"} may be auto-filtering your applications`, items: risks.slice(0, 3).map((i) => `${i.label}: ${i.value}`), cta: "Review" });
+      } else if (fast.length > 0) {
+        setInsight({ tone: "warn", title: `${fast.length} rejection${fast.length === 1 ? "" : "s"} came back suspiciously fast`, items: fast.slice(0, 3).map((f) => `${f.app.company_name ?? "A role"} — rejected ${humanDuration(f.hoursToResult)} after submit`), cta: "Investigate" });
+      } else if (d.applied >= 8) {
+        const oa = d.funnel.find((s) => s.key === "oa");
+        if (oa && oa.rate < 0.15) setInsight({ tone: "accent", title: "Low OA conversion", items: [`Only ${Math.round(oa.rate * 100)}% of your applications reach an OA — worth checking what's converting.`], cta: "See diagnostics" });
+      }
+    }).catch(() => {});
+  }, []);
+  if (!insight) return null;
+  return (
+    <div className={`card dash-insight ${insight.tone}`}>
+      <div className="card-head">
+        <div><span className="eyebrow">Diagnostics</span><h2>{insight.title}</h2></div>
+        <button type="button" className="btn small" onClick={onOpen}>{insight.cta}</button>
+      </div>
+      <ul className="dash-insight-list">{insight.items.map((t, i) => <li key={i}>{t}</li>)}</ul>
+    </div>
+  );
 }
 
 function PrepWidget({ onOpen }: { onOpen: () => void }) {
