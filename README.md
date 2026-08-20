@@ -4,10 +4,11 @@
 &nbsp;[![Web app](https://img.shields.io/badge/Web%20app-live-2EA043)](https://intern-pilot-seven.vercel.app)
 &nbsp;[![License](https://img.shields.io/badge/status-beta-A9761C)](#)
 
-**Your internship search — discovered, ranked, tracked, and half-applied for you.**
-InternPilot finds internships, scores each one against your résumé, tells you the single
-best thing to do next, autofills applications from a browser extension, and preps you for
-OAs and interviews. Sign in and your data is the same across **desktop, web, and phone**.
+**Your internship search — discovered, ranked, tracked, diagnosed, and half-applied for you.**
+InternPilot finds internships, scores each one against your résumé, tells you the single best
+thing to do next, catches target companies the moment they post, autofills applications from a
+browser extension, **diagnoses why applications stall**, and **trains your coding prep against
+where you actually fail**. Sign in and your data is the same across **desktop, web, and phone**.
 
 ## Get it — two ways
 
@@ -47,7 +48,7 @@ the web/phone app browses, queues, and tracks._
 Built with **Tauri 2 + React 19 + TypeScript** on the desktop and **Supabase** (Postgres +
 auth) in the cloud, with **OpenAI** powering the AI features (each has an offline fallback).
 
-- **Deeper docs:** [Architecture](docs/ARCHITECTURE.md) · [Browser extension](docs/EXTENSION.md) · [Privacy](docs/PRIVACY.md) · [Development](docs/DEVELOPMENT.md) · [Cloud setup](cloud/SETUP.md)
+- **Deeper docs:** [Features guide](docs/FEATURES.md) · [Architecture](docs/ARCHITECTURE.md) · [Development](docs/DEVELOPMENT.md) · [Browser extension](docs/EXTENSION.md) · [Cloud setup](cloud/SETUP.md) · [Privacy](docs/PRIVACY.md) · [Changelog](CHANGELOG.md)
 
 ## Features
 
@@ -66,10 +67,25 @@ auth) in the cloud, with **OpenAI** powering the AI features (each has an offlin
   against your résumé and shows matched / missing skills ("X of Y found").
 - One click to **Save** to your tracker or **Apply with autofill**.
 
-**Applications & analytics**
-- Application tracker (CRUD, search, status filters, résumé version, referral, notes).
-- Dashboard: status funnel, weekly trend, conversion rates, résumé-version performance,
-  referral rate, reminders + desktop notifications, and an on-demand **AI weekly strategy**.
+**Release Radar & live openings**
+- A **watchlist** of target companies with priority tiers (instant / high / normal / muted).
+- **Release Radar** forecasts each company's likely opening window from past cycles
+  (recency-weighted, cohort-drift-corrected, with a measured-accuracy backtest) and gives you a
+  **"reach out by" date** so you network before the rush.
+- **Live ATS detection**: polls your watchlist companies' real job boards
+  (Greenhouse / Lever / Ashby / SmartRecruiters / Workday) and surfaces **actual just-posted**
+  internships — on the Radar, on Home, and via desktop notification — with a direct apply link.
+
+**Applications, tracker & diagnostics**
+- Application tracker (CRUD, search, status filters, inline status change, résumé version,
+  referral, notes) with **milestone "Outcome moments"** on every status change (OA → interview →
+  offer, plus honest neutral screens for rejections and auto-detected ghosting).
+- Dashboard: status funnel, weekly trend, conversion rates, reminders + desktop notifications,
+  live openings, a diagnostic nudge, and an on-demand **AI weekly strategy**.
+- **Recruiting Diagnostics**: a segmented funnel (by résumé / apply-timing / referral) and a
+  **rejection-timing histogram** (a cluster in the first hour flags an automated eligibility
+  screen), plus a **question audit** that reconstructs your screening answers and points at what
+  likely auto-filters you — all sample-size-gated and worded as correlation, never proof.
 
 **Résumé**
 - Résumé Center: multiple targeted versions, **PDF/DOCX import**, and an AI résumé-to-job match.
@@ -80,6 +96,19 @@ auth) in the cloud, with **OpenAI** powering the AI features (each has an offlin
   warnings (agreed-but-unconfirmed, no thank-you, overdue follow-up) and networking analytics
   (response/agreement/confirmed rates, OA/interview rate with vs. without a referral) — all
   labeled correlational with sample-size guards.
+
+**Coding prep — the Prep Engine**
+- Tracks **interview readiness by pattern + performance**, not "problems solved." ~15 patterns
+  (Arrays, Graphs, DP, Simulation…) each get a readiness score from a weighted blend of
+  independent-solve rate, timed performance, retention, difficulty, and recency.
+- A **Today queue** tells you exactly what to practice, with **adaptive difficulty** and
+  **spaced repetition** (fail → re-solve tomorrow → 7 days → 30 days).
+- **OA Lab**: debrief each online assessment; it diagnoses the pattern (e.g. time management —
+  "67% of the clock on one unsolved problem") and prescribes training.
+- **OA Simulation Mode**: a timed, multi-question run with per-question clocks and a move-on
+  nudge — built to fix the "sank the whole clock into one problem" failure.
+- **Company OA countdown plan**: when an OA is scheduled, a day-by-day plan weighted to that
+  company's own history. OAs feed the *same* readiness scores — one system, not two universes.
 
 **Interviews & research**
 - Interview Prep: track OA/interview events and generate company-specific prep plans.
@@ -122,7 +151,12 @@ Full prerequisites, commands, release process, and proxy/TLS notes are in
 npm install
 npm run tauri dev      # run the desktop app in dev mode
 npm run tauri build    # produce an installer bundle
+npm test               # run the unit suite
+npm run check          # tests + build — the gate CI enforces
 ```
+
+Tests (Vitest) and a type-check/build run in CI on every push and PR
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Privacy
 
@@ -133,8 +167,13 @@ Google only for read-only Gmail sync if you connect it. Full data-flow breakdown
 
 ## Roadmap
 
-- ✅ Tracking, dashboard, résumé matching, Gmail classification, interview prep, experience
-  research, referral CRM, internship Discover feed, Apply Assist, autofill browser extension,
-  JD-powered matching, local auth + onboarding.
-- ⏳ **Next Best Action** engine (prioritized daily actions), **work-authorization eligibility
-  screening**, and **security hardening** (move secrets to the OS keychain).
+- ✅ **Shipped:** Discover feed + personal ranking, tracker + Outcome moments, dashboard +
+  Next-Best-Action engine, AI weekly strategy, résumé matching & per-job tailoring, referral
+  CRM, Gmail classification, Apply Assist + autofill extension, work-authorization eligibility
+  screening, cloud sync (Supabase) + web/phone PWA, **Release Radar + live ATS detection**,
+  **Recruiting Diagnostics** (funnel + rejection-timing + question audit), **Prep Engine**
+  (pattern readiness, spaced repetition, OA Lab, OA Simulation, company countdown plans),
+  unit tests + CI.
+- ⏳ **Next:** deeper component/integration test coverage, **security hardening** (secrets to the
+  OS keychain), and more live-ATS company coverage (Workday is currently a curated, desktop-first
+  set).

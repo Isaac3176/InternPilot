@@ -32,6 +32,12 @@ I can't create those or hold your secrets), and the parts **I** build.
    near you. Save the database password.
 2. **Run the schema** — Supabase dashboard → **SQL Editor** → paste all of
    `cloud/schema.sql` → **Run**. (Creates the tables + security policies.)
+   `schema.sql` is **idempotent** (`if not exists` / `add column if not exists`), so
+   **re-run it whenever you pull changes that add tables or columns** — the desktop app
+   auto-migrates its SQLite, but the web/PWA needs the schema re-applied to match. The current
+   schema includes the diagnostics signals + `application_answers`, `oa_attempts`, and
+   `coding_problems` tables; the Prep Engine will silently fail to save on the web app until
+   `coding_problems` exists.
 3. **Enable email auth** — Authentication → Providers → Email → enable. (For a
    personal tool you can turn *off* "Confirm email" so you can log in instantly.)
 4. **Grab two values** — Project Settings → API:
