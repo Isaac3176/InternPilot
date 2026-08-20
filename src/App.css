@@ -2082,6 +2082,20 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .prep-rr-fill, .prep-w-fill { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width .3s ease; }
 .prep-rr-pct { font-size: 12px; color: var(--ink-2); text-align: right; }
 
+/* Dashboard live-now widget */
+.live-now-card .card-head h2 { display: inline-flex; align-items: center; }
+.live-now-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin-top: 12px; }
+.live-now-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 10px; background: var(--surface-2); min-width: 0; }
+.live-now-item.instant { border-left-color: var(--alert); }
+.live-now-item.high { border-left-color: var(--accent); }
+.live-now-item .logo { width: 30px; height: 30px; flex: none; }
+.live-now-tx { flex: 1; min-width: 0; }
+.live-now-co { display: flex; align-items: center; gap: 6px; }
+.live-now-co b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-now-age { flex: none; font-size: 10.5px; color: var(--slate); }
+.live-now-title { display: block; font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-now-item .btn { flex: none; }
+
 /* Dashboard diagnostics insight */
 .dash-insight { margin-bottom: 16px; border-left: 3px solid var(--accent); }
 .dash-insight.warn { border-left-color: var(--warn); }

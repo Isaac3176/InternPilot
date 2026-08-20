@@ -14,7 +14,7 @@ import {
   type StatusCounts,
   type WeekBucket,
 } from "../db/metrics";
-import { listApplications } from "../db/applications";
+import { listApplications, createApplication } from "../db/applications";
 import { getReminders, type Reminder } from "../db/reminders";
 import { notifyNewReminders } from "../lib/notify";
 import { getStrategyRecommendation, type Strategy } from "../ai/strategy";
@@ -24,6 +24,9 @@ import { buildOverview } from "../prep/engine";
 import { getProfile } from "../db/profile";
 import { computeDiagnostics } from "../diagnostics/recruiting";
 import { fastRejections, screeningItems, humanDuration } from "../diagnostics/questionAudit";
+import { getLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../release/live";
+import { openExternal } from "../lib/open";
+import CompanyLogo from "../components/CompanyLogo";
 import type { ApplicationRow, Status } from "../db/types";
 
 const WEEKLY_GOAL = 5;
@@ -149,6 +152,8 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      <LiveNowWidget onSeeAll={() => navigate("/radar")} />
 
       {/* ============ PIPELINE (hero) ============ */}
       <div className="card pipeline">
@@ -422,6 +427,65 @@ function PlusIcon() {
 }
 function ArrowIcon() {
   return <svg width="15" height="10" viewBox="0 0 15 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M1 5h11M9 2l3.5 3L9 8" /></svg>;
+}
+
+function agoLabel(sec: number | null): string {
+  if (!sec) return "";
+  const hrs = Math.floor((Date.now() / 1000 - sec) / 3600);
+  if (hrs < 1) return "just posted";
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "yesterday" : `${days}d ago`;
+}
+
+/**
+ * Real just-posted openings from watchlist companies' ATS boards — surfaced on Home
+ * because they're the most time-sensitive thing in the app. Cached-first paint, then
+ * a background refresh. Renders nothing when there's nothing live.
+ */
+function LiveNowWidget({ onSeeAll }: { onSeeAll: () => void }) {
+  const [items, setItems] = useState<LiveOpening[]>([]);
+  useEffect(() => {
+    const cached = getCachedLiveOpenings();
+    if (cached) setItems(cached.openings);
+    getLiveOpenings().then(setItems).catch(() => {});
+  }, []);
+  if (items.length === 0) return null;
+
+  async function apply(o: LiveOpening) {
+    try {
+      await createApplication({
+        company_name: o.company, role_title: o.title, job_link: o.url,
+        location: o.location, status: "applied", date_applied: new Date().toISOString().slice(0, 10),
+        source: "live-ats", company_priority: o.priority,
+        posting_posted_at: o.postedAt ? new Date(o.postedAt * 1000).toISOString() : null,
+      });
+    } catch (e) { console.error(e); }
+    openExternal(o.url).catch(console.error);
+  }
+
+  const newCount = items.filter((o) => o.isNew).length;
+  return (
+    <div className="card live-now-card">
+      <div className="card-head">
+        <div><h2>Live now <span className="live-dot" aria-hidden /></h2>
+          <p className="sub">Real postings from your watchlist{newCount > 0 ? ` · ${newCount} new` : ""}</p></div>
+        <button type="button" className="btn small" onClick={onSeeAll}>See all on Radar</button>
+      </div>
+      <div className="live-now-list">
+        {items.slice(0, 4).map((o) => (
+          <div className={`live-now-item ${o.priority}`} key={o.url}>
+            <CompanyLogo company={o.company} />
+            <div className="live-now-tx">
+              <div className="live-now-co"><b>{o.company}</b>{o.isNew && <span className="live-new">NEW</span>}{o.postedAt && <span className="live-now-age">{agoLabel(o.postedAt)}</span>}</div>
+              <span className="live-now-title">{o.title}</span>
+            </div>
+            <button type="button" className="btn small primary" onClick={() => apply(o)}>Apply ↗</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /**
