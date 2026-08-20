@@ -15,7 +15,7 @@
  */
 import { httpFetch } from "../lib/http";
 
-export type AtsProvider = "greenhouse" | "lever" | "ashby";
+export type AtsProvider = "greenhouse" | "lever" | "ashby" | "smartrecruiters" | "workday";
 
 export interface AtsPosting {
   id: string;
@@ -25,13 +25,20 @@ export interface AtsPosting {
   postedAt: number | null; // unix seconds, when known
 }
 
-interface AtsRef { provider: AtsProvider; token: string; }
+/** Workday needs a full per-tenant address (host + tenant + site), not just a slug. */
+interface WorkdayCfg { host: string; tenant: string; site: string }
+interface AtsRef { provider: AtsProvider; token: string; wd?: WorkdayCfg }
 
 /**
- * Curated boards — required for Lever/Ashby (their APIs expose no verifiable
- * company name, so we never auto-discover them). Every token below was confirmed
- * live against the real API. Greenhouse companies are auto-discovered, so they
- * don't need entries here.
+ * Curated boards for the providers we can't safely auto-discover:
+ *  - Lever / Ashby expose no verifiable company name.
+ *  - Workday is per-tenant (host + tenant + site) with no probeable slug.
+ * Every entry below was confirmed live against the real API. Greenhouse and
+ * SmartRecruiters ARE auto-discovered (their responses carry the company name),
+ * so they don't need entries here.
+ *
+ * To add a Workday company: open its careers site (…myworkdayjobs.com/…), the URL
+ * is https://{host}/{site}/… and the tenant is the first path segment after cxs.
  */
 const ATS_OVERRIDES: Record<string, AtsRef> = {
   openai: { provider: "ashby", token: "openai" },
@@ -43,6 +50,14 @@ const ATS_OVERRIDES: Record<string, AtsRef> = {
   perplexity: { provider: "ashby", token: "perplexity" },
   cohere: { provider: "ashby", token: "cohere" },
   palantir: { provider: "lever", token: "palantir" },
+  // Workday (confirmed live):
+  nvidia: { provider: "workday", token: "nvidia", wd: { host: "nvidia.wd5.myworkdayjobs.com", tenant: "nvidia", site: "NVIDIAExternalCareerSite" } },
+  salesforce: { provider: "workday", token: "salesforce", wd: { host: "salesforce.wd12.myworkdayjobs.com", tenant: "salesforce", site: "External_Career_Site" } },
+  adobe: { provider: "workday", token: "adobe", wd: { host: "adobe.wd5.myworkdayjobs.com", tenant: "adobe", site: "external_experienced" } },
+  hp: { provider: "workday", token: "hp", wd: { host: "hp.wd5.myworkdayjobs.com", tenant: "hp", site: "ExternalCareerSite" } },
+  mastercard: { provider: "workday", token: "mastercard", wd: { host: "mastercard.wd1.myworkdayjobs.com", tenant: "mastercard", site: "CorporateCareers" } },
+  dell: { provider: "workday", token: "dell", wd: { host: "dell.wd1.myworkdayjobs.com", tenant: "dell", site: "External" } },
+  workday: { provider: "workday", token: "workday", wd: { host: "workday.wd5.myworkdayjobs.com", tenant: "workday", site: "Workday" } },
 };
 
 const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -121,10 +136,57 @@ async function fetchAshby(token: string): Promise<AtsPosting[] | null> {
   }));
 }
 
+async function fetchSmartRecruiters(token: string): Promise<AtsPosting[] | null> {
+  const res = await withTimeout(`https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=100`);
+  if (!res) return null;
+  const data = await res.json().catch(() => null);
+  if (!data || !Array.isArray(data.content)) return null;
+  return data.content.map((j: any) => ({
+    id: `sr:${token}:${j.id}`,
+    title: String(j.name ?? ""),
+    url: `https://jobs.smartrecruiters.com/${token}/${j.id}`,
+    location: [j.location?.city, j.location?.region, j.location?.country].filter(Boolean).join(", ") || (j.location?.remote ? "Remote" : ""),
+    postedAt: j.releasedDate ? Math.floor(Date.parse(j.releasedDate) / 1000) : null,
+  }));
+}
+
+async function fetchWorkday(ref: AtsRef): Promise<AtsPosting[] | null> {
+  const wd = ref.wd;
+  if (!wd) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    // searchText 'internship' narrows a huge board to intern-relevant postings;
+    // isInternRole (live.ts) then keeps only the real early-career SWE ones.
+    const res = await httpFetch(`https://${wd.host}/wday/cxs/${wd.tenant}/${wd.site}/jobs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ appliedFacets: {}, limit: 20, offset: 0, searchText: "internship" }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!data || !Array.isArray(data.jobPostings)) return null;
+    return data.jobPostings.map((j: any) => ({
+      id: `wd:${wd.tenant}:${j.externalPath ?? j.title}`,
+      title: String(j.title ?? ""),
+      url: `https://${wd.host}/${wd.site}${j.externalPath ?? ""}`,
+      location: String(j.locationsText ?? ""),
+      postedAt: null, // Workday reports "Posted N days ago", not a real date
+    }));
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const fetchByProvider = (ref: AtsRef): Promise<AtsPosting[] | null> =>
   ref.provider === "greenhouse" ? fetchGreenhouse(ref.token)
   : ref.provider === "lever" ? fetchLever(ref.token)
-  : fetchAshby(ref.token);
+  : ref.provider === "ashby" ? fetchAshby(ref.token)
+  : ref.provider === "smartrecruiters" ? fetchSmartRecruiters(ref.token)
+  : fetchWorkday(ref);
 
 // --- Resolution cache: company → board (or a negative result with TTL) ---
 
@@ -159,6 +221,18 @@ export async function resolveAts(company: string): Promise<AtsRef | null> {
     const data = await meta.json().catch(() => null);
     if (data?.name && nameMatches(String(data.name), company)) {
       const ref: AtsRef = { provider: "greenhouse", token };
+      cache[key] = { ref }; writeCache(cache);
+      return ref;
+    }
+  }
+  // Then SmartRecruiters — its postings carry company.name, so it's verifiable too.
+  for (const token of slugCandidates(company)) {
+    const res = await withTimeout(`https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=1`);
+    if (!res) continue;
+    const data = await res.json().catch(() => null);
+    const nm = data?.content?.[0]?.company?.name;
+    if (nm && nameMatches(String(nm), company)) {
+      const ref: AtsRef = { provider: "smartrecruiters", token };
       cache[key] = { ref }; writeCache(cache);
       return ref;
     }

@@ -21,7 +21,7 @@ export interface LiveOpening {
 /** Keep only early-career software/ML roles; drop senior, sales, and non-eng noise. */
 export function isInternRole(title: string): boolean {
   const t = title.toLowerCase();
-  const early = /\b(intern|internship|co-?op|new ?grad|university|early career|apprentice|campus)\b/.test(t);
+  const early = /\b(interns?|internships?|co-?op|new ?grad|university|early career|apprentice|campus)\b/.test(t);
   if (!early) return false;
   if (/\b(senior|staff|principal|lead|manager|director|mba|phd only)\b/.test(t)) return false;
   const eng = /\b(software|swe|engineer|developer|data|machine learning|\bml\b|\bai\b|backend|back-end|frontend|front-end|full.?stack|infrastructure|platform|security|systems|quant|research)\b/.test(t);
