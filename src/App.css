@@ -1466,6 +1466,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .pk-rewrite { border: 1px solid var(--accent-line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--accent-soft); }
 .pk-rw-old { margin: 0 0 4px; font-size: 12px; color: var(--slate); text-decoration: line-through; }
 .pk-rw-new { margin: 0 0 7px; font-size: 12.5px; line-height: 1.45; color: var(--ink); font-weight: 500; }
+.pk-rw-acts { display: flex; gap: 6px; }
 
 .pk-contacts { list-style: none; margin: 0; padding: 0; }
 .pk-contacts li { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; border-top: 1px solid var(--line-2); }

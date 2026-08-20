@@ -35,9 +35,13 @@ export default function PrepEngine() {
     const companyWeak: Pattern[] = [];
     if (key) {
       const seen = new Set<Pattern>();
+      // Exact match, or a prefix relationship only when both names are long enough
+      // (so 'HP' never matches 'HPE', 'meta' never matches 'metamask').
+      const sameCompany = (ck: string) => ck === key ||
+        (Math.min(ck.length, key.length) >= 5 && (ck.startsWith(key) || key.startsWith(ck)));
       for (const a of oas) {
         const ck = norm(a.company);
-        if (!ck || (ck !== key && !ck.includes(key) && !key.includes(ck))) continue;
+        if (!ck || !sameCompany(ck)) continue;
         for (const q of a.questions) {
           if (!q.attempted || q.solved) continue;
           const p = topicToPattern(q.topic);

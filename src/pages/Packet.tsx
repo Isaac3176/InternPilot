@@ -244,7 +244,7 @@ export default function Packet() {
                         <p className="pk-rw-new">{r.suggested}</p>
                         <div className="pk-lead-foot">
                           <div className="chips">{r.addresses.map((s) => <span key={s} className="chip on">{s}</span>)}</div>
-                          <span style={{ display: "flex", gap: 6 }}>
+                          <span className="pk-rw-acts">
                             <button type="button" className="btn small" onClick={() => copy(r.suggested)}>Copy</button>
                             <button type="button" className="btn small" onClick={() => saveRewrite(r, i)} disabled={savedRewrites.has(i)}>{savedRewrites.has(i) ? "✓ Saved" : "Save to library"}</button>
                           </span>

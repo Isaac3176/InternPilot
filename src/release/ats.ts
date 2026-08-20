@@ -191,7 +191,11 @@ const fetchByProvider = (ref: AtsRef): Promise<AtsPosting[] | null> =>
 // --- Resolution cache: company → board (or a negative result with TTL) ---
 
 const CACHE_KEY = "internpilot.ats.resolve.v1";
-const NEG_TTL = 14 * 24 * 3600 * 1000; // re-probe unresolved companies every 2 weeks
+// Re-probe unresolved companies periodically. Kept short because a SmartRecruiters
+// company with zero open postings can't be name-verified (its response is
+// indistinguishable from a non-existent one), so it would otherwise be cached as
+// "no board" and its later internship postings hidden until the TTL expired.
+const NEG_TTL = 4 * 24 * 3600 * 1000;
 type CacheVal = { ref: AtsRef } | { none: true; ts: number };
 
 function readCache(): Record<string, CacheVal> {
