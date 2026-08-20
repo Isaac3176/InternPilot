@@ -2117,6 +2117,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .prep-plan-weak { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 14px 0; }
 .prep-plan-weak .eyebrow { margin-right: 2px; }
 .prep-plan-chip { font-size: 11.5px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 2px 8px; color: #dbe4ee; }
+.prep-plan-chip.seen { background: rgba(240,178,78,.16); border-color: rgba(240,178,78,.4); color: #f0b24e; }
 .prep-plan-days-list { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
 .prep-plan-day { display: grid; grid-template-columns: 84px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.08); align-items: baseline; }
 .prep-plan-daylbl { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: #9fb0c2; }

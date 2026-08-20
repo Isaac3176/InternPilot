@@ -5,7 +5,7 @@ import { listInterviews } from "../db/interviews";
 import type { InterviewRow } from "../db/types";
 import { buildOverview, scheduleReview, type PatternReadiness, type TodayItem } from "../prep/engine";
 import { buildOAPlan, type OAPlan } from "../prep/plan";
-import { DIFFICULTIES, FAILURE_REASONS, PATTERNS, RESULTS, SOLUTION_QUALITIES, type Difficulty, type FailureReason, type Pattern, type ProblemResult, type SolutionQuality } from "../prep/patterns";
+import { DIFFICULTIES, FAILURE_REASONS, PATTERNS, RESULTS, SOLUTION_QUALITIES, topicToPattern, type Difficulty, type FailureReason, type Pattern, type ProblemResult, type SolutionQuality } from "../prep/patterns";
 import OASimulation from "../components/OASimulation";
 
 type Tab = "today" | "progress" | "history";
@@ -28,8 +28,25 @@ export default function PrepEngine() {
     const upcoming = interviews
       .filter((i) => i.type === "oa" && i.date && Date.parse(i.date) >= now - 86_400_000)
       .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!))[0];
-    return upcoming ? buildOAPlan(upcoming.company_name ?? "This company", upcoming.role_title ?? null, upcoming.date!, ov) : null;
-  }, [interviews, ov]);
+    if (!upcoming) return null;
+    // Patterns you've actually failed on THIS company's own logged OAs.
+    const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const key = norm(upcoming.company_name);
+    const companyWeak: Pattern[] = [];
+    if (key) {
+      const seen = new Set<Pattern>();
+      for (const a of oas) {
+        const ck = norm(a.company);
+        if (!ck || (ck !== key && !ck.includes(key) && !key.includes(ck))) continue;
+        for (const q of a.questions) {
+          if (!q.attempted || q.solved) continue;
+          const p = topicToPattern(q.topic);
+          if (p && !seen.has(p)) { seen.add(p); companyWeak.push(p); }
+        }
+      }
+    }
+    return buildOAPlan(upcoming.company_name ?? "This company", upcoming.role_title ?? null, upcoming.date!, ov, companyWeak);
+  }, [interviews, ov, oas]);
 
   async function reSolve(problemId: number, result: ProblemResult) {
     const p = problems.find((x) => x.id === problemId);
@@ -133,6 +150,13 @@ function OAPlanCard({ plan, onStartSim }: { plan: OAPlan; onStartSim: () => void
         </div>
         <div className="prep-plan-readiness"><b>{plan.readiness}%</b><span>readiness</span></div>
       </div>
+
+      {plan.seenHere.length > 0 && (
+        <div className="prep-plan-weak">
+          <span className="eyebrow">Seen at {plan.company}</span>
+          {plan.seenHere.map((p) => <span key={p} className="prep-plan-chip seen">{p}</span>)}
+        </div>
+      )}
 
       {plan.relevantWeak.length > 0 && (
         <div className="prep-plan-weak">

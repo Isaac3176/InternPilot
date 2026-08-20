@@ -18,19 +18,26 @@ export interface OAPlan {
   daysUntil: number;
   readiness: number;
   relevantWeak: PatternReadiness[];
+  seenHere: Pattern[]; // patterns you've actually struggled with AT this company
   days: PlanDay[];
 }
 
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
-export function buildOAPlan(company: string, role: string | null, dueDateStr: string, ov: PrepOverview, now = Date.now()): OAPlan | null {
+/**
+ * @param companyWeak patterns the user has failed on THIS company's own OAs — these
+ *        get top priority in the plan over generic overall weakness.
+ */
+export function buildOAPlan(company: string, role: string | null, dueDateStr: string, ov: PrepOverview, companyWeak: Pattern[] = [], now = Date.now()): OAPlan | null {
   const due = Date.parse(dueDateStr);
   if (Number.isNaN(due)) return null;
   const daysUntil = Math.ceil((due - now) / DAY);
   if (daysUntil < 0) return null;
 
   const weak = ov.needsWork.slice(0, 4);
-  const weakPats: Pattern[] = weak.length ? weak.map((w) => w.pattern) : CORE_FALLBACK;
+  // Company-specific weaknesses first, then overall, deduped.
+  const weakPats: Pattern[] = [...new Set([...companyWeak, ...weak.map((w) => w.pattern)])].slice(0, 4);
+  if (weakPats.length === 0) weakPats.push(...CORE_FALLBACK);
 
   const simIdx = daysUntil >= 3 ? Math.max(1, Math.floor(daysUntil / 2)) : -1;
   const days: PlanDay[] = [];
@@ -55,5 +62,5 @@ export function buildOAPlan(company: string, role: string | null, dueDateStr: st
     days.push({ label, date: fmtDate(dateMs), tasks, sim });
   }
 
-  return { company, role, dueLabel: fmtDate(due), daysUntil, readiness: ov.overall, relevantWeak: weak, days };
+  return { company, role, dueLabel: fmtDate(due), daysUntil, readiness: ov.overall, relevantWeak: weak, seenHere: companyWeak, days };
 }
