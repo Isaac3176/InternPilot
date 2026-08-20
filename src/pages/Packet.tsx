@@ -8,7 +8,7 @@ import { getReusableAnswers, type ApplicationAnswer } from "../apply/answers";
 import { coldEmail } from "../ai/coldEmail";
 import { tailorForJob, type TailorResult } from "../apply/tailor";
 import { suggestBulletRewrites, type BulletRewrite } from "../ai/tailorBullets";
-import { listResumeBullets } from "../db/resumes";
+import { listResumeBullets, saveResumeBullet } from "../db/resumes";
 import { matchCompany } from "../ranking/companies";
 import type { Status } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
@@ -31,6 +31,7 @@ export default function Packet() {
   const [bulletTexts, setBulletTexts] = useState<string[]>([]);
   const [rewrites, setRewrites] = useState<BulletRewrite[] | null>(null);
   const [rewriteBusy, setRewriteBusy] = useState(false);
+  const [savedRewrites, setSavedRewrites] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -128,6 +129,20 @@ export default function Packet() {
       if (r.length === 0) setStatus("No honest rewrites found — those gaps likely need new experience, not rephrasing.");
     } catch (e) { setStatus(e instanceof Error ? e.message : String(e)); }
     finally { setRewriteBusy(false); }
+  }
+
+  async function saveRewrite(r: BulletRewrite, i: number) {
+    try {
+      await saveResumeBullet({
+        experience_name: null,
+        original_text: r.original || null,
+        improved_text: r.suggested,
+        tags: r.addresses.length ? r.addresses.join(", ") : null,
+        application_id: null,
+      });
+      setSavedRewrites((prev) => new Set(prev).add(i));
+      setStatus("Saved to your bullet library.");
+    } catch (e) { setStatus(e instanceof Error ? e.message : String(e)); }
   }
 
   return (
@@ -229,7 +244,10 @@ export default function Packet() {
                         <p className="pk-rw-new">{r.suggested}</p>
                         <div className="pk-lead-foot">
                           <div className="chips">{r.addresses.map((s) => <span key={s} className="chip on">{s}</span>)}</div>
-                          <button type="button" className="btn small" onClick={() => copy(r.suggested)}>Copy</button>
+                          <span style={{ display: "flex", gap: 6 }}>
+                            <button type="button" className="btn small" onClick={() => copy(r.suggested)}>Copy</button>
+                            <button type="button" className="btn small" onClick={() => saveRewrite(r, i)} disabled={savedRewrites.has(i)}>{savedRewrites.has(i) ? "✓ Saved" : "Save to library"}</button>
+                          </span>
                         </div>
                       </div>
                     ))}

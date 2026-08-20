@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createOAAttempt, deleteOAAttempt, listOAAttempts, type OAAttempt, type OAQuestion } from "../db/oaAttempts";
 import { listApplications } from "../db/applications";
 import { analyzeOA } from "../prep/oaDiagnostics";
@@ -78,11 +79,41 @@ function Diagnostics({ diag }: { diag: NonNullable<ReturnType<typeof analyzeOA>>
         </ul>
       )}
 
-      <div className="oa-rx">
-        <span className="eyebrow">Recommended training</span>
-        <ul>{diag.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
-      </div>
+      <TrainingPlan recs={diag.recommendations} />
       <p className="oa-caveat">Associations from your own debriefs — a training guide, not a diagnosis. Correlation, not proof.</p>
+    </div>
+  );
+}
+
+function TrainingPlan({ recs }: { recs: string[] }) {
+  const navigate = useNavigate();
+  const KEY = "internpilot.oa.trainingplan.v1";
+  const [done, setDone] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(KEY) ?? "[]")); } catch { return new Set(); }
+  });
+  const toggle = (r: string) => setDone((prev) => {
+    const n = new Set(prev);
+    if (n.has(r)) n.delete(r); else n.add(r);
+    try { localStorage.setItem(KEY, JSON.stringify([...n])); } catch { /* ignore */ }
+    return n;
+  });
+  const allDone = recs.length > 0 && recs.every((r) => done.has(r));
+  const completed = recs.filter((r) => done.has(r)).length;
+
+  return (
+    <div className="oa-rx">
+      <div className="oa-rx-head">
+        <span className="eyebrow">Your training plan {recs.length > 0 && `· ${completed}/${recs.length}`}</span>
+        <button type="button" className="btn small" onClick={() => navigate("/prep-engine")}>Practice in Prep →</button>
+      </div>
+      <ul className="oa-plan">
+        {recs.map((r) => (
+          <li key={r} className={done.has(r) ? "on" : ""}>
+            <label><input type="checkbox" checked={done.has(r)} onChange={() => toggle(r)} /><span>{r}</span></label>
+          </li>
+        ))}
+      </ul>
+      {allDone && <p className="oa-plan-done">Plan complete — log your next OA to recheck the weakness.</p>}
     </div>
   );
 }
