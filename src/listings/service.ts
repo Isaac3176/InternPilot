@@ -2,6 +2,8 @@ import { getProfile } from "../db/profile";
 import type { Profile } from "../db/types";
 import { fetchAllListings } from "./sources";
 import type { Listing, RankedListing } from "./types";
+import { getPrefs } from "../ranking/prefs";
+import { matchesSeason, requiresGradDegree, isUndergradDegree } from "./relevance";
 
 function splitCsv(value: string | null | undefined): string[] {
   return (value ?? "")
@@ -128,5 +130,15 @@ export async function getFeed(force = false): Promise<Feed> {
     return (b.datePosted ?? 0) - (a.datePosted ?? 0);
   });
 
-  return { listings: ranked, newCount: ranked.filter((l) => l.isNew).length };
+  // Filter to the user's target: drop roles from a different season/year and (for
+  // undergrads) grad-only roles. Ambiguous roles with no stated season are kept.
+  const targetSeason = getPrefs().targetSeason;
+  const undergrad = isUndergradDegree(profile?.degree);
+  const onTarget = (l: RankedListing): boolean =>
+    matchesSeason(l.title, targetSeason) &&
+    (!l.season || l.seasonInferred || matchesSeason(l.season, targetSeason)) &&
+    !(undergrad && requiresGradDegree(l.title));
+  const filtered = ranked.filter(onTarget);
+
+  return { listings: filtered, newCount: filtered.filter((l) => l.isNew).length };
 }

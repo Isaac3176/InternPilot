@@ -7,6 +7,10 @@
 import { fetchCompanyPostings, type AtsPosting } from "./ats";
 import { getWatchlist, type CompanyPriority } from "../ranking/companies";
 import { notify } from "../lib/notify";
+import { matchesSeason, requiresGradDegree, isUndergradDegree } from "../listings/relevance";
+
+// Re-export so callers (and tests) can reach the shared filters through live.ts.
+export { matchesSeason, requiresGradDegree, isUndergradDegree };
 
 export interface LiveOpening {
   company: string;
@@ -31,40 +35,6 @@ export function isInternRole(title: string): boolean {
 /** The user's filter for live openings — from their target season + degree level. */
 export interface OpeningFilter { targetSeason: string; undergrad: boolean }
 
-/**
- * Season/year match: if the title names year(s) and none is the target year, it's
- * a different cycle → drop it. Titles with no year are kept (ambiguous, don't
- * over-filter). A clearly-conflicting season word (target Summer, title Fall) also drops.
- */
-export function matchesSeason(title: string, targetSeason: string): boolean {
-  const t = title.toLowerCase();
-  const targetYear = targetSeason.match(/20\d\d/)?.[0];
-  const years = t.match(/20\d\d/g);
-  if (targetYear && years && years.length > 0 && !years.includes(targetYear)) return false;
-
-  const seasonWords = ["summer", "fall", "autumn", "winter", "spring"];
-  const targetWord = targetSeason.toLowerCase().match(/summer|fall|autumn|winter|spring/)?.[0];
-  if (targetWord) {
-    const mentionsTarget = new RegExp(`\\b${targetWord}\\b`).test(t);
-    const mentionsOther = seasonWords.some((s) => s !== targetWord && s !== "autumn" && new RegExp(`\\b${s}\\b`).test(t));
-    if (mentionsOther && !mentionsTarget) return false;
-  }
-  return true;
-}
-
-/** True if a title requires a graduate degree (PhD / Master's) an undergrad can't hold. */
-export function requiresGradDegree(title: string): boolean {
-  const t = ` ${title.toLowerCase()} `;
-  return /\bph\.?\s?d\b|\bphd\b|doctoral|post-?doc|graduate student|master'?s|\bmasters\b|\bm\.?eng\b|\bmba\b/.test(t);
-}
-
-/** Treat the user as an undergrad unless their profile degree clearly says grad. */
-export function isUndergradDegree(degree: string | null | undefined): boolean {
-  const d = (degree ?? "").toLowerCase();
-  if (!d) return true;
-  return !/ph\.?d|doctora|master|\bms\b|\bm\.?eng\b|\bmba\b|graduate/.test(d);
-}
-
 /** Full user-tailored filter: an intern SWE role, in the user's season, at their level. */
 export function isRelevantOpening(title: string, f: OpeningFilter): boolean {
   if (!isInternRole(title)) return false;
@@ -74,7 +44,9 @@ export function isRelevantOpening(title: string, f: OpeningFilter): boolean {
 }
 
 const SEEN_KEY = "internpilot.live.seen.v1";
-const CACHE_KEY = "internpilot.live.cache.v1";
+// v2: bumped when the tailored season/degree filter shipped, so stale unfiltered
+// cached openings from an older poll are discarded instead of shown.
+const CACHE_KEY = "internpilot.live.cache.v2";
 const CACHE_TTL = 30 * 60 * 1000; // serve cached openings for 30 min between polls
 
 function readSeen(): Set<string> {
