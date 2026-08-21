@@ -5,7 +5,12 @@ Notable changes to InternPilot. Format loosely follows
 
 ## [Unreleased]
 
-Work merged to `main` after the `v0.1.2` tag (rolls into the next release):
+_Nothing yet._
+
+## [0.1.3]
+
+The polish, coverage, and quality release (everything that landed after the `v0.1.2` tag, which
+was never published):
 
 - **Live ATS coverage** for **Workday** and **SmartRecruiters** (SmartRecruiters auto-discovered;
   Workday a curated, live-confirmed, desktop-first set). Fixed the intern-role filter to match
@@ -58,6 +63,7 @@ Initial public build.
   prep** + experience research, **referral CRM**, **Apply Assist**, the **autofill browser
   extension**, local auth + onboarding, and **cloud sync** (Supabase) with a web/phone PWA.
 
-[Unreleased]: https://github.com/Isaac3176/InternPilot/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Isaac3176/InternPilot/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/Isaac3176/InternPilot/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Isaac3176/InternPilot/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Isaac3176/InternPilot/releases/tag/v0.1.1
