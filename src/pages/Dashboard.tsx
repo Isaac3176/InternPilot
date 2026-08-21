@@ -469,7 +469,7 @@ function LiveNowWidget({ onSeeAll }: { onSeeAll: () => void }) {
     <div className="card live-now-card">
       <div className="card-head">
         <div><h2>Live now <span className="live-dot" aria-hidden /></h2>
-          <p className="sub">Real postings from your watchlist{newCount > 0 ? ` · ${newCount} new` : ""}</p></div>
+          <p className="sub">Real postings, tailored to your target season &amp; level{newCount > 0 ? ` · ${newCount} new` : ""}</p></div>
         <button type="button" className="btn small" onClick={onSeeAll}>See all on Radar</button>
       </div>
       <div className="live-now-list">

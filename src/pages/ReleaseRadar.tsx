@@ -203,7 +203,7 @@ function LiveOpenings() {
       <div className="radar-sec-head">
         <h2>Live now {items && items.length > 0 && <span className="live-dot" aria-hidden />}</h2>
         <span>
-          Real postings read from your watchlist's career pages{newCount > 0 ? ` · ${newCount} new` : ""}
+          Real postings, filtered to your target — <b>{getPrefs().targetSeason}</b> internships at your level{newCount > 0 ? ` · ${newCount} new` : ""}
           {polledAt ? ` · checked ${polledLabel(polledAt)}` : ""}
         </span>
         <button type="button" className="btn small" onClick={refresh} disabled={polling} style={{ marginLeft: "auto" }}>
