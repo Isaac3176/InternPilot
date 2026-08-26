@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { checkNewListingsAndNotify } from "./listings/notify";
 import { checkRadarAndNotify } from "./release/alerts";
 import { checkLiveAndNotify } from "./release/live";
@@ -24,6 +25,7 @@ let startupRan = false;
 
 export default function App() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const isPhone = useIsPhone();
   const [counts, setCounts] = useState<NavCounts>({});
   const [user, setUser] = useState({ initials: "··", name: "You", note: cloudMode() ? "Cloud · synced" : "Local · Beta" });
@@ -76,9 +78,11 @@ export default function App() {
         onSignOut={cloudMode() ? () => { cloudSignOut().catch(console.error); } : undefined}
       />
       <main className="main">
-        <Suspense fallback={<p className="hint" style={{ padding: "8px 2px" }}>Loading…</p>}>
-          <Outlet />
-        </Suspense>
+        <ErrorBoundary level="page" key={pathname}>
+          <Suspense fallback={<p className="hint" style={{ padding: "8px 2px" }}>Loading…</p>}>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </div>
   );

@@ -7,6 +7,7 @@ import { buildOverview, scheduleReview, type PatternReadiness, type TodayItem } 
 import { buildOAPlan, type OAPlan } from "../prep/plan";
 import { DIFFICULTIES, FAILURE_REASONS, PATTERNS, RESULTS, SOLUTION_QUALITIES, topicToPattern, type Difficulty, type FailureReason, type Pattern, type ProblemResult, type SolutionQuality } from "../prep/patterns";
 import OASimulation from "../components/OASimulation";
+import { reportError } from "../lib/report";
 
 type Tab = "today" | "progress" | "history";
 
@@ -18,9 +19,9 @@ export default function PrepEngine() {
   const [logging, setLogging] = useState(false);
   const [simming, setSimming] = useState(false);
 
-  const reload = () => { listCodingProblems().then(setProblems).catch(console.error); };
-  const reloadOas = () => { listOAAttempts().then(setOas).catch(() => {}); };
-  useEffect(() => { reload(); reloadOas(); listInterviews().then(setInterviews).catch(() => {}); }, []);
+  const reload = () => { listCodingProblems().then(setProblems).catch((e) => reportError("prep: load problems", e)); };
+  const reloadOas = () => { listOAAttempts().then(setOas).catch((e) => reportError("prep: load OA attempts", e)); };
+  useEffect(() => { reload(); reloadOas(); listInterviews().then(setInterviews).catch((e) => reportError("prep: load interviews", e)); }, []);
 
   const ov = useMemo(() => buildOverview(problems, oas), [problems, oas]);
   const plan = useMemo<OAPlan | null>(() => {

@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getResumeVersionPerformance, type ResumeVersionPerf } from "../db/metrics";
 import { listResumeVersions, listResumeBullets, saveResumeBullet } from "../db/resumes";
 import { listExperiences, createExperience } from "../db/experiences";
+import { reportError } from "../lib/report";
 import { getFeed } from "../listings/service";
 import { listApplications } from "../db/applications";
 import { getProfile } from "../db/profile";
@@ -100,10 +101,10 @@ function ResumesTab() {
   const [trackMap, setTrackMap] = useState(getTrackResumes());
 
   useEffect(() => {
-    getResumeVersionPerformance().then(setPerf).catch(() => setPerf([]));
-    listResumeBullets().then(setBullets).catch(() => {});
-    listResumeVersions().then(setVersions).catch(() => {});
-    computeCoverage().then(setCov).catch(() => setCov(null));
+    getResumeVersionPerformance().then(setPerf).catch((e) => { reportError("toolkit: résumé performance", e); setPerf([]); });
+    listResumeBullets().then(setBullets).catch((e) => reportError("toolkit: bullets", e));
+    listResumeVersions().then(setVersions).catch((e) => reportError("toolkit: résumé versions", e));
+    computeCoverage().then(setCov).catch((e) => { reportError("toolkit: coverage", e); setCov(null); });
     ensureSeededAnswers();
     setAnswers(getAnswers());
   }, []);

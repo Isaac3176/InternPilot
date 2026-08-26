@@ -26,6 +26,7 @@ import { computeDiagnostics } from "../diagnostics/recruiting";
 import { fastRejections, screeningItems, humanDuration } from "../diagnostics/questionAudit";
 import { getLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../release/live";
 import { openExternal } from "../lib/open";
+import { reportError } from "../lib/report";
 import CompanyLogo from "../components/CompanyLogo";
 import type { ApplicationRow, Status } from "../db/types";
 
@@ -448,7 +449,7 @@ function LiveNowWidget({ onSeeAll }: { onSeeAll: () => void }) {
   useEffect(() => {
     const cached = getCachedLiveOpenings();
     if (cached) setItems(cached.openings);
-    getLiveOpenings().then(setItems).catch(() => {});
+    getLiveOpenings().then(setItems).catch((e) => reportError("dashboard: live openings", e));
   }, []);
   if (items.length === 0) return null;
 
@@ -508,7 +509,7 @@ function DiagnosticsInsight({ onOpen }: { onOpen: () => void }) {
         const oa = d.funnel.find((s) => s.key === "oa");
         if (oa && oa.rate < 0.15) setInsight({ tone: "accent", title: "Low OA conversion", items: [`Only ${Math.round(oa.rate * 100)}% of your applications reach an OA — worth checking what's converting.`], cta: "See diagnostics" });
       }
-    }).catch(() => {});
+    }).catch((e) => reportError("dashboard: diagnostics insight", e));
   }, []);
   if (!insight) return null;
   return (
@@ -527,7 +528,7 @@ function PrepWidget({ onOpen }: { onOpen: () => void }) {
   useEffect(() => {
     Promise.all([listCodingProblems(), listOAAttempts()])
       .then(([p, o]) => setOv(buildOverview(p, o)))
-      .catch(() => {});
+      .catch((e) => reportError("dashboard: prep widget", e));
   }, []);
   if (!ov || ov.totalAttempts === 0) return null;
   return (

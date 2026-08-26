@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createOAAttempt, deleteOAAttempt, listOAAttempts, type OAAttempt, type OAQuestion } from "../db/oaAttempts";
 import { listApplications } from "../db/applications";
 import { analyzeOA } from "../prep/oaDiagnostics";
+import { reportError } from "../lib/report";
 import type { ApplicationRow } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
 
@@ -14,8 +15,8 @@ export default function OALab() {
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [showForm, setShowForm] = useState(false);
 
-  const load = () => listOAAttempts().then(setAttempts).catch(console.error);
-  useEffect(() => { load(); listApplications().then(setApps).catch(() => {}); }, []);
+  const load = () => listOAAttempts().then(setAttempts).catch((e) => reportError("oa lab: load attempts", e));
+  useEffect(() => { load(); listApplications().then(setApps).catch((e) => reportError("oa lab: load applications", e)); }, []);
 
   const diag = useMemo(() => analyzeOA(attempts), [attempts]);
 

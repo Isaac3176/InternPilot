@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listApplications, backfillDiagnostics, needsBackfill } from "../db/applications";
 import { getProfile } from "../db/profile";
+import { reportError } from "../lib/report";
 import { computeDiagnostics, MIN_SEGMENT, type Segment, type Bucket } from "../diagnostics/recruiting";
 import { fastRejections, screeningItems, humanDuration, type FastRejection, type AuditItem } from "../diagnostics/questionAudit";
 import type { ApplicationRow, Profile } from "../db/types";
@@ -11,10 +12,10 @@ export default function DiagnosticsPage() {
   const [apps, setApps] = useState<ApplicationRow[] | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [backfilling, setBackfilling] = useState(false);
-  const load = () => listApplications().then(setApps).catch(() => setApps([]));
+  const load = () => listApplications().then(setApps).catch((e) => { reportError("diagnostics: load applications", e); setApps([]); });
   useEffect(() => {
     load();
-    getProfile().then(setProfile).catch(() => {});
+    getProfile().then(setProfile).catch((e) => reportError("diagnostics: load profile", e));
   }, []);
 
   const d = useMemo(() => (apps ? computeDiagnostics(apps) : null), [apps]);

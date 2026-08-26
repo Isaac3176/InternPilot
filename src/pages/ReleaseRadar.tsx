@@ -12,6 +12,7 @@ import { listAllEmployment, type ContactEmployment } from "../db/contactHistory"
 import { getProfile } from "../db/profile";
 import { buildMission, PHASE_LABEL, getMissionState, setMissionState, type Mission } from "../release/missions";
 import { getLiveOpenings, detectLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../release/live";
+import { reportError } from "../lib/report";
 import PeopleFinder from "../components/PeopleFinder";
 import CompanyLogo from "../components/CompanyLogo";
 import type { ContactRow, Profile, ReferralRow } from "../db/types";
@@ -45,7 +46,7 @@ export default function ReleaseRadar() {
   function refreshNetwork() {
     Promise.all([listContacts(), listReferrals(), listAllEmployment(), getProfile()])
       .then(([c, r, e, p]) => { setContacts(c); setReferrals(r); setEmployment(e); setProfile(p); })
-      .catch(() => {});
+      .catch((e) => reportError("radar: load network", e));
   }
 
   function companyContactsFor(company: string): ContactRow[] {

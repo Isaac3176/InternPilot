@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import AuthGate from "./components/AuthGate";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./App.css";
 
 // Pages are code-split so the initial boot only loads what the first route needs.
@@ -69,8 +70,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <AuthGate>
-      <RouterProvider router={router} />
-    </AuthGate>
+    <ErrorBoundary level="app">
+      <AuthGate>
+        <RouterProvider router={router} />
+      </AuthGate>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
