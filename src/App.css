@@ -1182,6 +1182,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .dash tbody tr:hover td { background: var(--surface-2); }
 .dash td .co { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -.01em; }
 .dash td .co i { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 10px; font-weight: 600; flex: none; }
+.dash td .co .logo { width: 22px; height: 22px; border-radius: 6px; flex: none; font-size: 10px; }
 .dash .muted { color: var(--muted-2); }
 .dash .perf-rate { display: flex; align-items: center; gap: 9px; }
 .dash .perf-rate .track { flex: 1; min-width: 52px; max-width: 86px; }

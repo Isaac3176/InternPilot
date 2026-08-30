@@ -49,10 +49,6 @@ const PILL_LABEL: Record<Status, string> = {
   interview: "Interview", offer: "Offer", rejected: "Rejected",
 };
 
-const AVATAR_COLORS = [
-  "#1A1A1A", "#3E4C8C", "#33383D", "#4B4FD6", "#D6455E",
-  "#157F5F", "#B03D2A", "#6B4A2F", "#7A5AF8", "#12509E",
-];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -346,7 +342,7 @@ export default function Dashboard() {
                   return (
                     <tr key={a.id}>
                       <td>
-                        <span className="co"><i style={{ background: avatarColor(name) }}>{initial(name)}</i>{name}</span>
+                        <span className="co"><CompanyLogo company={name} />{name}</span>
                         <span style={{ display: "block", fontSize: 12, color: "var(--slate)", marginLeft: 31, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "26ch" }}>{a.role_title}</span>
                       </td>
                       <td><span className={`status ${a.status}`}><i />{PILL_LABEL[a.status]}</span></td>
@@ -405,15 +401,6 @@ function pipelineNote(c: StatusCounts): string {
   if (c.offer > 0) return "One offer in hand. Keep the funnel warm until you sign.";
   if (c.interview > 0) return "Interviews are the bottleneck to watch this month.";
   return "No interviews yet. Volume at the top usually fixes this before résumé edits do.";
-}
-
-function avatarColor(name: string): string {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
-function initial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
 }
 
 const NBA_ICON: Record<"apply" | "followup" | "prep" | "network", ReactNode> = {
