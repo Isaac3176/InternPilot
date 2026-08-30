@@ -24,9 +24,31 @@ export async function cloudSignIn(email: string, password: string): Promise<void
   const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
   if (error) throw error;
 }
+// Where the password-reset email should send the user back to. On web that's the
+// current origin (incl. localhost in dev); on desktop (tauri://…, which a browser
+// can't open) fall back to the hosted web app. This URL must also be allow-listed
+// in Supabase → Auth → URL Configuration → Redirect URLs.
+const WEB_APP_URL = "https://intern-pilot-seven.vercel.app";
+function resetRedirectTo(): string {
+  if (typeof window !== "undefined" && window.location.origin.startsWith("http")) return window.location.origin;
+  return WEB_APP_URL;
+}
+
 export async function cloudResetPassword(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: resetRedirectTo() });
   if (error) throw error;
+}
+
+/** Set a new password once the user is in a recovery session (from the email link). */
+export async function cloudUpdatePassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+}
+
+/** Fires when the user arrives via a password-reset link (Supabase PASSWORD_RECOVERY). */
+export function onPasswordRecovery(cb: () => void): () => void {
+  const { data } = supabase.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") cb(); });
+  return () => data.subscription.unsubscribe();
 }
 export async function cloudSignOut(): Promise<void> {
   await supabase.auth.signOut();
