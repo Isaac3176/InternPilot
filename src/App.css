@@ -488,6 +488,12 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
 }
+.auth-card .linklike { background: none; border: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; box-shadow: none; }
+.auth-card .linklike:hover { text-decoration: underline; }
+.auth-notice { background: var(--good-soft, #e4f3ee); border: 1px solid var(--good-line, #bfe3d5); color: var(--good, #157f5f); border-radius: 9px; padding: 9px 12px; font-size: 13px; margin: 0 0 14px; }
+.auth-row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
+.auth-row-between .remember-row { margin: 0; }
+.auth-switch { margin: 14px 0 0; font-size: 13px; color: var(--ink-2, #33445a); text-align: center; }
 .brand-lg {
   display: flex;
   align-items: center;

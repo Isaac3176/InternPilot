@@ -7,10 +7,13 @@
  *   none     — no historical data yet (capturing this cycle)
  */
 import { getFeed } from "../listings/service";
+import { getProfile } from "../db/profile";
 import { getWatchlist, type CompanyPriority } from "../ranking/companies";
 import { getPrefs } from "../ranking/prefs";
 import { forecastForCompany, normName, seasonYearOf, type ReleaseForecast } from "./history";
 import { recordOpen } from "./observed";
+import { isInternRole } from "./live";
+import { matchesSeason, requiresGradDegree, isUndergradDegree } from "../listings/relevance";
 
 export type RadarState = "open" | "signal" | "forecast" | "none";
 
@@ -51,8 +54,18 @@ function humanDate(ms: number): string {
 export async function getReleaseRadar(): Promise<RadarEntry[]> {
   const prefs = getPrefs();
   const year = seasonYear(prefs.targetSeason);
-  const feed = await getFeed();
+  const [feed, profile] = await Promise.all([getFeed(), getProfile()]);
+  const undergrad = isUndergradDegree(profile?.degree);
   const now = Date.now();
+
+  // A listing counts as the user's target only if it's an intern SWE role, in their
+  // season, at their level — so "already open" means *their* role is open, not just
+  // anything the company posted.
+  const isTargetRole = (l: { title: string; season?: string }): boolean =>
+    isInternRole(l.title) &&
+    matchesSeason(l.title, prefs.targetSeason) &&
+    (!l.season || matchesSeason(l.season, prefs.targetSeason)) &&
+    !(undergrad && requiresGradDegree(l.title));
 
   // Index live listings by normalized company for state detection.
   const feedByCo = new Map<string, { id: string; season?: string; title: string; url: string; location: string | null; datePosted?: number }[]>();
@@ -72,8 +85,9 @@ export async function getReleaseRadar(): Promise<RadarEntry[]> {
       const live = [...feedByCo.entries()]
         .filter(([k]) => k === key || (key.length >= 4 && (k.includes(key) || key.includes(k))))
         .flatMap(([, v]) => v);
-      const openMatch = live.find((l) => (l.season ?? "").toLowerCase() === prefs.targetSeason.toLowerCase());
-      const recent = live.find((l) => (l.datePosted ?? 0) * 1000 > now - 30 * DAY);
+      const targetLive = live.filter(isTargetRole);
+      const openMatch = targetLive[0]; // a target-role listing is live in the feed → open
+      const recent = targetLive.find((l) => (l.datePosted ?? 0) * 1000 > now - 30 * DAY);
       const posted = live.map((l) => l.datePosted ?? 0).filter((t) => t > 0);
       const actualFirst = posted.length ? Math.min(...posted) * 1000 : null; // ms
       // Self-learning: remember this cycle's actual earliest post for future forecasts.

@@ -416,7 +416,10 @@ export default function Settings() {
             </div>
             <div className="actions">
               <button type="button" disabled={cBusy || !cEmail || !cPass} onClick={() => cloudDo(() => cloudSignIn(cEmail, cPass), "Signed in ✓")}>Sign in</button>
-              <button type="button" className="secondary" disabled={cBusy || !cEmail || !cPass} onClick={() => cloudDo(() => cloudSignUp(cEmail, cPass), "Account created — you can sign in now.")}>Create account</button>
+              <button type="button" className="secondary" disabled={cBusy || !cEmail || !cPass} onClick={() => cloudDo(async () => {
+                const r = await cloudSignUp(cEmail, cPass);
+                if (r === "already_exists") throw new Error("That email already has an account — sign in instead.");
+              }, "Account created — confirm your email if prompted, then sign in.")}>Create account</button>
             </div>
           </>
         )}
