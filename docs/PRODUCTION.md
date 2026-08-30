@@ -10,6 +10,11 @@ is tagged **[code]** (in the app), **[ops]** (accounts / billing / config), or
       (SETUP.md tells you to turn it *off* for personal use — reverse that.)
 - [ ] **[ops] Enable auth abuse protection** — Supabase rate limiting + CAPTCHA on
       sign-up/sign-in; review the anon key is the only key shipped (it is).
+- [ ] **[ops] Configure custom SMTP for auth emails** (Auth → Emails → SMTP). The
+      built-in Supabase email sender is **rate-limited to a few messages/hour** and is
+      not for production — password-reset and confirmation emails will silently fail
+      to arrive at scale. Use Resend / SendGrid / SES (all have free tiers) and set a
+      verified sender domain. Also raise Auth → Rate Limits once SMTP is real.
 - [ ] **[ops] Upgrade Supabase off the free tier** and set **billing alerts** — every
       user's data lives in your project; free-tier limits (DB size, bandwidth,
       monthly active users) will be hit, and overages are on your card.
