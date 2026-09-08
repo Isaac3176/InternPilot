@@ -8,6 +8,7 @@ import { createResumeVersion } from "../db/resumes";
 import { getPrefs, savePrefs } from "../ranking/prefs";
 import OptionChips from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
+import { YES_NO } from "../db/types";
 
 const EMPLOYMENT_TYPES = [
   { value: "internship", label: "Internship" },
@@ -155,6 +156,9 @@ export default function SignupWizard({ onDone, skipAccount = false }: { onDone: 
               <label htmlFor="su-target-date">When do you want a job by?</label>
               <input id="su-target-date" type="date" value={h.s.target_date} onChange={(e) => h.set("target_date", e.target.value)} />
             </div>
+            {/* Work authorization up front — it drives eligibility on every posting. */}
+            {h.cards("authorized_us", "Are you authorized to work in the U.S.?", YES_NO.map((o) => ({ value: o, label: o })))}
+            {h.cards("requires_sponsorship", "Will you need visa sponsorship (now or in the future)?", YES_NO.map((o) => ({ value: o, label: o })))}
           </>
         )}
 

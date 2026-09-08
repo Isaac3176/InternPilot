@@ -33,8 +33,30 @@ describe("assessEligibility", () => {
     expect(assessEligibility(profile({ work_auth: "us_citizen" }), listing({})).level).toBe("eligible");
   });
 
-  it("marks a clearance-required role ineligible without recorded clearance", () => {
+  it("marks a clearance-required role ineligible only when the user said they have none", () => {
     const r = assessEligibility(profile({ work_auth: "us_citizen", security_clearance: "No" }), listing({}), "Active security clearance required.");
     expect(r.level).toBe("ineligible");
+  });
+
+  // --- answer-driven behavior (the fix) ---
+
+  it("uses the user's 'authorized' answer even without a work_auth enum value", () => {
+    const r = assessEligibility(profile({ authorized_us: "Yes", requires_sponsorship: "No" }), listing({}));
+    expect(r.level).toBe("eligible");
+  });
+
+  it("is unknown only when NO auth question was answered", () => {
+    expect(assessEligibility(profile({ authorized_us: "Yes" }), listing({})).level).not.toBe("unknown");
+    expect(assessEligibility(profile({}), listing({})).level).toBe("unknown");
+  });
+
+  it("softens a citizenship-required role to review (not ineligible) when citizenship is unstated but the user is authorized", () => {
+    const r = assessEligibility(profile({ authorized_us: "Yes", requires_sponsorship: "No" }), listing({ sponsorship: "U.S. citizenship required" }));
+    expect(r.level).toBe("review");
+  });
+
+  it("softens a clearance-required role to review when clearance is unstated", () => {
+    const r = assessEligibility(profile({ authorized_us: "Yes" }), listing({}), "Active security clearance required.");
+    expect(r.level).toBe("review");
   });
 });
