@@ -2104,6 +2104,17 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .live-now-title { display: block; font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-now-item .btn { flex: none; }
 
+/* Desktop-app promo / not-found landing */
+.promo { display: flex; justify-content: center; padding: 40px 20px; }
+.promo-card { max-width: 480px; text-align: center; background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 16px; padding: 30px 28px; box-shadow: var(--shadow-sm); }
+.promo-logo { display: flex; justify-content: center; margin-bottom: 10px; color: var(--accent); }
+.promo-card h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.promo-card p { margin: 0 0 20px; font-size: 13.5px; color: var(--slate); line-height: 1.55; }
+.promo-dl { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.promo-dl .btn { text-decoration: none; }
+.promo-all { display: inline-block; margin-top: 16px; font-size: 12.5px; color: var(--accent); text-decoration: none; font-weight: 600; }
+.promo-all:hover { text-decoration: underline; }
+
 /* Error boundary fallback */
 .errb { display: flex; align-items: center; justify-content: center; padding: 32px 20px; }
 .errb-full { position: fixed; inset: 0; background: var(--bg, #f6f7f9); z-index: 300; }
