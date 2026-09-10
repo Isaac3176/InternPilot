@@ -38,8 +38,46 @@ const authStorage = {
   },
 };
 
+class UnavailableRealtimeSocket {
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSING = 2;
+  readonly CLOSED = 3;
+  readonly url: string;
+  readonly protocol = "";
+  readyState = this.CLOSED;
+  binaryType?: string;
+  bufferedAmount = 0;
+  extensions = "";
+  onopen: ((this: unknown, ev: Event) => unknown) | null = null;
+  onmessage: ((this: unknown, ev: MessageEvent) => unknown) | null = null;
+  onclose: ((this: unknown, ev: CloseEvent) => unknown) | null = null;
+  onerror: ((this: unknown, ev: Event) => unknown) | null = null;
+
+  constructor(address: string | URL) {
+    this.url = String(address);
+  }
+
+  close(): void {
+    this.readyState = this.CLOSED;
+  }
+
+  send(): void {
+    throw new Error("Realtime WebSocket transport is unavailable in this runtime.");
+  }
+
+  addEventListener(): void {}
+  removeEventListener(): void {}
+}
+
+const realtimeOptions =
+  typeof globalThis.WebSocket === "undefined"
+    ? { transport: UnavailableRealtimeSocket }
+    : undefined;
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storage: authStorage },
+  realtime: realtimeOptions,
 });
 
 // Track the session synchronously so the data layer can route to cloud vs local
