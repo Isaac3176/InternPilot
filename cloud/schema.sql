@@ -259,6 +259,291 @@ create index if not exists idx_contacts_user       on contacts(user_id);
 create index if not exists idx_referrals_user      on referrals(user_id);
 
 -- ---------------------------------------------------------------------------
+-- Owned foreign keys: RLS hides other users' rows, but normal foreign keys only
+-- check that a referenced id exists. These triggers reject cross-account links
+-- so clients cannot attach their rows to another user's data or infer ids from
+-- FK success/failure behavior.
+-- ---------------------------------------------------------------------------
+create or replace function app_private_owned_row_exists(table_name text, row_id bigint)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare ok boolean;
+begin
+  if row_id is null then
+    return true;
+  end if;
+  if table_name not in (
+    'applications',
+    'companies',
+    'contacts',
+    'resume_versions'
+  ) then
+    raise exception 'unsupported owned reference table';
+  end if;
+
+  execute format('select exists(select 1 from %I where id = $1 and user_id = auth.uid())', table_name)
+    into ok
+    using row_id;
+  return coalesce(ok, false);
+end;
+$$;
+
+create or replace function app_private_assert_application_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('companies', new.company_id) then
+    raise exception 'company_id must reference one of your companies';
+  end if;
+  if not app_private_owned_row_exists('resume_versions', new.resume_version_id) then
+    raise exception 'resume_version_id must reference one of your resumes';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_application_answer_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_resume_bullet_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_interview_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_interview_experience_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('companies', new.company_id) then
+    raise exception 'company_id must reference one of your companies';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_email_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_task_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_contact_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('companies', new.company_id) then
+    raise exception 'company_id must reference one of your companies';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_referral_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('contacts', new.contact_id) then
+    raise exception 'contact_id must reference one of your contacts';
+  end if;
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  if not app_private_owned_row_exists('companies', new.company_id) then
+    raise exception 'company_id must reference one of your companies';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_contact_history_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('contacts', new.contact_id) then
+    raise exception 'contact_id must reference one of your contacts';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_profile_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('resume_versions', new.preferred_resume_id) then
+    raise exception 'preferred_resume_id must reference one of your resumes';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function app_private_assert_oa_attempt_refs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not app_private_owned_row_exists('applications', new.application_id) then
+    raise exception 'application_id must reference one of your applications';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_assert_application_refs on applications;
+create trigger trg_assert_application_refs
+before insert or update of company_id, resume_version_id on applications
+for each row execute function app_private_assert_application_refs();
+
+drop trigger if exists trg_assert_application_answer_refs on application_answers;
+create trigger trg_assert_application_answer_refs
+before insert or update of application_id on application_answers
+for each row execute function app_private_assert_application_answer_refs();
+
+drop trigger if exists trg_assert_resume_bullet_refs on resume_bullets;
+create trigger trg_assert_resume_bullet_refs
+before insert or update of application_id on resume_bullets
+for each row execute function app_private_assert_resume_bullet_refs();
+
+drop trigger if exists trg_assert_interview_refs on interviews;
+create trigger trg_assert_interview_refs
+before insert or update of application_id on interviews
+for each row execute function app_private_assert_interview_refs();
+
+drop trigger if exists trg_assert_interview_experience_refs on interview_experiences;
+create trigger trg_assert_interview_experience_refs
+before insert or update of company_id on interview_experiences
+for each row execute function app_private_assert_interview_experience_refs();
+
+drop trigger if exists trg_assert_email_refs on emails;
+create trigger trg_assert_email_refs
+before insert or update of application_id on emails
+for each row execute function app_private_assert_email_refs();
+
+drop trigger if exists trg_assert_task_refs on tasks;
+create trigger trg_assert_task_refs
+before insert or update of application_id on tasks
+for each row execute function app_private_assert_task_refs();
+
+drop trigger if exists trg_assert_contact_refs on contacts;
+create trigger trg_assert_contact_refs
+before insert or update of company_id on contacts
+for each row execute function app_private_assert_contact_refs();
+
+drop trigger if exists trg_assert_referral_refs on referrals;
+create trigger trg_assert_referral_refs
+before insert or update of contact_id, application_id, company_id on referrals
+for each row execute function app_private_assert_referral_refs();
+
+drop trigger if exists trg_assert_contact_history_refs on contact_employment_history;
+create trigger trg_assert_contact_history_refs
+before insert or update of contact_id on contact_employment_history
+for each row execute function app_private_assert_contact_history_refs();
+
+drop trigger if exists trg_assert_profile_refs on profiles;
+create trigger trg_assert_profile_refs
+before insert or update of preferred_resume_id on profiles
+for each row execute function app_private_assert_profile_refs();
+
+drop trigger if exists trg_assert_oa_attempt_refs on oa_attempts;
+create trigger trg_assert_oa_attempt_refs
+before insert or update of application_id on oa_attempts
+for each row execute function app_private_assert_oa_attempt_refs();
+
+revoke execute on function app_private_owned_row_exists(text, bigint) from public, anon, authenticated;
+revoke execute on function app_private_assert_application_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_application_answer_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_resume_bullet_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_interview_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_interview_experience_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_email_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_task_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_contact_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_referral_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_contact_history_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_profile_refs() from public, anon, authenticated;
+revoke execute on function app_private_assert_oa_attempt_refs() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row-Level Security: every table is owner-scoped to auth.uid().
 -- ---------------------------------------------------------------------------
 do $$
