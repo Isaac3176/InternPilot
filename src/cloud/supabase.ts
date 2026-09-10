@@ -39,7 +39,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 // Track the session synchronously so the data layer can route to cloud vs local
-// without an await on every call. When signed in, db modules use Supabase.
+// without an await on every call. Auth helpers also update this after every
+// explicit session read, so boot-time DB calls see the same session AuthGate saw.
 let currentUserId: string | null = null;
 supabase.auth.getSession().then(({ data }) => { currentUserId = data.session?.user?.id ?? null; });
 supabase.auth.onAuthStateChange((_e, s) => { currentUserId = s?.user?.id ?? null; });
@@ -50,4 +51,7 @@ export function cloudMode(): boolean {
 }
 export function cloudUserId(): string | null {
   return currentUserId;
+}
+export function setCloudSessionUserId(userId: string | null): void {
+  currentUserId = userId;
 }

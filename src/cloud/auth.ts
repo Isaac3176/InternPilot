@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "./supabase";
+import { setCloudSessionUserId, supabase } from "./supabase";
 
 export type SignUpResult = "created" | "confirm_email" | "already_exists";
 
@@ -52,13 +52,18 @@ export function onPasswordRecovery(cb: () => void): () => void {
 }
 export async function cloudSignOut(): Promise<void> {
   await supabase.auth.signOut();
+  setCloudSessionUserId(null);
 }
 export async function cloudSession(): Promise<Session | null> {
   const { data } = await supabase.auth.getSession();
+  setCloudSessionUserId(data.session?.user?.id ?? null);
   return data.session;
 }
 export function onCloudAuth(cb: (session: Session | null) => void): () => void {
-  const { data } = supabase.auth.onAuthStateChange((_e, session) => cb(session));
+  const { data } = supabase.auth.onAuthStateChange((_e, session) => {
+    setCloudSessionUserId(session?.user?.id ?? null);
+    cb(session);
+  });
   return () => data.subscription.unsubscribe();
 }
 
