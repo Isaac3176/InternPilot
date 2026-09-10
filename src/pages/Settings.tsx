@@ -36,8 +36,31 @@ import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learn
 import { getPhoneAccess } from "../mobile/sync";
 import { QRCodeSVG } from "qrcode.react";
 import { cloudSignIn, cloudSignUp, cloudSignOut, cloudSession, onCloudAuth, cloudTestConnection } from "../cloud/auth";
+import { supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
+import { isTauri } from "../lib/env";
+
+const APP_DATA_TABLES = [
+  "application_answers",
+  "oa_attempts",
+  "coding_problems",
+  "resume_bullets",
+  "emails",
+  "tasks",
+  "interviews",
+  "interview_experiences",
+  "contact_employment_history",
+  "referrals",
+  "contacts",
+  "applications",
+  "resume_versions",
+  "companies",
+  "profiles",
+  "user_settings",
+] as const;
+
+const LOCAL_DATA_TABLES = APP_DATA_TABLES.filter((t) => t !== "profiles" && t !== "user_settings");
 
 export default function Settings() {
   const [apiKey, setApiKeyState] = useState(getApiKey());
@@ -113,6 +136,7 @@ export default function Settings() {
   }
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
+  const [dataMsg, setDataMsg] = useState("");
 
   async function saveAndTestSources() {
     setSimplifyOn(simplifyOn);
@@ -149,7 +173,12 @@ export default function Settings() {
     return `${p.count} listing${p.count === 1 ? "" : "s"}`;
   }
 
-  function signOut() {
+  async function signOut() {
+    if (cloud) {
+      await cloudSignOut();
+      setCloud(null);
+      return;
+    }
     logout();
     window.location.reload();
   }
@@ -183,11 +212,19 @@ export default function Settings() {
   }
 
   async function exportData() {
-    const db = await getDb();
-    const tables = ["companies", "applications", "resume_versions", "resume_bullets", "tasks", "emails"];
+    setDataMsg("");
     const dump: Record<string, unknown[]> = {};
-    for (const t of tables) {
-      dump[t] = await db.select(`SELECT * FROM ${t}`);
+    if (cloud) {
+      for (const t of APP_DATA_TABLES) {
+        const { data, error } = await supabase.from(t).select("*");
+        throwIfSupabaseError(error);
+        dump[t] = data ?? [];
+      }
+    } else {
+      if (!isTauri()) throw new Error("Local export is only available in the desktop app.");
+      const db = await getDb();
+      for (const t of LOCAL_DATA_TABLES) dump[t] = await db.select(`SELECT * FROM ${t}`);
+      dump.profile = await db.select("SELECT * FROM profile");
     }
     const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -196,15 +233,26 @@ export default function Settings() {
     a.download = "internpilot-export.json";
     a.click();
     URL.revokeObjectURL(url);
+    setDataMsg("Export downloaded.");
   }
 
   async function deleteAll() {
-    if (!confirm("Delete ALL local data? This cannot be undone.")) return;
-    const db = await getDb();
-    for (const t of ["tasks", "resume_bullets", "emails", "interviews", "interview_experiences", "applications", "resume_versions", "companies"]) {
-      await db.execute(`DELETE FROM ${t}`);
+    setDataMsg("");
+    const scope = cloud ? "cloud app data for this account" : "local desktop app data";
+    if (!confirm(`Delete ALL ${scope}? This cannot be undone.`)) return;
+    if (cloud) {
+      const userId = cloud.user.id;
+      for (const t of APP_DATA_TABLES) {
+        const { error } = await supabase.from(t).delete().eq("user_id", userId);
+        throwIfSupabaseError(error);
+      }
+    } else {
+      if (!isTauri()) throw new Error("Local delete is only available in the desktop app.");
+      const db = await getDb();
+      for (const t of LOCAL_DATA_TABLES) await db.execute(`DELETE FROM ${t}`);
+      await db.execute("DELETE FROM profile");
     }
-    alert("All data deleted.");
+    setDataMsg("All app data deleted.");
   }
 
   return (
@@ -212,16 +260,18 @@ export default function Settings() {
       <div className="page-header">
         <div>
           <h1>Settings</h1>
-          <p>API keys, Gmail, AI model, and your local data.</p>
+          <p>Account, integrations, data controls, and application sources.</p>
         </div>
       </div>
 
       <div className="card">
         <h2>Account</h2>
         <p className="hint mb-md">
-          Signed in{accountEmail ? ` as ${accountEmail}` : ""}. Your login is local to this device.
+          {cloud
+            ? <>Signed in as <strong>{cloud.user.email}</strong>. Your tracker data syncs through your InternPilot cloud account.</>
+            : <>Using the desktop-only local account{accountEmail ? ` for ${accountEmail}` : ""}. Cloud sync is off.</>}
         </p>
-        <button type="button" className="secondary" onClick={signOut}>Log out</button>
+        <button type="button" className="secondary" onClick={() => signOut().catch((e) => setDataMsg(e instanceof Error ? e.message : String(e)))}>Log out</button>
       </div>
 
       <div className="card">
@@ -397,8 +447,8 @@ export default function Settings() {
       <div className="card">
         <h2>Cloud sync <span className="badge interested">beta</span></h2>
         <p className="hint mb-md">
-          Sign in to sync your data to the cloud so you can use InternPilot on your phone from any network.
-          Foundation step — data-layer sync and the hosted phone app come next.
+          Supabase keeps your tracker, profile, resumes, emails, referrals, interviews, diagnostics, and prep logs available across signed-in devices.
+          Some fast-apply preferences are still stored on this device.
         </p>
         {cloud ? (
           <>
@@ -512,11 +562,13 @@ export default function Settings() {
       <div className="card">
         <h2>Your data</h2>
         <p className="hint mb-md">
-          All application data is stored locally in SQLite. Nothing leaves your device except the text you send to
-          OpenAI, and the job-related emails fetched from Gmail with your permission.
+          {cloud
+            ? "Export or delete the app data stored in your cloud account. This does not delete your Supabase login."
+            : "Export or delete the app data stored in this desktop app's local SQLite database."}
         </p>
-        <button type="button" className="secondary" onClick={exportData}>Export data (JSON)</button>{" "}
-        <button type="button" className="danger" onClick={deleteAll}>Delete all data</button>
+        <button type="button" className="secondary" onClick={() => exportData().catch((e) => setDataMsg(e instanceof Error ? e.message : String(e)))}>Export data (JSON)</button>{" "}
+        <button type="button" className="danger" onClick={() => deleteAll().catch((e) => setDataMsg(e instanceof Error ? e.message : String(e)))}>Delete all data</button>
+        {dataMsg && <p className="hint" style={{ marginTop: 10 }}>{dataMsg}</p>}
       </div>
     </>
   );
