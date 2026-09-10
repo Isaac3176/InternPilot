@@ -13,7 +13,8 @@ already sets the build command, output dir, and SPA routing.
    ever rotate keys; the app already has your project URL + publishable key baked
    in as defaults:
    - `VITE_SUPABASE_URL` = `https://sdminkbpouqdjgqawdqc.supabase.co`
-   - `VITE_SUPABASE_KEY` = your `sb_publishable_…` key
+   - `VITE_SUPABASE_ANON_KEY` = your `sb_publishable_...` key
+   - `VITE_SUPABASE_KEY` is still accepted as a legacy fallback
 5. **Deploy.** You'll get a URL like `https://internpilot.vercel.app`.
 
 **Live deployment:** https://intern-pilot-seven.vercel.app

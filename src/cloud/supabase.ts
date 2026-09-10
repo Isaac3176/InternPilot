@@ -3,10 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Supabase client. The publishable (anon) key is designed to be shipped in the
  * client — Row-Level Security in cloud/schema.sql is what actually protects
- * data. Both values can be overridden via .env (VITE_SUPABASE_URL / _KEY).
+ * data. Values can be overridden via .env. Prefer VITE_SUPABASE_ANON_KEY;
+ * VITE_SUPABASE_KEY remains supported for existing deployments.
  */
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://sdminkbpouqdjgqawdqc.supabase.co";
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || "sb_publishable_MHwlEX21gJ019Fus0mB9JQ_8zvHGUTX";
+const SUPABASE_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+  || import.meta.env.VITE_SUPABASE_KEY
+  || "sb_publishable_MHwlEX21gJ019Fus0mB9JQ_8zvHGUTX";
 
 // "Remember this device": when on, the session lives in localStorage and
 // survives restarts (stay logged in). When off, it lives in sessionStorage and
