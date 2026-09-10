@@ -512,8 +512,34 @@ async function runAutofill() {
   }
 }
 
+// Read the currently-open email (Gmail first, then a generic fallback) so the app
+// can classify it and update the matching application.
+function scrapeEmail() {
+  const txt = (el) => (el && el.innerText ? el.innerText.trim() : "");
+  // Gmail: subject h2.hP, sender span[email], message bodies .a3s
+  const subjectEl = document.querySelector("h2.hP");
+  const senderEl = document.querySelector(".gD[email], span[email]");
+  const bodyEls = [...document.querySelectorAll(".a3s")];
+  if (subjectEl || bodyEls.length) {
+    return {
+      subject: txt(subjectEl) || document.title || "",
+      sender: senderEl ? (senderEl.getAttribute("email") || txt(senderEl)) : "",
+      body: bodyEls.map(txt).filter(Boolean).join("\n").slice(0, 8000),
+    };
+  }
+  // Fallback: a meaningful text selection, else the page's main text.
+  const sel = (window.getSelection && window.getSelection().toString().trim()) || "";
+  const body = (sel.length > 40 ? sel : (document.body ? document.body.innerText : "")).trim().slice(0, 8000);
+  return { subject: document.title || "", sender: "", body };
+}
+
 // Popup <-> page messages
 chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
+  if (msg.type === "scrapeEmail") {
+    try { sendResponse({ ok: true, email: scrapeEmail() }); }
+    catch (e) { sendResponse({ ok: false, error: e && e.message ? e.message : String(e) }); }
+    return true;
+  }
   if (msg.type === "autofill") {
     (async () => {
       try { sendResponse({ ok: true, ...(await autofillPage()) }); }

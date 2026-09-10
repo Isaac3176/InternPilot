@@ -142,4 +142,20 @@ $("log-applied").onclick = async () => {
 
 $("scan").onclick = runScan;
 
+$("read-email").onclick = async () => {
+  status("Reading this email…");
+  try {
+    const scraped = await sendTab({ type: "scrapeEmail" });
+    const email = scraped && scraped.email;
+    if (!scraped || !scraped.ok || !email || (!email.subject && !email.body)) {
+      status("No email found on this page.", "err");
+      return;
+    }
+    const r = await sendBg({ type: "recordEmail", payload: email });
+    status(r && r.ok ? "Sent to InternPilot ✓ — check the app" : "Error: " + (r && r.error ? r.error : "unknown"), r && r.ok ? "ok" : "err");
+  } catch {
+    status("Can't read this page.", "err");
+  }
+};
+
 init();

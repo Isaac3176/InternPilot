@@ -197,6 +197,16 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
                         respond(request, 200, "{\"ok\":true}");
                     }
                 }
+                (Method::Post, "/email") => {
+                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
+                        let mut body = String::new();
+                        let _ = request.as_reader().read_to_string(&mut body);
+                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
+                            let _ = app.emit("bridge://email", val);
+                        }
+                        respond(request, 200, "{\"ok\":true}");
+                    }
+                }
                 _ => respond(request, 404, "{\"error\":\"not found\"}"),
             }
         }

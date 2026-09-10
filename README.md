@@ -143,6 +143,10 @@ running** while you apply. Full guide: [docs/EXTENSION.md](docs/EXTENSION.md).
 everything — it never submits for you), then **Save to InternPilot** to record the job in
 your Applications list.
 
+**Read an email → tracker:** open a recruiter email (Gmail, etc.), click the extension →
+**Read this email**. It detects the company and whether it's an OA, interview, offer, or
+rejection, and updates that application's status automatically (with the desktop app running).
+
 ## Build from source
 
 Full prerequisites, commands, release process, and proxy/TLS notes are in

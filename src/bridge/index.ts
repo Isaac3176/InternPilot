@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getProfile } from "../db/profile";
-import { createApplication, listApplications } from "../db/applications";
+import { createApplication, listApplications, setApplicationStatus } from "../db/applications";
 import { getResumeVersion } from "../db/resumes";
+import { createEmail, setEmailClassification } from "../db/emails";
+import { classifyEmail } from "../ai/email";
 import { getReusableAnswers } from "../apply/answers";
-import { WORK_AUTH_LABELS, type WorkAuth } from "../db/types";
+import { CATEGORY_TO_STATUS, STATUS_LABELS, WORK_AUTH_LABELS, type WorkAuth } from "../db/types";
 import { notify } from "../lib/notify";
 
 const TOKEN_KEY = "internpilot.bridge.token";
@@ -88,12 +90,53 @@ export async function pushAnswersToBridge(): Promise<void> {
   }
 }
 
+/**
+ * Classify an email the extension read, match it to an application by company name,
+ * record it, and (when confident) advance that application's status. Powers the
+ * extension's "Read this email" action.
+ */
+async function processIncomingEmail(p: Record<string, string>): Promise<void> {
+  const email = { sender: p.sender || null, subject: p.subject || null, body: p.body || null };
+  if (!email.subject && !email.body) {
+    notify("Couldn't read the email", "No email content was found on this page.");
+    return;
+  }
+  const cls = await classifyEmail(email);
+  const apps = await listApplications();
+  const hay = `${email.sender ?? ""} ${email.subject ?? ""} ${email.body ?? ""}`.toLowerCase();
+  const matched = apps.find((a) => {
+    const n = (a.company_name ?? "").trim().toLowerCase();
+    return n.length >= 3 && hay.includes(n);
+  }) ?? null;
+
+  const id = await createEmail({
+    sender: email.sender, subject: email.subject, body: email.body,
+    received_at: new Date().toISOString(), application_id: matched?.id ?? null,
+  });
+  if (id) await setEmailClassification(id, cls.category, cls.confidence);
+
+  const suggested = CATEGORY_TO_STATUS[cls.category];
+  if (matched && suggested && cls.confidence >= 0.5) {
+    await setApplicationStatus(matched.id, suggested);
+    notify(`${matched.company_name ?? "Application"} → ${STATUS_LABELS[suggested]}`, `Read a ${cls.category} email and updated the application.`);
+  } else if (matched) {
+    notify(`Email saved · ${matched.company_name ?? ""}`, `Classified as ${cls.category}. Open Email inbox to apply the status.`);
+  } else {
+    notify("Email saved", `Classified as ${cls.category} — couldn't match a company. Link it in Email inbox.`);
+  }
+  window.dispatchEvent(new CustomEvent(APP_RECORDED_EVENT));
+}
+
 let listening = false;
 
-/** Listen for jobs the extension records, and insert them as applications. */
+/** Listen for jobs and emails the extension sends, and record them. */
 export async function startBridgeListener(onRecorded?: () => void): Promise<void> {
   if (listening) return;
   listening = true;
+  await listen<Record<string, string>>("bridge://email", async (event) => {
+    try { await processIncomingEmail(event.payload ?? {}); onRecorded?.(); }
+    catch (e) { console.error("process email failed", e); notify("Email read failed", "Couldn't process that email."); }
+  });
   await listen<Record<string, string>>("bridge://application", async (event) => {
     const p = event.payload ?? {};
     try {
