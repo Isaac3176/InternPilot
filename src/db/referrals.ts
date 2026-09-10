@@ -1,5 +1,5 @@
 import { getDb, validFk, blankToNull } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { ReferralRow, ReferralStatus, Status } from "./types";
 
 export interface ReferralInput {
@@ -42,8 +42,9 @@ function params(input: ReferralInput): unknown[] {
 
 export async function listReferrals(): Promise<ReferralRow[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("referrals")
+    const { data, error } = await supabase.from("referrals")
       .select("*, contacts(name, companies(name)), companies(name), applications(role_title)");
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const ct = row.contacts as { name?: string; companies?: { name?: string } } | null;
@@ -171,10 +172,12 @@ export async function getNetworkingStats(): Promise<NetworkingStats> {
   let apps: { id: number; status: Status }[];
 
   if (cloudMode()) {
-    const [{ data: r }, { data: a }] = await Promise.all([
+    const [{ data: r, error: rError }, { data: a, error: aError }] = await Promise.all([
       supabase.from("referrals").select("status, next_follow_up, application_id"),
       supabase.from("applications").select("id, status"),
     ]);
+    throwIfSupabaseError(rError);
+    throwIfSupabaseError(aError);
     refs = (r ?? []) as typeof refs;
     apps = (a ?? []) as typeof apps;
   } else {

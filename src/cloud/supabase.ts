@@ -55,3 +55,6 @@ export function cloudUserId(): string | null {
 export function setCloudSessionUserId(userId: string | null): void {
   currentUserId = userId;
 }
+export function throwIfSupabaseError(error: unknown): void {
+  if (error) throw error;
+}

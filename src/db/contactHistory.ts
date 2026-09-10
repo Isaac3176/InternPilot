@@ -1,5 +1,5 @@
 import { getDb, blankToNull } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 
 /** One role a contact has held — lets us preserve a person as they change jobs. */
 export interface ContactEmployment {
@@ -29,7 +29,8 @@ export interface EmploymentInput {
 /** Every employment row for the user (for building shared-employer paths). */
 export async function listAllEmployment(): Promise<ContactEmployment[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("contact_employment_history").select("*").order("is_current", { ascending: false }).order("id", { ascending: false });
+    const { data, error } = await supabase.from("contact_employment_history").select("*").order("is_current", { ascending: false }).order("id", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []) as ContactEmployment[];
   }
   const db = await getDb();
@@ -40,7 +41,8 @@ export async function listAllEmployment(): Promise<ContactEmployment[]> {
 
 export async function listEmployment(contactId: number): Promise<ContactEmployment[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("contact_employment_history").select("*").eq("contact_id", contactId).order("is_current", { ascending: false }).order("id", { ascending: false });
+    const { data, error } = await supabase.from("contact_employment_history").select("*").eq("contact_id", contactId).order("is_current", { ascending: false }).order("id", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []) as ContactEmployment[];
   }
   const db = await getDb();
@@ -53,10 +55,11 @@ export async function listEmployment(contactId: number): Promise<ContactEmployme
 export async function addEmployment(input: EmploymentInput): Promise<number | null> {
   const cur = input.is_current ? 1 : 0;
   if (cloudMode()) {
-    const { data } = await supabase.from("contact_employment_history").insert({
+    const { data, error } = await supabase.from("contact_employment_history").insert({
       contact_id: input.contact_id, company: input.company, title: input.title ?? null, team: input.team ?? null,
       start_date: blankToNull(input.start_date), end_date: blankToNull(input.end_date), is_current: cur, source: input.source ?? null,
     }).select("id").single();
+    throwIfSupabaseError(error);
     return (data?.id as number) ?? null;
   }
   const db = await getDb();
@@ -69,7 +72,11 @@ export async function addEmployment(input: EmploymentInput): Promise<number | nu
 }
 
 export async function deleteEmployment(id: number): Promise<void> {
-  if (cloudMode()) { await supabase.from("contact_employment_history").delete().eq("id", id); return; }
+  if (cloudMode()) {
+    const { error } = await supabase.from("contact_employment_history").delete().eq("id", id);
+    throwIfSupabaseError(error);
+    return;
+  }
   const db = await getDb();
   await db.execute("DELETE FROM contact_employment_history WHERE id = ?", [id]);
 }

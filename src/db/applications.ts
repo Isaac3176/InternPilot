@@ -1,6 +1,6 @@
 import { getDb } from "./index";
 import { upsertCompany } from "./companies";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Application, ApplicationRow, Status } from "./types";
 
 export interface ApplicationInput {
@@ -34,7 +34,8 @@ export async function listApplications(opts?: {
   if (cloudMode()) {
     let q = supabase.from("applications").select("*, companies(name), resume_versions(name)").order("date_saved", { ascending: false });
     if (opts?.status && opts.status !== "all") q = q.eq("status", opts.status);
-    const { data } = await q;
+    const { data, error } = await q;
+    throwIfSupabaseError(error);
     let rows = (data ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const company = row.companies as { name?: string } | null;
@@ -75,7 +76,8 @@ export async function listApplications(opts?: {
 
 export async function getApplication(id: number): Promise<Application | null> {
   if (cloudMode()) {
-    const { data } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
+    throwIfSupabaseError(error);
     return (data as Application) ?? null;
   }
   const db = await getDb();
@@ -86,7 +88,8 @@ export async function getApplication(id: number): Promise<Application | null> {
 async function validResumeId(id: number | null | undefined): Promise<number | null> {
   if (id == null) return null;
   if (cloudMode()) {
-    const { data } = await supabase.from("resume_versions").select("id").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("resume_versions").select("id").eq("id", id).maybeSingle();
+    throwIfSupabaseError(error);
     return data ? id : null;
   }
   const db = await getDb();
@@ -194,7 +197,8 @@ export async function backfillDiagnostics(): Promise<number> {
     ["interested", "applied", "oa", "interview", "offer"].includes(status) ? status : "applied";
 
   if (cloudMode()) {
-    const { data } = await supabase.from("applications").select("id, status, date_saved, date_applied, discovered_at, applied_at, furthest_stage");
+    const { data, error } = await supabase.from("applications").select("id, status, date_saved, date_applied, discovered_at, applied_at, furthest_stage");
+    throwIfSupabaseError(error);
     const rows = (data ?? []) as ApplicationRow[];
     let n = 0;
     for (const a of rows) {
@@ -204,7 +208,8 @@ export async function backfillDiagnostics(): Promise<number> {
       if (!a.furthest_stage) patch.furthest_stage = stageFor(a.status);
       if (Object.keys(patch).length) {
         const { error } = await supabase.from("applications").update(patch).eq("id", a.id);
-        if (!error) n++;
+        throwIfSupabaseError(error);
+        n++;
       }
     }
     return n;
@@ -230,7 +235,8 @@ export async function setApplicationStatus(id: number, status: Status): Promise<
   const patch: Record<string, unknown> = { status };
   let cur: { furthest_stage?: string | null; applied_at?: string | null } | null = null;
   if (cloudMode()) {
-    const { data } = await supabase.from("applications").select("furthest_stage, applied_at").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("applications").select("furthest_stage, applied_at").eq("id", id).maybeSingle();
+    throwIfSupabaseError(error);
     cur = (data as typeof cur) ?? null;
   } else {
     const rows = await (await getDb()).select<{ furthest_stage: string | null; applied_at: string | null }[]>(

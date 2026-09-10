@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { ResumeBullet, ResumeVersion } from "./types";
 
 export interface ResumeVersionInput {
@@ -11,7 +11,8 @@ export interface ResumeVersionInput {
 
 export async function listResumeVersions(): Promise<ResumeVersion[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("resume_versions").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("resume_versions").select("*").order("created_at", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []) as ResumeVersion[];
   }
   const db = await getDb();
@@ -20,7 +21,8 @@ export async function listResumeVersions(): Promise<ResumeVersion[]> {
 
 export async function getResumeVersion(id: number): Promise<ResumeVersion | null> {
   if (cloudMode()) {
-    const { data } = await supabase.from("resume_versions").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("resume_versions").select("*").eq("id", id).maybeSingle();
+    throwIfSupabaseError(error);
     return (data as ResumeVersion) ?? null;
   }
   const db = await getDb();
@@ -95,7 +97,8 @@ export async function saveResumeBullet(
 
 export async function listResumeBullets(): Promise<ResumeBullet[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("resume_bullets").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("resume_bullets").select("*").order("created_at", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []) as ResumeBullet[];
   }
   const db = await getDb();

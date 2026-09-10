@@ -1,5 +1,5 @@
 import { getDb, validFk, blankToNull } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { InterviewRow, InterviewType, PrepStatus } from "./types";
 
 export interface InterviewInput {
@@ -11,8 +11,9 @@ export interface InterviewInput {
 
 export async function listInterviews(): Promise<InterviewRow[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("interviews")
+    const { data, error } = await supabase.from("interviews")
       .select("*, applications(role_title, job_description, resume_version_id, companies(name))");
+    throwIfSupabaseError(error);
     const rows = (data ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const app = row.applications as { role_title?: string; job_description?: string; resume_version_id?: number; companies?: { name?: string } } | null;

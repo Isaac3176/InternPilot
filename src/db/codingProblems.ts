@@ -1,5 +1,5 @@
 import { getDb, blankToNull, numOrNull } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Difficulty, FailureReason, Pattern, ProblemResult, SolutionQuality } from "../prep/patterns";
 
 export interface CodingProblem {
@@ -67,7 +67,8 @@ function normalize(row: Record<string, unknown>): CodingProblem {
 
 export async function listCodingProblems(): Promise<CodingProblem[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("coding_problems").select("*").order("solved_at", { ascending: false });
+    const { data, error } = await supabase.from("coding_problems").select("*").order("solved_at", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => normalize(r as Record<string, unknown>));
   }
   const db = await getDb();

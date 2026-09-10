@@ -1,5 +1,5 @@
 import { getDb, blankToNull, numOrNull } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 
 /** One question within an OA debrief. */
 export interface OAQuestion {
@@ -65,7 +65,8 @@ function normalize(row: Record<string, unknown>): OAAttempt {
 
 export async function listOAAttempts(): Promise<OAAttempt[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("oa_attempts").select("*").order("taken_on", { ascending: false });
+    const { data, error } = await supabase.from("oa_attempts").select("*").order("taken_on", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => normalize(r as Record<string, unknown>));
   }
   const db = await getDb();

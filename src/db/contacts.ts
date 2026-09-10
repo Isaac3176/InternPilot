@@ -1,6 +1,6 @@
 import { getDb, numOrNull } from "./index";
 import { upsertCompany } from "./companies";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { ContactRow, RelationshipType } from "./types";
 
 export interface ContactInput {
@@ -19,7 +19,8 @@ export interface ContactInput {
 
 export async function listContacts(): Promise<ContactRow[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("contacts").select("*, companies(name)").order("name");
+    const { data, error } = await supabase.from("contacts").select("*, companies(name)").order("name");
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const company = row.companies as { name?: string } | null;

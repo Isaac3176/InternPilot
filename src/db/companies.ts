@@ -1,10 +1,11 @@
 import { getDb } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Company } from "./types";
 
 export async function listCompanies(): Promise<Company[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("companies").select("*").order("name");
+    const { data, error } = await supabase.from("companies").select("*").order("name");
+    throwIfSupabaseError(error);
     return (data ?? []) as Company[];
   }
   const db = await getDb();
@@ -17,6 +18,7 @@ export async function upsertCompany(name: string): Promise<number | null> {
   if (!trimmed) return null;
   if (cloudMode()) {
     const found = await supabase.from("companies").select("id").ilike("name", trimmed).limit(1);
+    throwIfSupabaseError(found.error);
     if (found.data && found.data.length > 0) return found.data[0].id as number;
     const ins = await supabase.from("companies").insert({ name: trimmed }).select("id").single();
     if (ins.error) throw ins.error;

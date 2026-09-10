@@ -1,6 +1,6 @@
 import { getDb } from "./index";
 import { upsertCompany } from "./companies";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Difficulty, ExperienceRow } from "./types";
 
 export interface ExperienceInput {
@@ -14,7 +14,8 @@ export interface ExperienceInput {
 
 export async function listExperiences(): Promise<ExperienceRow[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("interview_experiences").select("*, companies(name)");
+    const { data, error } = await supabase.from("interview_experiences").select("*, companies(name)");
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const company = row.companies as { name?: string } | null;

@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import { STATUSES, type Status } from "./types";
 
 export type StatusCounts = Record<Status, number> & { total: number };
@@ -8,7 +8,8 @@ export async function getStatusCounts(): Promise<StatusCounts> {
   const counts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>;
   let total = 0;
   if (cloudMode()) {
-    const { data } = await supabase.from("applications").select("status");
+    const { data, error } = await supabase.from("applications").select("status");
+    throwIfSupabaseError(error);
     for (const r of data ?? []) { const s = r.status as Status; if (s in counts) counts[s] += 1; total += 1; }
     return { ...counts, total };
   }
@@ -59,7 +60,8 @@ export interface ReferralStats {
 
 export async function getReferralStats(): Promise<ReferralStats> {
   if (cloudMode()) {
-    const { data } = await supabase.from("applications").select("referral");
+    const { data, error } = await supabase.from("applications").select("referral");
+    throwIfSupabaseError(error);
     let referred = 0; const total = (data ?? []).length;
     for (const r of data ?? []) if (r.referral && String(r.referral).trim()) referred += 1;
     return { referred, total, rate: total > 0 ? Math.round((referred / total) * 100) : 0 };
@@ -88,10 +90,12 @@ export interface ResumeVersionPerf {
 /** Per-resume-version funnel performance, to answer "which resume works best?". */
 export async function getResumeVersionPerformance(): Promise<ResumeVersionPerf[]> {
   if (cloudMode()) {
-    const [{ data: versions }, { data: apps }] = await Promise.all([
+    const [{ data: versions, error: versionsError }, { data: apps, error: appsError }] = await Promise.all([
       supabase.from("resume_versions").select("id, name"),
       supabase.from("applications").select("resume_version_id, status"),
     ]);
+    throwIfSupabaseError(versionsError);
+    throwIfSupabaseError(appsError);
     return (versions ?? []).map((v) => {
       const rel = (apps ?? []).filter((a) => a.resume_version_id === v.id);
       return {
@@ -148,11 +152,14 @@ export async function getConversionByOutreach(): Promise<OutreachBucket[]> {
   let contacts: { id: number; relationship_type: string | null }[];
 
   if (cloudMode()) {
-    const [{ data: a }, { data: r }, { data: c }] = await Promise.all([
+    const [{ data: a, error: aError }, { data: r, error: rError }, { data: c, error: cError }] = await Promise.all([
       supabase.from("applications").select("id, status, referral"),
       supabase.from("referrals").select("application_id, contact_id, status"),
       supabase.from("contacts").select("id, relationship_type"),
     ]);
+    throwIfSupabaseError(aError);
+    throwIfSupabaseError(rError);
+    throwIfSupabaseError(cError);
     apps = (a ?? []) as typeof apps;
     refs = (r ?? []) as typeof refs;
     contacts = (c ?? []) as typeof contacts;
@@ -212,7 +219,8 @@ function startOfWeek(d: Date): Date {
 export async function getWeeklyApplications(weeks = 8): Promise<WeekBucket[]> {
   let rows: { d: string }[];
   if (cloudMode()) {
-    const { data } = await supabase.from("applications").select("date_applied, date_saved");
+    const { data, error } = await supabase.from("applications").select("date_applied, date_saved");
+    throwIfSupabaseError(error);
     rows = (data ?? [])
       .map((r) => ({ d: (r.date_applied ?? r.date_saved) as string }))
       .filter((r) => !!r.d);

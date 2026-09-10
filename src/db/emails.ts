@@ -1,6 +1,6 @@
 import { getDb } from "./index";
 import { isTauri } from "../lib/env";
-import { cloudMode, supabase } from "../cloud/supabase";
+import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { EmailCategory, EmailRow } from "./types";
 
 export interface EmailInput {
@@ -14,11 +14,12 @@ export interface EmailInput {
 
 export async function listEmails(): Promise<EmailRow[]> {
   if (cloudMode()) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("emails")
       .select("*, applications(role_title, companies(name))")
       .order("received_at", { ascending: false, nullsFirst: false })
       .order("id", { ascending: false });
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const app = row.applications as { role_title?: string; companies?: { name?: string } | null } | null;
@@ -41,7 +42,7 @@ export async function createEmail(input: EmailInput): Promise<number | null> {
   if (cloudMode()) {
     // Empty strings are invalid for a Postgres timestamptz — coerce to null.
     const received = input.received_at && input.received_at.trim() ? input.received_at : null;
-    const { data } = await supabase.from("emails").insert({
+    const { data, error } = await supabase.from("emails").insert({
       sender: input.sender ?? null,
       subject: input.subject ?? null,
       body: input.body ?? null,
@@ -49,6 +50,7 @@ export async function createEmail(input: EmailInput): Promise<number | null> {
       application_id: input.application_id ?? null,
       gmail_id: input.gmail_id ?? null,
     }).select("id").single();
+    throwIfSupabaseError(error);
     return (data?.id as number) ?? null;
   }
   const db = await getDb();
@@ -69,7 +71,8 @@ export async function createEmail(input: EmailInput): Promise<number | null> {
 /** Gmail message ids already stored, used to avoid re-importing on sync. */
 export async function getExistingGmailIds(): Promise<string[]> {
   if (cloudMode()) {
-    const { data } = await supabase.from("emails").select("gmail_id").not("gmail_id", "is", null);
+    const { data, error } = await supabase.from("emails").select("gmail_id").not("gmail_id", "is", null);
+    throwIfSupabaseError(error);
     return (data ?? []).map((r) => r.gmail_id as string).filter(Boolean);
   }
   if (!isTauri()) return [];
@@ -86,7 +89,8 @@ export async function setEmailClassification(
   confidence: number,
 ): Promise<void> {
   if (cloudMode()) {
-    await supabase.from("emails").update({ classification, confidence }).eq("id", id);
+    const { error } = await supabase.from("emails").update({ classification, confidence }).eq("id", id);
+    throwIfSupabaseError(error);
     return;
   }
   const db = await getDb();
@@ -99,7 +103,8 @@ export async function setEmailClassification(
 
 export async function linkEmailApplication(id: number, applicationId: number | null): Promise<void> {
   if (cloudMode()) {
-    await supabase.from("emails").update({ application_id: applicationId }).eq("id", id);
+    const { error } = await supabase.from("emails").update({ application_id: applicationId }).eq("id", id);
+    throwIfSupabaseError(error);
     return;
   }
   const db = await getDb();
@@ -109,7 +114,8 @@ export async function linkEmailApplication(id: number, applicationId: number | n
 /** Total stored emails — cheap count for the sidebar "Replies" badge. */
 export async function countEmails(): Promise<number> {
   if (cloudMode()) {
-    const { count } = await supabase.from("emails").select("*", { count: "exact", head: true });
+    const { count, error } = await supabase.from("emails").select("*", { count: "exact", head: true });
+    throwIfSupabaseError(error);
     return count ?? 0;
   }
   if (!isTauri()) return 0;
@@ -120,7 +126,8 @@ export async function countEmails(): Promise<number> {
 
 export async function deleteEmail(id: number): Promise<void> {
   if (cloudMode()) {
-    await supabase.from("emails").delete().eq("id", id);
+    const { error } = await supabase.from("emails").delete().eq("id", id);
+    throwIfSupabaseError(error);
     return;
   }
   const db = await getDb();
