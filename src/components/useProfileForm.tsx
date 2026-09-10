@@ -5,6 +5,7 @@ import TagMultiSelect from "./TagMultiSelect";
 import OptionChips, { type ChipOption } from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
 import { SKILL_SUGGESTIONS } from "../data/skills";
+import { userErrorMessage } from "../lib/errors";
 import {
   DEGREE_OPTIONS,
   DISABILITY_OPTIONS,
@@ -47,6 +48,7 @@ export interface ProfileFormApi {
   resumes: ResumeVersion[];
   saving: boolean;
   savedMsg: boolean;
+  error: string;
   save: () => Promise<void>;
   text: (k: string, label: string, ph?: string) => ReactNode;
   choice: (k: string, label: string, opts: string[]) => ReactNode;
@@ -59,9 +61,10 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
   const [resumes, setResumes] = useState<ResumeVersion[]>([]);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    listResumeVersions().then(setResumes).catch(console.error);
+    listResumeVersions().then(setResumes).catch((e) => setError(userErrorMessage(e, "Couldn't load resume versions.")));
     getProfile()
       .then((p) => {
         if (!p) return;
@@ -73,7 +76,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
         if (!next.remote_pref) next.remote_pref = "any";
         setS(next);
       })
-      .catch(console.error);
+      .catch((e) => setError(userErrorMessage(e, "Couldn't load your profile.")));
   }, []);
 
   function set(k: string, v: string) {
@@ -82,6 +85,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
 
   async function save() {
     setSaving(true);
+    setError("");
     try {
       const str = (v: string) => (v.trim() ? v.trim() : null);
       const payload: ProfileInput = {
@@ -106,7 +110,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
       setTimeout(() => setSavedMsg(false), 1600);
       onSaved?.();
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      setError(userErrorMessage(e, "Couldn't save your profile."));
     } finally {
       setSaving(false);
     }
@@ -146,7 +150,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
     </div>
   );
 
-  return { s, set, resumes, saving, savedMsg, save, text, choice, cards, tags };
+  return { s, set, resumes, saving, savedMsg, error, save, text, choice, cards, tags };
 }
 
 /** Profile questionnaire sections, reused by the Profile page and the signup wizard. */

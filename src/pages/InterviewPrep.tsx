@@ -16,19 +16,24 @@ import {
 import { generatePrepPlan, type PrepPlan } from "../ai/prep";
 import { hasApiKey } from "../ai/settings";
 import InterviewModal from "../components/InterviewModal";
+import { userErrorMessage } from "../lib/errors";
 
 export default function InterviewPrep() {
   const [rows, setRows] = useState<InterviewRow[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [message, setMessage] = useState("");
 
   function load() {
-    listInterviews().then(setRows).catch(console.error);
+    listInterviews()
+      .then((next) => { setRows(next); setMessage(""); })
+      .catch((e) => setMessage(userErrorMessage(e, "Couldn't load interview events.")));
   }
   useEffect(load, []);
 
   async function generate(row: InterviewRow) {
     setGeneratingId(row.id);
+    setMessage("");
     try {
       const resume = row.resume_version_id ? await getResumeVersion(row.resume_version_id) : null;
       const plan = await generatePrepPlan({
@@ -43,21 +48,31 @@ export default function InterviewPrep() {
       if (row.prep_status === "not_started") await setPrepStatus(row.id, "in_progress");
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      setMessage(userErrorMessage(e, "Couldn't generate this prep plan."));
     } finally {
       setGeneratingId(null);
     }
   }
 
   async function changeStatus(id: number, status: PrepStatus) {
-    await setPrepStatus(id, status);
-    load();
+    setMessage("");
+    try {
+      await setPrepStatus(id, status);
+      load();
+    } catch (e) {
+      setMessage(userErrorMessage(e, "Couldn't update prep status."));
+    }
   }
 
   async function remove(id: number) {
     if (!confirm("Delete this event?")) return;
-    await deleteInterview(id);
-    load();
+    setMessage("");
+    try {
+      await deleteInterview(id);
+      load();
+    } catch (e) {
+      setMessage(userErrorMessage(e, "Couldn't delete this event."));
+    }
   }
 
   return (
@@ -73,6 +88,8 @@ export default function InterviewPrep() {
       {!hasApiKey() && (
         <p className="hint">No OpenAI key set — generated plans use an offline template. Add a key in Settings for tailored plans.</p>
       )}
+
+      {message && <p className="hint text-red">{message}</p>}
 
       {rows.length === 0 ? (
         <div className="empty">No events yet. Add an OA or interview to generate a prep plan.</div>

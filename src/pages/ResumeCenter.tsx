@@ -11,6 +11,7 @@ import { matchResume } from "../ai";
 import type { ResumeMatchResult } from "../ai/types";
 import { hasApiKey } from "../ai/settings";
 import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
+import { userErrorMessage } from "../lib/errors";
 
 const emptyForm = { name: "", targetRole: "", content: "" };
 
@@ -20,15 +21,19 @@ export default function ResumeCenter() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [versionMsg, setVersionMsg] = useState("");
 
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jobDescription, setJobDescription] = useState("");
   const [result, setResult] = useState<ResumeMatchResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [bulletMsg, setBulletMsg] = useState("");
 
   function load() {
-    listResumeVersions().then(setVersions).catch(console.error);
+    listResumeVersions()
+      .then((rows) => { setVersions(rows); setVersionMsg(""); })
+      .catch((e) => setVersionMsg(userErrorMessage(e, "Couldn't load resume versions.")));
   }
   useEffect(load, []);
 
@@ -65,18 +70,28 @@ export default function ResumeCenter() {
   async function saveVersion() {
     if (!form.name.trim()) return;
     const payload = { name: form.name, target_role: form.targetRole, content: form.content };
-    if (editingId) await updateResumeVersion(editingId, payload);
-    else await createResumeVersion(payload);
-    resetForm();
-    load();
+    setVersionMsg("");
+    try {
+      if (editingId) await updateResumeVersion(editingId, payload);
+      else await createResumeVersion(payload);
+      resetForm();
+      load();
+    } catch (e) {
+      setVersionMsg(userErrorMessage(e, "Couldn't save this resume version."));
+    }
   }
 
   async function removeVersion(id: number) {
     if (!confirm("Delete this resume version?")) return;
-    await deleteResumeVersion(id);
-    if (selectedId === id) setSelectedId("");
-    if (editingId === id) resetForm();
-    load();
+    setVersionMsg("");
+    try {
+      await deleteResumeVersion(id);
+      if (selectedId === id) setSelectedId("");
+      if (editingId === id) resetForm();
+      load();
+    } catch (e) {
+      setVersionMsg(userErrorMessage(e, "Couldn't delete this resume version."));
+    }
   }
 
   async function runMatch() {
@@ -84,6 +99,7 @@ export default function ResumeCenter() {
     if (!resume?.content?.trim() || !jobDescription.trim()) return;
     setRunning(true);
     setError("");
+    setBulletMsg("");
     setResult(null);
     try {
       const r = await matchResume({
@@ -93,21 +109,27 @@ export default function ResumeCenter() {
       });
       setResult(r);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(userErrorMessage(e, "Couldn't analyze this resume."));
     } finally {
       setRunning(false);
     }
   }
 
   async function saveBullet(before: string, after: string) {
-    await saveResumeBullet({
-      experience_name: null,
-      original_text: before,
-      improved_text: after,
-      tags: result?.source ?? null,
-      application_id: null,
-    });
-    alert("Saved to your bullet library.");
+    setError("");
+    setBulletMsg("");
+    try {
+      await saveResumeBullet({
+        experience_name: null,
+        original_text: before,
+        improved_text: after,
+        tags: result?.source ?? null,
+        application_id: null,
+      });
+      setBulletMsg("Saved to your bullet library.");
+    } catch (e) {
+      setError(userErrorMessage(e, "Couldn't save this bullet."));
+    }
   }
 
   const selected = versions.find((v) => v.id === selectedId);
@@ -158,6 +180,7 @@ export default function ResumeCenter() {
             <button type="button" className="secondary" onClick={resetForm}>Cancel</button>
           )}
         </div>
+        {versionMsg && <p className="hint text-red">{versionMsg}</p>}
       </div>
 
       <div className="card">
@@ -216,6 +239,7 @@ export default function ResumeCenter() {
         </button>
 
         {error && <p className="hint text-red">{error}</p>}
+        {bulletMsg && <p className="hint">{bulletMsg}</p>}
 
         {result && (
           <div className="mt-lg">

@@ -19,6 +19,7 @@ import { classifyEmail } from "../ai/email";
 import { hasApiKey } from "../ai/settings";
 import { isConnected } from "../gmail/config";
 import { syncGmail } from "../gmail/sync";
+import { userErrorMessage } from "../lib/errors";
 
 const CATEGORY_BADGE: Record<EmailCategory, string> = {
   confirmation: "applied",
@@ -38,74 +39,108 @@ export default function Emails() {
   const [form, setForm] = useState(emptyForm);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"info" | "error">("info");
   const gmailConnected = isConnected();
+
+  function showInfo(text: string) {
+    setMessageKind("info");
+    setMessage(text);
+  }
+
+  function showError(error: unknown, fallback: string) {
+    setMessageKind("error");
+    setMessage(userErrorMessage(error, fallback));
+  }
 
   async function sync() {
     setSyncing(true);
+    setMessage("");
     try {
       const result = await syncGmail();
-      alert(`Synced Gmail: ${result.added} new email(s), ${result.classified} classified.`);
+      showInfo(`Synced Gmail: ${result.added} new email(s), ${result.classified} classified.`);
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      showError(e, "Couldn't sync Gmail.");
     } finally {
       setSyncing(false);
     }
   }
 
   function load() {
-    listEmails().then(setRows).catch(console.error);
-    listApplications().then(setApps).catch(console.error);
+    listEmails().then(setRows).catch((e) => showError(e, "Couldn't load emails."));
+    listApplications().then(setApps).catch((e) => showError(e, "Couldn't load applications."));
   }
   useEffect(load, []);
 
   async function addAndClassify() {
     if (!form.subject.trim() && !form.body.trim()) return;
-    const id = await createEmail({
-      sender: form.sender || null,
-      subject: form.subject || null,
-      body: form.body || null,
-      received_at: form.received_at || null,
-    });
-    if (id) {
-      const result = await classifyEmail(form);
-      await setEmailClassification(id, result.category, result.confidence);
+    setMessage("");
+    try {
+      const id = await createEmail({
+        sender: form.sender || null,
+        subject: form.subject || null,
+        body: form.body || null,
+        received_at: form.received_at || null,
+      });
+      if (id) {
+        const result = await classifyEmail(form);
+        await setEmailClassification(id, result.category, result.confidence);
+      }
+      setForm(emptyForm);
+      load();
+    } catch (e) {
+      showError(e, "Couldn't add this email.");
     }
-    setForm(emptyForm);
-    load();
   }
 
   async function reclassify(row: EmailRow) {
     setBusyId(row.id);
+    setMessage("");
     try {
       const result = await classifyEmail(row);
       await setEmailClassification(row.id, result.category, result.confidence);
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      showError(e, "Couldn't classify this email.");
     } finally {
       setBusyId(null);
     }
   }
 
   async function link(row: EmailRow, applicationId: number | null) {
-    await linkEmailApplication(row.id, applicationId);
-    load();
+    setMessage("");
+    try {
+      await linkEmailApplication(row.id, applicationId);
+      load();
+    } catch (e) {
+      showError(e, "Couldn't link this email.");
+    }
   }
 
   async function applyStatus(row: EmailRow) {
     const suggested = row.classification ? CATEGORY_TO_STATUS[row.classification] : null;
     if (!row.application_id || !suggested) return;
     if (!confirm(`Mark this application as "${STATUS_LABELS[suggested]}"?`)) return;
-    await setApplicationStatus(row.application_id, suggested);
-    alert("Application status updated.");
-    load();
+    setMessage("");
+    try {
+      await setApplicationStatus(row.application_id, suggested);
+      showInfo("Application status updated.");
+      load();
+    } catch (e) {
+      showError(e, "Couldn't update application status.");
+    }
   }
 
   async function remove(id: number) {
     if (!confirm("Delete this email?")) return;
-    await deleteEmail(id);
-    load();
+    setMessage("");
+    try {
+      await deleteEmail(id);
+      load();
+    } catch (e) {
+      showError(e, "Couldn't delete this email.");
+    }
   }
 
   return (
@@ -121,6 +156,7 @@ export default function Emails() {
           </button>
         )}
       </div>
+      {message && <p className={`hint ${messageKind === "error" ? "text-red" : ""}`}>{message}</p>}
 
       <div className="card">
         <h2>Add an email</h2>

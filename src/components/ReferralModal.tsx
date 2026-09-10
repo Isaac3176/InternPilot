@@ -10,6 +10,7 @@ import {
   type ReferralRow,
   type ReferralStatus,
 } from "../db/types";
+import { userErrorMessage } from "../lib/errors";
 
 interface Props {
   initial?: ReferralRow | null;
@@ -48,10 +49,11 @@ export default function ReferralModal({ initial, onClose, onSaved }: Props) {
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    listContacts().then(setContacts).catch(console.error);
-    listApplications().then(setApps).catch(console.error);
+    listContacts().then(setContacts).catch((e) => setError(userErrorMessage(e, "Couldn't load contacts.")));
+    listApplications().then(setApps).catch((e) => setError(userErrorMessage(e, "Couldn't load applications.")));
   }, []);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function ReferralModal({ initial, onClose, onSaved }: Props) {
 
   async function save() {
     setSaving(true);
+    setError("");
     try {
       const app = apps.find((a) => a.id === form.application_id);
       const contact = contacts.find((c) => c.id === form.contact_id);
@@ -98,7 +101,7 @@ export default function ReferralModal({ initial, onClose, onSaved }: Props) {
       else await createReferral(payload);
       onSaved();
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      setError(userErrorMessage(e, "Couldn't save this referral."));
     } finally {
       setSaving(false);
     }
@@ -171,6 +174,7 @@ export default function ReferralModal({ initial, onClose, onSaved }: Props) {
           <button type="button" className="secondary" onClick={onClose}>Cancel</button>
           <button type="button" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
         </div>
+        {error && <p className="hint text-red">{error}</p>}
       </div>
     </div>
   );

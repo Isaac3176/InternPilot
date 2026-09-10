@@ -6,6 +6,7 @@ import {
   type ContactRow,
   type RelationshipType,
 } from "../db/types";
+import { userErrorMessage } from "../lib/errors";
 
 interface Props {
   initial?: ContactRow | null;
@@ -30,6 +31,7 @@ const empty: ContactInput = {
 export default function ContactModal({ initial, onClose, onSaved }: Props) {
   const [form, setForm] = useState<ContactInput>(empty);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (initial) {
@@ -56,12 +58,13 @@ export default function ContactModal({ initial, onClose, onSaved }: Props) {
   async function save() {
     if (!form.name.trim()) return;
     setSaving(true);
+    setError("");
     try {
       if (initial) await updateContact(initial.id, form);
       else await createContact(form);
       onSaved();
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      setError(userErrorMessage(e, "Couldn't save this contact."));
     } finally {
       setSaving(false);
     }
@@ -137,6 +140,7 @@ export default function ContactModal({ initial, onClose, onSaved }: Props) {
           <button type="button" className="secondary" onClick={onClose}>Cancel</button>
           <button type="button" onClick={save} disabled={saving || !form.name.trim()}>{saving ? "Saving…" : "Save"}</button>
         </div>
+        {error && <p className="hint text-red">{error}</p>}
       </div>
     </div>
   );

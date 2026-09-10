@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createInterview } from "../db/interviews";
 import { listApplications } from "../db/applications";
 import { INTERVIEW_TYPES, INTERVIEW_TYPE_LABELS, type ApplicationRow, type InterviewType } from "../db/types";
+import { userErrorMessage } from "../lib/errors";
 
 interface Props {
   onClose: () => void;
@@ -15,13 +16,15 @@ export default function InterviewModal({ onClose, onSaved }: Props) {
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    listApplications().then(setApps).catch(console.error);
+    listApplications().then(setApps).catch((e) => setError(userErrorMessage(e, "Couldn't load applications.")));
   }, []);
 
   async function save() {
     setSaving(true);
+    setError("");
     try {
       await createInterview({
         application_id: applicationId === "" ? null : applicationId,
@@ -31,8 +34,7 @@ export default function InterviewModal({ onClose, onSaved }: Props) {
       });
       onSaved();
     } catch (e) {
-      console.error(e);
-      alert("Failed to save event.");
+      setError(userErrorMessage(e, "Couldn't save this event."));
     } finally {
       setSaving(false);
     }
@@ -79,6 +81,7 @@ export default function InterviewModal({ onClose, onSaved }: Props) {
           <button type="button" className="secondary" onClick={onClose}>Cancel</button>
           <button type="button" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
         </div>
+        {error && <p className="hint text-red">{error}</p>}
       </div>
     </div>
   );

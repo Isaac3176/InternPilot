@@ -19,6 +19,7 @@ export default function ProfileForm({ submitLabel = "Save profile", onSaved }: P
       <button type="button" onClick={h.save} disabled={h.saving}>
         {h.saving ? "Saving…" : h.savedMsg ? "Saved ✓" : submitLabel}
       </button>
+      {h.error && <p className="hint text-red">{h.error}</p>}
     </>
   );
 }

@@ -6,6 +6,7 @@ import {
 } from "../db/applications";
 import { listResumeVersions } from "../db/resumes";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type ResumeVersion, type Status } from "../db/types";
+import { userErrorMessage } from "../lib/errors";
 
 interface Props {
   initial?: ApplicationRow | null;
@@ -30,9 +31,10 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
   const [form, setForm] = useState<ApplicationInput>(empty);
   const [resumes, setResumes] = useState<ResumeVersion[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    listResumeVersions().then(setResumes).catch(console.error);
+    listResumeVersions().then(setResumes).catch((e) => setError(userErrorMessage(e, "Couldn't load resume versions.")));
   }, []);
 
   useEffect(() => {
@@ -59,13 +61,13 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
   async function handleSave() {
     if (!form.role_title.trim()) return;
     setSaving(true);
+    setError("");
     try {
       if (initial) await updateApplication(initial.id, form);
       else await createApplication(form);
       onSaved();
     } catch (e) {
-      console.error(e);
-      alert("Failed to save application. See console for details.");
+      setError(userErrorMessage(e, "Couldn't save this application."));
     } finally {
       setSaving(false);
     }
@@ -148,6 +150,7 @@ export default function ApplicationModal({ initial, onClose, onSaved }: Props) {
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
+        {error && <p className="hint text-red">{error}</p>}
       </div>
     </div>
   );

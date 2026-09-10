@@ -7,6 +7,7 @@ import { APP_RECORDED_EVENT } from "../bridge";
 import ApplicationModal from "../components/ApplicationModal";
 import MilestoneCelebration, { isMilestone, type Kind, type Terminal } from "../components/MilestoneCelebration";
 import CompanyLogo from "../components/CompanyLogo";
+import { userErrorMessage } from "../lib/errors";
 
 const JOURNEY_LABELS = ["Saved", "Applied", "OA", "Interview", "Offer"];
 const journeyIndex = (s: Status): number =>
@@ -68,16 +69,20 @@ export default function Applications() {
   const [editing, setEditing] = useState<ApplicationRow | null>(null);
   const [openPop, setOpenPop] = useState<number | null>(null);
   const [celebrate, setCelebrate] = useState<Celebrate | null>(null);
+  const [error, setError] = useState("");
   const ghostShownRef = useRef(false);
 
-  const load = useCallback(() => {
-    listApplications({ search, status: "all" }).then(setAll).catch(console.error);
+  const load = useCallback((clearMessage = true) => {
+    listApplications({ search, status: "all" })
+      .then((rows) => { setAll(rows); if (clearMessage) setError(""); })
+      .catch((e) => setError(userErrorMessage(e, "Couldn't load applications.")));
   }, [search]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    window.addEventListener(APP_RECORDED_EVENT, load);
-    return () => window.removeEventListener(APP_RECORDED_EVENT, load);
+    const onRecorded = () => load();
+    window.addEventListener(APP_RECORDED_EVENT, onRecorded);
+    return () => window.removeEventListener(APP_RECORDED_EVENT, onRecorded);
   }, [load]);
 
   // Close the status popover on any outside click.
@@ -135,8 +140,13 @@ export default function Applications() {
 
   async function handleDelete(row: ApplicationRow) {
     if (!confirm(`Delete the ${row.role_title} application?`)) return;
-    await deleteApplication(row.id);
-    load();
+    setError("");
+    try {
+      await deleteApplication(row.id);
+      load();
+    } catch (e) {
+      setError(userErrorMessage(e, "Couldn't delete this application."));
+    }
   }
 
   async function changeStatus(row: ApplicationRow, next: Status) {
@@ -150,7 +160,10 @@ export default function Applications() {
         const terminal: Terminal = next === "rejected" ? "rejected" : null;
         setCelebrate({ kind: next, row: { ...row, status: next }, reach, terminal });
       }
-    } catch (e) { console.error(e); load(); }
+    } catch (e) {
+      setError(userErrorMessage(e, "Couldn't update application status."));
+      load(false);
+    }
   }
   function advance(row: ApplicationRow) { const n = NEXT[row.status]; if (n) changeStatus(row, n); }
 
@@ -217,8 +230,9 @@ export default function Applications() {
     if (!celebrate) return;
     const row = celebrate.row;
     closeGhost(row);
-    try { await setApplicationStatus(row.id, "rejected"); } catch (e) { console.error(e); }
-    setCelebrate(null); load();
+    try { await setApplicationStatus(row.id, "rejected"); }
+    catch (e) { setError(userErrorMessage(e, "Couldn't close this application.")); }
+    setCelebrate(null); load(false);
   }
 
   const chips: (Status | "all")[] = ["all", ...STATUSES];
@@ -254,6 +268,7 @@ export default function Applications() {
           );
         })}
       </div>
+      {error && <p className="hint text-red">{error}</p>}
 
       {view.length === 0 ? (
         <div className="empty">No applications match. Add one to get started.</div>
