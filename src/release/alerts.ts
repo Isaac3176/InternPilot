@@ -7,6 +7,7 @@
 import { getReleaseRadar, type RadarEntry } from "./radar";
 import { notify } from "../lib/notify";
 import { getPrefs } from "../ranking/prefs";
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 /** Top-tier watchlist companies where it's time to START reaching out (before they open). */
 export async function getOpeningSoon(): Promise<RadarEntry[]> {
@@ -38,5 +39,5 @@ export async function checkRadarAndNotify(): Promise<void> {
   await notify(`Time to reach out — ${top.company}`, `${top.company} — start reaching out now (${opensIn}).${extra} Line up contacts before the rush.`);
 
   fresh.forEach((e) => seen.add(e.company));
-  try { localStorage.setItem(key, JSON.stringify([...seen])); } catch { /* ignore */ }
+  try { localStorage.setItem(key, JSON.stringify([...seen])); mirrorLocalSetting(key); } catch { /* ignore */ }
 }

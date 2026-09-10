@@ -4,6 +4,8 @@
  * preference learning is a later phase — this is the manual layer.)
  */
 
+import { mirrorLocalSetting } from "../cloud/userSettings";
+
 const K_DISMISSED = "internpilot.ranking.dismissed";
 const K_MUTED = "internpilot.ranking.mutedPatterns";
 
@@ -16,6 +18,7 @@ function readSet(key: string): Set<string> {
 }
 function writeSet(key: string, set: Set<string>): void {
   localStorage.setItem(key, JSON.stringify([...set]));
+  mirrorLocalSetting(key);
 }
 
 export function getDismissed(): Set<string> {

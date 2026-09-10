@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { cloudSession, onCloudAuth, onPasswordRecovery } from "../cloud/auth";
+import { syncLocalSettingsFromCloud } from "../cloud/userSettings";
 import { isOnboarded } from "../db/profile";
 import SignupWizard from "./SignupWizard";
 import CloudLogin from "./CloudLogin";
@@ -20,6 +21,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const evalSession = useCallback(async (session: Session | null) => {
     if (!session) { setMode("login"); return; }
     try {
+      await syncLocalSettingsFromCloud();
       setMode((await isOnboarded()) ? "authed" : "onboarding");
     } catch {
       setMode("authed"); // don't lock the user out if the profile check fails

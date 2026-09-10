@@ -4,6 +4,7 @@
  * résumé to lead with — the last link in the apply-fast chain.
  */
 import { trackFor, type ResumeTrack } from "./companies";
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 const KEY = "internpilot.trackResumes";
 type TrackMap = Partial<Record<ResumeTrack, number>>;
@@ -14,7 +15,7 @@ export function getTrackResumes(): TrackMap {
 export function setTrackResume(track: ResumeTrack, versionId: number | null): void {
   const m = getTrackResumes();
   if (versionId == null) delete m[track]; else m[track] = versionId;
-  try { localStorage.setItem(KEY, JSON.stringify(m)); } catch { /* ignore */ }
+  try { localStorage.setItem(KEY, JSON.stringify(m)); mirrorLocalSetting(KEY); } catch { /* ignore */ }
 }
 export function trackResumeId(track: ResumeTrack): number | null {
   return getTrackResumes()[track] ?? null;

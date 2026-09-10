@@ -6,6 +6,7 @@
  */
 import { bestConnection, type BestPath } from "../networking/graph";
 import { extractTeam } from "../networking/connections";
+import { mirrorLocalSetting } from "../cloud/userSettings";
 import { REFERRAL_STATUS_LABELS, type ContactRow, type Profile, type ReferralRow, type ReferralStatus } from "../db/types";
 import type { RadarEntry } from "./radar";
 
@@ -93,5 +94,9 @@ export function getMissionState(company: string): Record<string, boolean> {
   try { return JSON.parse(localStorage.getItem(MK(company)) ?? "{}"); } catch { return {}; }
 }
 export function setMissionState(company: string, state: Record<string, boolean>): void {
-  try { localStorage.setItem(MK(company), JSON.stringify(state)); } catch { /* ignore */ }
+  try {
+    const key = MK(company);
+    localStorage.setItem(key, JSON.stringify(state));
+    mirrorLocalSetting(key);
+  } catch { /* ignore */ }
 }

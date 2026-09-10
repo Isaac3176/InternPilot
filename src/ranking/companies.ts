@@ -1,9 +1,10 @@
 /**
  * Company watchlist: the user maintains a list of target companies, each with a
- * priority tier that drives ranking and notification behavior. Stored locally
- * (localStorage) so it needs no migration; the typed API below is the only
- * surface callers use, so it can move to SQLite later without changing them.
+ * priority tier that drives ranking and notification behavior. Cached in
+ * localStorage for synchronous reads and mirrored to cloud user_settings when
+ * a Supabase account is active.
  */
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 export type CompanyPriority = "instant" | "high" | "normal" | "muted";
 
@@ -103,6 +104,7 @@ export function ensureSeeded(): void {
   if (localStorage.getItem(SEED_FLAG)) return;
   if (!localStorage.getItem(KEY)) saveWatchlist(defaultWatchlist());
   localStorage.setItem(SEED_FLAG, "1");
+  mirrorLocalSetting(SEED_FLAG);
 }
 
 export function getWatchlist(): TargetCompany[] {
@@ -118,6 +120,7 @@ export function getWatchlist(): TargetCompany[] {
 
 export function saveWatchlist(list: TargetCompany[]): void {
   localStorage.setItem(KEY, JSON.stringify(list));
+  mirrorLocalSetting(KEY);
 }
 
 export function upsertCompany(c: TargetCompany): void {

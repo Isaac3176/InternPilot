@@ -6,6 +6,7 @@
  * Simplify-grade), the unavatar aggregator, then DuckDuckGo — before the UI falls
  * back to a colored monogram. Set a Logo.dev token in Settings for full coverage.
  */
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 // Names that don't slugify cleanly to "{name}.com".
 const OVERRIDES: Record<string, string> = {
@@ -128,4 +129,5 @@ export function isLogosOn(): boolean {
 }
 export function setLogosOn(on: boolean): void {
   localStorage.setItem(K_LOGOS_ON, on ? "1" : "0");
+  mirrorLocalSetting(K_LOGOS_ON);
 }

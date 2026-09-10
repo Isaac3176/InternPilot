@@ -6,6 +6,7 @@
  */
 import type { RankedListing } from "../listings/types";
 import type { ScoreReason } from "./types";
+import { mirrorLocalSetting, removeMirroredLocalSetting } from "../cloud/userSettings";
 
 export type FeedbackKind =
   | "good" | "wrong_role" | "wrong_company" | "not_eligible"
@@ -56,6 +57,7 @@ export function getLearn(): LearnState {
 }
 function save(s: LearnState): void {
   localStorage.setItem(KEY, JSON.stringify(s));
+  mirrorLocalSetting(KEY);
 }
 
 function nudgeRole(state: LearnState, tokens: string[], dir: number): void {
@@ -124,4 +126,5 @@ export function learnSummary(): LearnSummary {
 }
 export function resetLearning(): void {
   localStorage.removeItem(KEY);
+  removeMirroredLocalSetting(KEY);
 }

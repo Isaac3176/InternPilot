@@ -4,6 +4,8 @@
  * that a real open becomes a data point in future forecasts. Over cycles this
  * turns the static release-history bundle into a dataset that improves with use.
  */
+import { mirrorLocalSetting } from "../cloud/userSettings";
+
 const KEY = "internpilot.release.observed";
 
 export interface Observation { year: number; e: number } // cycle season year, earliest post (unix seconds)
@@ -13,7 +15,7 @@ function read(): Store {
   try { return JSON.parse(localStorage.getItem(KEY) ?? "{}") as Store; } catch { return {}; }
 }
 function write(s: Store): void {
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ }
+  try { localStorage.setItem(KEY, JSON.stringify(s)); mirrorLocalSetting(KEY); } catch { /* ignore */ }
 }
 
 export function getObserved(companyKey: string): Observation[] {

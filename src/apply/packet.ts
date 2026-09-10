@@ -13,6 +13,7 @@ import { fetchJobDescription } from "../listings/description";
 import { jdSkillMatch, type JdMatch } from "../listings/match";
 import { assessEligibility, type Eligibility } from "../listings/eligibility";
 import { recommendResume } from "../ranking/queue";
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 export interface ApplicationPacket {
   listing: RankedListing;
@@ -79,5 +80,7 @@ export function getChecklist(jobId: string): Set<number> {
 export function setChecklistItem(jobId: string, index: number, done: boolean): void {
   const s = getChecklist(jobId);
   if (done) s.add(index); else s.delete(index);
-  localStorage.setItem(checkKey(jobId), JSON.stringify([...s]));
+  const key = checkKey(jobId);
+  localStorage.setItem(key, JSON.stringify([...s]));
+  mirrorLocalSetting(key);
 }

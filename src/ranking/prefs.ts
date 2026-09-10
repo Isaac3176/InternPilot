@@ -3,6 +3,7 @@
  * scoring, and notification thresholds. Defaults come from the spec's
  * recommended configuration; the user edits them in Settings.
  */
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 export interface RankingPrefs {
   graduationYear: number;
@@ -65,6 +66,7 @@ export function getPrefs(): RankingPrefs {
 
 export function savePrefs(prefs: Partial<RankingPrefs>): void {
   localStorage.setItem(KEY, JSON.stringify({ ...getPrefs(), ...prefs }));
+  mirrorLocalSetting(KEY);
 }
 
 /** Whether the current local time falls within the user's quiet hours. */

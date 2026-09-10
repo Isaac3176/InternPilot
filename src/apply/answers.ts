@@ -4,6 +4,7 @@
  * locally; surfaced in the application packet and pushed to the browser
  * extension so it can fill matching essay/short-answer fields.
  */
+import { mirrorLocalSetting } from "../cloud/userSettings";
 
 export interface ApplicationAnswer {
   id: string;
@@ -48,6 +49,7 @@ export function getAnswers(): ApplicationAnswer[] {
 }
 export function saveAnswers(list: ApplicationAnswer[]): void {
   localStorage.setItem(KEY, JSON.stringify(list));
+  mirrorLocalSetting(KEY);
 }
 
 export function ensureSeededAnswers(): void {
@@ -56,6 +58,7 @@ export function ensureSeededAnswers(): void {
     saveAnswers(SEED.map((s) => ({ ...s, id: newId(), answer: "", approved: false, lastReviewedAt: null })));
   }
   localStorage.setItem(SEED_FLAG, "1");
+  mirrorLocalSetting(SEED_FLAG);
 }
 
 /** Derive a match pattern from a free-typed question (keyword-ish). */
