@@ -1,9 +1,15 @@
+use std::io::Read;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_sql::{Migration, MigrationKind};
 use tiny_http::{Header, Method, Response, Server};
 
 const DB_URL: &str = "sqlite:internpilot.db";
+const BRIDGE_TOKEN_HEX_LEN: usize = 32;
+const MAX_PROFILE_JSON_BYTES: usize = 128 * 1024;
+const MAX_ANSWERS_JSON_BYTES: usize = 256 * 1024;
+const MAX_SNAPSHOT_JSON_BYTES: usize = 512 * 1024;
+const MAX_POST_JSON_BYTES: usize = 128 * 1024;
 
 /// Local bridge between the browser extension and the app. The frontend pushes
 /// the current profile + a shared token here; the extension reads /profile for
@@ -19,24 +25,54 @@ struct BridgeState {
 type SharedBridge = Arc<Mutex<BridgeState>>;
 
 #[tauri::command]
-fn bridge_set_profile(state: tauri::State<SharedBridge>, token: String, profile: String) {
+fn bridge_set_profile(
+    state: tauri::State<SharedBridge>,
+    token: String,
+    profile: String,
+) -> Result<(), String> {
+    validate_token(&token)?;
+    let val = validate_json_payload("profile", &profile, MAX_PROFILE_JSON_BYTES)?;
+    if !val.is_object() {
+        return Err("profile must be a JSON object".into());
+    }
     let mut s = state.lock().unwrap();
     s.token = Some(token);
     s.profile_json = Some(profile);
+    Ok(())
 }
 
 #[tauri::command]
-fn bridge_set_answers(state: tauri::State<SharedBridge>, token: String, answers: String) {
+fn bridge_set_answers(
+    state: tauri::State<SharedBridge>,
+    token: String,
+    answers: String,
+) -> Result<(), String> {
+    validate_token(&token)?;
+    let val = validate_json_payload("answers", &answers, MAX_ANSWERS_JSON_BYTES)?;
+    if !val.is_array() {
+        return Err("answers must be a JSON array".into());
+    }
     let mut s = state.lock().unwrap();
     s.token = Some(token);
     s.answers_json = Some(answers);
+    Ok(())
 }
 
 #[tauri::command]
-fn bridge_set_snapshot(state: tauri::State<SharedBridge>, token: String, snapshot: String) {
+fn bridge_set_snapshot(
+    state: tauri::State<SharedBridge>,
+    token: String,
+    snapshot: String,
+) -> Result<(), String> {
+    validate_token(&token)?;
+    let val = validate_json_payload("snapshot", &snapshot, MAX_SNAPSHOT_JSON_BYTES)?;
+    if !val.is_object() {
+        return Err("snapshot must be a JSON object".into());
+    }
     let mut s = state.lock().unwrap();
     s.token = Some(token);
     s.snapshot_json = Some(snapshot);
+    Ok(())
 }
 
 /// Best-effort LAN IP (no packets are sent — just resolves the outbound iface).
@@ -83,6 +119,47 @@ fn header_value(request: &tiny_http::Request, name: &str) -> Option<String> {
         .iter()
         .find(|h| h.field.as_str().as_str().eq_ignore_ascii_case(name))
         .map(|h| h.value.as_str().to_string())
+}
+
+fn validate_token(token: &str) -> Result<(), String> {
+    if token.len() != BRIDGE_TOKEN_HEX_LEN || !token.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err("invalid bridge token".into());
+    }
+    Ok(())
+}
+
+fn validate_json_payload(
+    name: &str,
+    json: &str,
+    max_bytes: usize,
+) -> Result<serde_json::Value, String> {
+    if json.len() > max_bytes {
+        return Err(format!("{name} payload is too large"));
+    }
+    serde_json::from_str::<serde_json::Value>(json)
+        .map_err(|_| format!("{name} payload must be valid JSON"))
+}
+
+fn read_json_body(
+    request: &mut tiny_http::Request,
+) -> Result<serde_json::Value, (u16, &'static str)> {
+    let mut body = String::new();
+    let read_result = request
+        .as_reader()
+        .take((MAX_POST_JSON_BYTES + 1) as u64)
+        .read_to_string(&mut body);
+    if read_result.is_err() {
+        return Err((400, "{\"error\":\"invalid body\"}"));
+    }
+    if body.len() > MAX_POST_JSON_BYTES {
+        return Err((413, "{\"error\":\"payload too large\"}"));
+    }
+    let val = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|_| (400, "{\"error\":\"invalid json\"}"))?;
+    if !val.is_object() {
+        return Err((400, "{\"error\":\"expected object\"}"));
+    }
+    Ok(val)
 }
 
 /// Constant-time string compare so token checks don't leak length-prefix timing.
@@ -164,47 +241,71 @@ fn start_bridge(app: AppHandle, shared: SharedBridge) {
                 // localhost (the extension) even with a valid token; the LAN
                 // phone only ever needs the /data snapshot.
                 (Method::Get, "/answers") => {
-                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
-                        let body = shared.lock().unwrap().answers_json.clone().unwrap_or_else(|| "[]".into());
+                    if !is_loopback(&request) {
+                        respond(request, 403, "{\"error\":\"local only\"}");
+                    } else {
+                        let body = shared
+                            .lock()
+                            .unwrap()
+                            .answers_json
+                            .clone()
+                            .unwrap_or_else(|| "[]".into());
                         respond(request, 200, &body);
                     }
                 }
                 (Method::Get, "/profile") => {
-                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
-                        let body = shared.lock().unwrap().profile_json.clone().unwrap_or_else(|| "{}".into());
+                    if !is_loopback(&request) {
+                        respond(request, 403, "{\"error\":\"local only\"}");
+                    } else {
+                        let body = shared
+                            .lock()
+                            .unwrap()
+                            .profile_json
+                            .clone()
+                            .unwrap_or_else(|| "{}".into());
                         respond(request, 200, &body);
                     }
                 }
                 (Method::Get, "/data") => {
-                    let body = shared.lock().unwrap().snapshot_json.clone().unwrap_or_else(|| "{}".into());
+                    let body = shared
+                        .lock()
+                        .unwrap()
+                        .snapshot_json
+                        .clone()
+                        .unwrap_or_else(|| "{}".into());
                     respond(request, 200, &body);
                 }
-                (Method::Post, "/action") => {
-                    let mut body = String::new();
-                    let _ = request.as_reader().read_to_string(&mut body);
-                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
+                (Method::Post, "/action") => match read_json_body(&mut request) {
+                    Ok(val) => {
                         let _ = app.emit("bridge://mobile-action", val);
-                    }
-                    respond(request, 200, "{\"ok\":true}");
-                }
-                (Method::Post, "/application") => {
-                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
-                        let mut body = String::new();
-                        let _ = request.as_reader().read_to_string(&mut body);
-                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
-                            let _ = app.emit("bridge://application", val);
-                        }
                         respond(request, 200, "{\"ok\":true}");
+                    }
+                    Err((status, body)) => respond(request, status, body),
+                },
+                (Method::Post, "/application") => {
+                    if !is_loopback(&request) {
+                        respond(request, 403, "{\"error\":\"local only\"}");
+                    } else {
+                        match read_json_body(&mut request) {
+                            Ok(val) => {
+                                let _ = app.emit("bridge://application", val);
+                                respond(request, 200, "{\"ok\":true}");
+                            }
+                            Err((status, body)) => respond(request, status, body),
+                        }
                     }
                 }
                 (Method::Post, "/email") => {
-                    if !is_loopback(&request) { respond(request, 403, "{\"error\":\"local only\"}"); } else {
-                        let mut body = String::new();
-                        let _ = request.as_reader().read_to_string(&mut body);
-                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
-                            let _ = app.emit("bridge://email", val);
+                    if !is_loopback(&request) {
+                        respond(request, 403, "{\"error\":\"local only\"}");
+                    } else {
+                        match read_json_body(&mut request) {
+                            Ok(val) => {
+                                let _ = app.emit("bridge://email", val);
+                                respond(request, 200, "{\"ok\":true}");
+                            }
+                            Err((status, body)) => respond(request, status, body),
                         }
-                        respond(request, 200, "{\"ok\":true}");
                     }
                 }
                 _ => respond(request, 404, "{\"error\":\"not found\"}"),
@@ -546,7 +647,12 @@ pub fn run() {
                 .build(),
         )
         .manage(bridge.clone())
-        .invoke_handler(tauri::generate_handler![bridge_set_profile, bridge_set_answers, bridge_set_snapshot, bridge_info])
+        .invoke_handler(tauri::generate_handler![
+            bridge_set_profile,
+            bridge_set_answers,
+            bridge_set_snapshot,
+            bridge_info
+        ])
         .setup(move |app| {
             start_bridge(app.handle().clone(), bridge.clone());
             Ok(())
