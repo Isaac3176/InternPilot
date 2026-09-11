@@ -1493,9 +1493,61 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   .dash .conv { padding: 22px 5px 0; }
 }
 @media (max-width: 720px) {
+  .dash .page-header {
+    align-items: stretch;
+  }
+  .dash .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .dash .header-actions .btn {
+    flex: 1 1 150px;
+    justify-content: center;
+  }
+  .dash .card {
+    padding: 16px;
+  }
+  .dash .card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dash .card-head .btn {
+    width: 100%;
+    justify-content: center;
+  }
   .dash .stages { flex-wrap: wrap; gap: 14px; }
   .dash .stage { flex: 1 1 40%; }
   .dash .conv { display: none; }
+  .dash .pipeline-foot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dash .nba {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .dash .nba-body {
+    flex: 1 1 calc(100% - 40px);
+  }
+  .dash .nba-body b {
+    white-space: normal;
+  }
+  .dash .nba .btn {
+    margin-left: 38px;
+  }
+  .dash .rate {
+    grid-template-columns: 1fr 52px;
+  }
+  .dash .rate .track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .dash .card table {
+    min-width: 520px;
+  }
+  .dash .card:has(table) {
+    overflow-x: auto;
+  }
 }
 
 /* ================= Fast Apply Queue + Watchlist ================= */
@@ -1924,6 +1976,34 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
    hands off to the phone UI below 768px.) */
 @media (max-width: 760px) {
   .main { padding: 16px 16px 40px; }
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .page-header h1 { font-size: 21px; }
+  .page-header button,
+  .page-header .actions,
+  .page-header .header-actions {
+    width: 100%;
+  }
+  .page-header .actions,
+  .page-header .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .page-header .actions > *,
+  .page-header .header-actions > * {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .card {
+    padding: 16px;
+  }
   /* Feature pages assume desktop widths — let them scroll instead of overflowing. */
   .grid-2, .pk-grid { grid-template-columns: 1fr !important; }
   .results, .workspace, .detail-head { overflow-x: auto; }
@@ -1973,14 +2053,18 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   }
   .onboarding-panel {
     width: calc(100% - 32px);
-    margin-top: 22px;
+    margin: 18px auto 48px;
   }
   .wizard-nav {
     margin-bottom: 30px;
   }
+  .onboarding-step {
+    width: 100%;
+  }
   .onboarding-step h2 {
     font-size: 24px;
     text-align: left;
+    margin-bottom: 22px;
   }
   .onboarding-sub {
     text-align: left;
@@ -1991,6 +2075,10 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   }
   .onboarding-panel .wizard-actions {
     gap: 10px;
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0), #fff 38%);
   }
   .onboarding-panel .wizard-actions button:last-child {
     flex: 1;
@@ -2142,6 +2230,57 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .apps .popitem .k { font-family: var(--mono); font-size: 10px; color: var(--muted-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; flex: none; }
 .apps .popitem.cur { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .apps .popsep { height: 1px; background: var(--line-soft); margin: 5px 0; }
+
+@media (max-width: 760px) {
+  .apps .filters {
+    gap: 7px;
+  }
+  .apps .search {
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+  }
+  .apps .fchip {
+    height: 34px;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .apps .tablewrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .apps table {
+    min-width: 700px;
+  }
+  .apps .hidesm {
+    display: none;
+  }
+  .apps thead th,
+  .apps tbody td {
+    padding: 10px 11px;
+  }
+  .apps .role {
+    max-width: 24ch;
+  }
+  .apps .quick,
+  .apps .rowacts {
+    opacity: 1;
+  }
+  .apps .quick {
+    margin-left: 0;
+    margin-top: 6px;
+  }
+  .apps .pop {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 18px;
+    width: auto;
+    max-height: min(460px, calc(100vh - 36px));
+    overflow-y: auto;
+  }
+}
 
 /* ================= Milestone / Outcome modal ================= */
 .ms-scrim { position: fixed; inset: 0; background: rgba(11,18,28,.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 22px; animation: ms-fade .16s ease both;
