@@ -3,19 +3,34 @@ import { deleteResumeBullet, listResumeBullets, updateResumeBulletText } from ".
 import type { ResumeBullet } from "../db/types";
 import { coachQuestion, quantifyBullet, hasMetric } from "../ai/bulletCoach";
 import { hasApiKey } from "../ai/settings";
+import ConfirmAction from "../components/ConfirmAction";
+import { PageNotice } from "../components/PageState";
+import { userErrorMessage } from "../lib/errors";
 
 export default function Bullets() {
   const [bullets, setBullets] = useState<ResumeBullet[]>([]);
+  const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
 
   function load() {
-    listResumeBullets().then(setBullets).catch(console.error);
+    listResumeBullets().then(setBullets).catch((e) => {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't load saved bullets."));
+    });
   }
   useEffect(load, []);
 
   async function remove(id: number) {
-    if (!confirm("Delete this saved bullet?")) return;
-    await deleteResumeBullet(id);
-    load();
+    setMessage("");
+    try {
+      await deleteResumeBullet(id);
+      setMessageKind("success");
+      setMessage("Bullet deleted.");
+      load();
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't delete this bullet."));
+    }
   }
 
   const unquantified = bullets.filter((b) => !hasMetric(b.improved_text)).length;
@@ -28,6 +43,7 @@ export default function Bullets() {
           <p>Improved résumé bullets you've saved. {unquantified > 0 ? `${unquantified} still have no number — quantify them below.` : "Every bullet has a metric. 💪"}</p>
         </div>
       </div>
+      {message && <PageNotice kind={messageKind}>{message}</PageNotice>}
 
       {bullets.length === 0 ? (
         <div className="empty">
@@ -47,6 +63,7 @@ function BulletRow({ b, onChange, onDelete }: { b: ResumeBullet; onChange: () =>
   const [question, setQuestion] = useState("");
   const [metric, setMetric] = useState("");
   const [loading, setLoading] = useState<"" | "ask" | "apply">("");
+  const [error, setError] = useState("");
   const quantified = hasMetric(improved);
 
   async function copy(text: string) {
@@ -55,7 +72,7 @@ function BulletRow({ b, onChange, onDelete }: { b: ResumeBullet; onChange: () =>
   async function ask() {
     setOpen(true); setLoading("ask");
     try { setQuestion(await coachQuestion(improved || b.original_text || "")); }
-    catch (e) { alert(e instanceof Error ? e.message : String(e)); }
+    catch (e) { setError(userErrorMessage(e, "Couldn't draft a coaching question.")); }
     finally { setLoading(""); }
   }
   async function apply() {
@@ -65,8 +82,9 @@ function BulletRow({ b, onChange, onDelete }: { b: ResumeBullet; onChange: () =>
       setImproved(r.text);
       await updateResumeBulletText(b.id, r.text);
       setOpen(false); setMetric(""); setQuestion("");
+      setError("");
       onChange();
-    } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(userErrorMessage(e, "Couldn't rewrite this bullet.")); }
     finally { setLoading(""); }
   }
 
@@ -92,8 +110,11 @@ function BulletRow({ b, onChange, onDelete }: { b: ResumeBullet; onChange: () =>
       <div className="actions mt-sm">
         {!quantified && <button type="button" className="small" onClick={ask} disabled={loading !== ""}>✨ Quantify</button>}
         <button type="button" className="secondary small" onClick={() => copy(improved)}>Copy</button>
-        <button type="button" className="danger small" onClick={onDelete}>Delete</button>
+        <ConfirmAction className="danger small" message="Delete this bullet?" confirmLabel="Delete" onConfirm={onDelete}>
+          Delete
+        </ConfirmAction>
       </div>
+      {error && <p className="hint text-red mt-xs">{error}</p>}
       {!hasApiKey() && open && <p className="hint mt-xs">Offline mode weaves your number in simply — edit the After text in Resume Center to refine. Add an OpenAI key for a clean rewrite.</p>}
     </div>
   );

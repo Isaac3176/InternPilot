@@ -21,6 +21,7 @@ import { isConnected } from "../gmail/config";
 import { syncGmail } from "../gmail/sync";
 import { userErrorMessage } from "../lib/errors";
 import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
+import ConfirmAction from "../components/ConfirmAction";
 
 const CATEGORY_BADGE: Record<EmailCategory, string> = {
   confirmation: "applied",
@@ -129,7 +130,6 @@ export default function Emails() {
   async function applyStatus(row: EmailRow) {
     const suggested = row.classification ? CATEGORY_TO_STATUS[row.classification] : null;
     if (!row.application_id || !suggested) return;
-    if (!confirm(`Mark this application as "${STATUS_LABELS[suggested]}"?`)) return;
     setMessage("");
     try {
       await setApplicationStatus(row.application_id, suggested);
@@ -141,7 +141,6 @@ export default function Emails() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Delete this email?")) return;
     setMessage("");
     try {
       await deleteEmail(id);
@@ -238,14 +237,15 @@ export default function Emails() {
                 <div className="field mb-0 suggest-col">
                   <label>Suggested update</label>
                   <div className="actions">
-                    <button
-                      type="button"
+                    <ConfirmAction
                       className="small"
-                      onClick={() => applyStatus(row)}
+                      message={suggested ? `Mark linked application as ${STATUS_LABELS[suggested]}?` : "No status change"}
+                      confirmLabel="Update"
+                      onConfirm={() => applyStatus(row)}
                       disabled={!row.application_id || !suggested}
                     >
                       {suggested ? `Mark as ${STATUS_LABELS[suggested]}` : "No status change"}
-                    </button>
+                    </ConfirmAction>
                   </div>
                 </div>
               </div>
@@ -254,7 +254,9 @@ export default function Emails() {
                 <button type="button" className="secondary small" onClick={() => reclassify(row)} disabled={busyId === row.id}>
                   {busyId === row.id ? "Classifying…" : "Reclassify"}
                 </button>
-                <button type="button" className="danger small" onClick={() => remove(row.id)}>Delete</button>
+                <ConfirmAction className="danger small" message="Delete this email?" confirmLabel="Delete" onConfirm={() => remove(row.id)}>
+                  Delete
+                </ConfirmAction>
               </div>
             </div>
           );

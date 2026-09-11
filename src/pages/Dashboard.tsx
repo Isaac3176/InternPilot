@@ -28,6 +28,7 @@ import { getLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../rel
 import { openExternal } from "../lib/open";
 import { reportError } from "../lib/report";
 import CompanyLogo from "../components/CompanyLogo";
+import { PageNotice } from "../components/PageState";
 import type { ApplicationRow, Status } from "../db/types";
 
 const WEEKLY_GOAL = 5;
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const [strategy, setStrategy] = useState<Strategy | null>(null);
   const [loadingStrategy, setLoadingStrategy] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [message, setMessage] = useState("");
 
   const loadMetrics = useCallback(async () => {
     setCounts(await getStatusCounts());
@@ -97,8 +99,9 @@ export default function Dashboard() {
     setLoadingStrategy(true);
     try {
       setStrategy(await getStrategyRecommendation());
+      setMessage("");
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      setMessage(e instanceof Error ? e.message : String(e));
     } finally {
       setLoadingStrategy(false);
     }
@@ -140,6 +143,7 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+      {message && <PageNotice kind="error">{message}</PageNotice>}
 
       {reminders.length > 0 && (
         <div className="reminders">

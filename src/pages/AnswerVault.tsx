@@ -10,6 +10,7 @@ import {
 import { draftAnswer } from "../ai/answerDraft";
 import { hasApiKey } from "../ai/settings";
 import { pushAnswersToBridge } from "../bridge";
+import { userErrorMessage } from "../lib/errors";
 
 export default function AnswerVault() {
   const [answers, setAnswers] = useState<ApplicationAnswer[]>([]);
@@ -73,6 +74,7 @@ function AnswerCard({ a, onChange }: { a: ApplicationAnswer; onChange: () => voi
   const [answer, setAnswer] = useState(a.answer);
   const [approved, setApproved] = useState(a.approved);
   const [drafting, setDrafting] = useState(false);
+  const [error, setError] = useState("");
   const dirty = question !== a.question || answer !== a.answer || approved !== a.approved;
 
   function save() {
@@ -84,7 +86,7 @@ function AnswerCard({ a, onChange }: { a: ApplicationAnswer; onChange: () => voi
     if (!question.trim()) return;
     setDrafting(true);
     try { const r = await draftAnswer(question); setAnswer(r.text); }
-    catch (e) { alert(e instanceof Error ? e.message : String(e)); }
+    catch (e) { setError(userErrorMessage(e, "Couldn't draft this answer.")); }
     finally { setDrafting(false); }
   }
 
@@ -115,6 +117,7 @@ function AnswerCard({ a, onChange }: { a: ApplicationAnswer; onChange: () => voi
           <button type="button" className="btn small ghost" onClick={() => { removeAnswer(a.id); onChange(); }}>Delete</button>
         </div>
       </div>
+      {error && <p className="hint text-red mt-xs">{error}</p>}
     </div>
   );
 }

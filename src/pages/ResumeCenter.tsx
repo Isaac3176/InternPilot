@@ -12,6 +12,7 @@ import type { ResumeMatchResult } from "../ai/types";
 import { hasApiKey } from "../ai/settings";
 import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { userErrorMessage } from "../lib/errors";
+import ConfirmAction from "../components/ConfirmAction";
 import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
 const emptyForm = { name: "", targetRole: "", content: "" };
@@ -92,7 +93,6 @@ export default function ResumeCenter() {
   }
 
   async function removeVersion(id: number) {
-    if (!confirm("Delete this resume version?")) return;
     setVersionMsg("");
     try {
       await deleteResumeVersion(id);
@@ -219,7 +219,9 @@ export default function ResumeCenter() {
                   <td>
                     <div className="actions">
                       <button type="button" className="secondary small" onClick={() => startEdit(v)}>Edit</button>
-                      <button type="button" className="danger small" onClick={() => removeVersion(v.id)}>Delete</button>
+                      <ConfirmAction className="danger small" message="Delete this resume version?" confirmLabel="Delete" onConfirm={() => removeVersion(v.id)}>
+                        Delete
+                      </ConfirmAction>
                     </div>
                   </td>
                 </tr>

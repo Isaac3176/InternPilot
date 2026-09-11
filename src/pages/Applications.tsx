@@ -7,6 +7,7 @@ import { APP_RECORDED_EVENT } from "../bridge";
 import ApplicationModal from "../components/ApplicationModal";
 import MilestoneCelebration, { isMilestone, type Kind, type Terminal } from "../components/MilestoneCelebration";
 import CompanyLogo from "../components/CompanyLogo";
+import ConfirmAction from "../components/ConfirmAction";
 import { userErrorMessage } from "../lib/errors";
 import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
@@ -144,7 +145,6 @@ export default function Applications() {
   function openEdit(row: ApplicationRow) { setEditing(row); setModalOpen(true); }
 
   async function handleDelete(row: ApplicationRow) {
-    if (!confirm(`Delete the ${row.role_title} application?`)) return;
     setError("");
     try {
       await deleteApplication(row.id);
@@ -377,9 +377,9 @@ export default function Applications() {
                           <button className="ibtn" title="Edit" onClick={() => openEdit(r)}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
                           </button>
-                          <button className="ibtn danger" title="Delete" onClick={() => handleDelete(r)}>
+                          <ConfirmAction className="ibtn danger" message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => handleDelete(r)}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
-                          </button>
+                          </ConfirmAction>
                         </span>
                       </td>
                     </tr>

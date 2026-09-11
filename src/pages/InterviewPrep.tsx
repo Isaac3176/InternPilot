@@ -16,6 +16,7 @@ import {
 import { generatePrepPlan, type PrepPlan } from "../ai/prep";
 import { hasApiKey } from "../ai/settings";
 import InterviewModal from "../components/InterviewModal";
+import ConfirmAction from "../components/ConfirmAction";
 import { userErrorMessage } from "../lib/errors";
 import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
@@ -76,7 +77,6 @@ export default function InterviewPrep() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Delete this event?")) return;
     setMessage("");
     try {
       await deleteInterview(id);
@@ -140,7 +140,9 @@ export default function InterviewPrep() {
                   <button type="button" className="secondary small" onClick={() => generate(row)} disabled={generatingId === row.id}>
                     {generatingId === row.id ? "Generating…" : plan ? "Regenerate" : "Generate plan"}
                   </button>
-                  <button type="button" className="danger small" onClick={() => remove(row.id)}>Delete</button>
+                  <ConfirmAction className="danger small" message="Delete this event?" confirmLabel="Delete" onConfirm={() => remove(row.id)}>
+                    Delete
+                  </ConfirmAction>
                 </div>
               </div>
 

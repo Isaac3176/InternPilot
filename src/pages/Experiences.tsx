@@ -3,6 +3,9 @@ import { createExperience, deleteExperience, listExperiences } from "../db/exper
 import { DIFFICULTIES, DIFFICULTY_LABELS, type Difficulty, type ExperienceRow } from "../db/types";
 import { summarizeExperiences, type ExperienceSummary } from "../ai/research";
 import { hasApiKey } from "../ai/settings";
+import ConfirmAction from "../components/ConfirmAction";
+import { PageNotice } from "../components/PageState";
+import { userErrorMessage } from "../lib/errors";
 
 const emptyForm = {
   company_name: "",
@@ -18,9 +21,14 @@ export default function Experiences() {
   const [form, setForm] = useState(emptyForm);
   const [summaries, setSummaries] = useState<Record<string, ExperienceSummary>>({});
   const [summarizing, setSummarizing] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
 
   function load() {
-    listExperiences().then(setRows).catch(console.error);
+    listExperiences().then(setRows).catch((e) => {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't load interview experiences."));
+    });
   }
   useEffect(load, []);
 
@@ -49,9 +57,16 @@ export default function Experiences() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Delete this experience?")) return;
-    await deleteExperience(id);
-    load();
+    setMessage("");
+    try {
+      await deleteExperience(id);
+      setMessageKind("success");
+      setMessage("Experience deleted.");
+      load();
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't delete this experience."));
+    }
   }
 
   async function summarize(company: string, experiences: ExperienceRow[]) {
@@ -60,7 +75,8 @@ export default function Experiences() {
       const summary = await summarizeExperiences(company, experiences);
       setSummaries((s) => ({ ...s, [company]: summary }));
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't summarize these experiences."));
     } finally {
       setSummarizing(null);
     }
@@ -74,6 +90,7 @@ export default function Experiences() {
           <p>Collect company interview reports and synthesize them into prep guidance.</p>
         </div>
       </div>
+      {message && <PageNotice kind={messageKind}>{message}</PageNotice>}
 
       <div className="card">
         <h2>Add an experience</h2>
@@ -139,7 +156,9 @@ export default function Experiences() {
                       <strong>{e.role ?? "—"}</strong>
                       {e.difficulty && <span className={`badge ${difficultyBadge(e.difficulty)} ml-xs`}>{DIFFICULTY_LABELS[e.difficulty]}</span>}
                     </span>
-                    <button type="button" className="danger small" onClick={() => remove(e.id)}>Delete</button>
+                    <ConfirmAction className="danger small" message="Delete this experience?" confirmLabel="Delete" onConfirm={() => remove(e.id)}>
+                      Delete
+                    </ConfirmAction>
                   </div>
                   {e.source && <div className="muted text-sm mt-xs">Source: {e.source}</div>}
                   {e.topics && (

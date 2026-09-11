@@ -40,6 +40,7 @@ import { supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
 import { isTauri } from "../lib/env";
+import ConfirmAction from "../components/ConfirmAction";
 
 const APP_DATA_TABLES = [
   "application_answers",
@@ -238,8 +239,6 @@ export default function Settings() {
 
   async function deleteAll() {
     setDataMsg("");
-    const scope = cloud ? "cloud app data for this account" : "local desktop app data";
-    if (!confirm(`Delete ALL ${scope}? This cannot be undone.`)) return;
     if (cloud) {
       const userId = cloud.user.id;
       for (const t of APP_DATA_TABLES) {
@@ -567,7 +566,15 @@ export default function Settings() {
             : "Export or delete the app data stored in this desktop app's local SQLite database."}
         </p>
         <button type="button" className="secondary" onClick={() => exportData().catch((e) => setDataMsg(e instanceof Error ? e.message : String(e)))}>Export data (JSON)</button>{" "}
-        <button type="button" className="danger" onClick={() => deleteAll().catch((e) => setDataMsg(e instanceof Error ? e.message : String(e)))}>Delete all data</button>
+        <ConfirmAction
+          className="danger"
+          confirmClassName="danger"
+          message={`Delete ALL ${cloud ? "cloud app data for this account" : "local desktop app data"}? This cannot be undone.`}
+          confirmLabel="Delete all"
+          onConfirm={() => deleteAll().catch((e) => setDataMsg(e instanceof Error ? e.message : String(e)))}
+        >
+          Delete all data
+        </ConfirmAction>
         {dataMsg && <p className="hint" style={{ marginTop: 10 }}>{dataMsg}</p>}
       </div>
     </>

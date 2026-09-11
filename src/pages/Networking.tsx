@@ -24,6 +24,7 @@ import { matchCompany } from "../ranking/companies";
 import ContactModal from "../components/ContactModal";
 import ReferralModal from "../components/ReferralModal";
 import PeopleFinder from "../components/PeopleFinder";
+import ConfirmAction from "../components/ConfirmAction";
 import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 import { userErrorMessage } from "../lib/errors";
 
@@ -122,7 +123,6 @@ export default function Networking() {
     }
   }
   async function removeReferral(id: number) {
-    if (!confirm("Delete this referral?")) return;
     setMessage("");
     try {
       await deleteReferral(id);
@@ -135,7 +135,6 @@ export default function Networking() {
     }
   }
   async function removeContact(id: number) {
-    if (!confirm("Delete this contact?")) return;
     setMessage("");
     try {
       await deleteContact(id);
@@ -306,7 +305,9 @@ export default function Networking() {
                       ))}
                     </select>
                     <button type="button" className="secondary small" onClick={() => { setEditingReferral(r); setReferralModal(true); }}>Edit</button>
-                    <button type="button" className="danger small" onClick={() => removeReferral(r.id)}>Delete</button>
+                    <ConfirmAction className="danger small" message="Delete this referral?" confirmLabel="Delete" onConfirm={() => removeReferral(r.id)}>
+                      Delete
+                    </ConfirmAction>
                   </div>
                 </div>
                 {warnings.map((w, i) => (
@@ -343,7 +344,9 @@ export default function Networking() {
                   <td>
                     <div className="actions">
                       <button type="button" className="secondary small" onClick={() => { setEditingContact(c); setContactModal(true); }}>Edit</button>
-                      <button type="button" className="danger small" onClick={() => removeContact(c.id)}>Delete</button>
+                      <ConfirmAction className="danger small" message="Delete this contact?" confirmLabel="Delete" onConfirm={() => removeContact(c.id)}>
+                        Delete
+                      </ConfirmAction>
                     </div>
                   </td>
                 </tr>

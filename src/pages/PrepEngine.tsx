@@ -7,7 +7,9 @@ import { buildOverview, scheduleReview, type PatternReadiness, type TodayItem } 
 import { buildOAPlan, type OAPlan } from "../prep/plan";
 import { DIFFICULTIES, FAILURE_REASONS, PATTERNS, RESULTS, SOLUTION_QUALITIES, topicToPattern, type Difficulty, type FailureReason, type Pattern, type ProblemResult, type SolutionQuality } from "../prep/patterns";
 import OASimulation from "../components/OASimulation";
+import ConfirmAction from "../components/ConfirmAction";
 import { reportError } from "../lib/report";
+import { userErrorMessage } from "../lib/errors";
 
 type Tab = "today" | "progress" | "history";
 
@@ -268,7 +270,11 @@ function HistoryTab({ problems, oas, onDelete }: { problems: CodingProblem[]; oa
                 <td>{p.difficulty ?? "—"}</td>
                 <td><span className={`prep-res ${p.result}`}>{p.result ?? "—"}</span></td>
                 <td className="mono">{p.time_minutes != null ? `${p.time_minutes}m` : "—"}</td>
-                <td><button type="button" className="prep-del" onClick={() => onDelete(p.id)} aria-label="Delete">✕</button></td>
+                <td>
+                  <ConfirmAction className="prep-del" message="Delete this problem?" confirmLabel="Delete" onConfirm={() => onDelete(p.id)}>
+                    ✕
+                  </ConfirmAction>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -290,13 +296,15 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
   const [confidence, setConfidence] = useState(3);
   const [reasons, setReasons] = useState<FailureReason[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const toggle = <T,>(arr: T[], v: T, set: (x: T[]) => void) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
   async function save() {
-    if (!name.trim()) { alert("Add a problem name."); return; }
-    if (patterns.length === 0) { alert("Tag at least one pattern."); return; }
+    if (!name.trim()) { setError("Add a problem name."); return; }
+    if (patterns.length === 0) { setError("Tag at least one pattern."); return; }
     setBusy(true);
+    setError("");
     try {
       const sched = scheduleReview(result, confidence, null);
       await createCodingProblem({
@@ -306,7 +314,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
         source: "manual", solved_at: new Date().toISOString(), next_review_at: sched.nextReviewAt, review_stage: sched.stage,
       });
       onSaved();
-    } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(userErrorMessage(e, "Couldn't save this problem.")); }
     finally { setBusy(false); }
   }
 
@@ -352,6 +360,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
             </div>
           </>
         )}
+        {error && <p className="hint text-red">{error}</p>}
 
         <div className="prep-log-acts">
           <button type="button" className="secondary" onClick={onClose}>Cancel</button>

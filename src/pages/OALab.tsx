@@ -4,8 +4,11 @@ import { createOAAttempt, deleteOAAttempt, listOAAttempts, type OAAttempt, type 
 import { listApplications } from "../db/applications";
 import { analyzeOA } from "../prep/oaDiagnostics";
 import { reportError } from "../lib/report";
+import { userErrorMessage } from "../lib/errors";
 import type { ApplicationRow } from "../db/types";
 import CompanyLogo from "../components/CompanyLogo";
+import ConfirmAction from "../components/ConfirmAction";
+import { PageNotice } from "../components/PageState";
 
 const blankQ = (): OAQuestion => ({ attempted: true, solved: false, timeMin: null, difficulty: "", topic: "", testsPassed: "", problem: "", failureReason: "" });
 const DIFFICULTIES = ["", "Easy", "Medium", "Hard"];
@@ -14,6 +17,8 @@ export default function OALab() {
   const [attempts, setAttempts] = useState<OAAttempt[]>([]);
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
 
   const load = () => listOAAttempts().then(setAttempts).catch((e) => reportError("oa lab: load attempts", e));
   useEffect(() => { load(); listApplications().then(setApps).catch((e) => reportError("oa lab: load applications", e)); }, []);
@@ -21,9 +26,16 @@ export default function OALab() {
   const diag = useMemo(() => analyzeOA(attempts), [attempts]);
 
   async function remove(id: number) {
-    if (!confirm("Delete this OA debrief?")) return;
-    await deleteOAAttempt(id);
-    load();
+    setMessage("");
+    try {
+      await deleteOAAttempt(id);
+      setMessageKind("success");
+      setMessage("OA debrief deleted.");
+      load();
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't delete this OA debrief."));
+    }
   }
 
   return (
@@ -35,8 +47,9 @@ export default function OALab() {
         </div>
         <button type="button" onClick={() => setShowForm((s) => !s)}>{showForm ? "Close" : "+ Log an OA"}</button>
       </div>
+      {message && <PageNotice kind={messageKind}>{message}</PageNotice>}
 
-      {showForm && <OAForm apps={apps} onSaved={() => { setShowForm(false); load(); }} onCancel={() => setShowForm(false)} />}
+      {showForm && <OAForm apps={apps} onSaved={() => { setShowForm(false); setMessageKind("success"); setMessage("OA debrief saved."); load(); }} onCancel={() => setShowForm(false)} />}
 
       {diag && <Diagnostics diag={diag} />}
 
@@ -132,7 +145,9 @@ function AttemptCard({ a, onDelete }: { a: OAAttempt; onDelete: () => void }) {
           <span>{a.taken_on ?? "—"} · {a.duration_min ? `${a.duration_min} min` : "duration —"} · {a.num_questions ?? a.questions.length} questions</span>
         </div>
         <span className="oa-score">{solved}/{a.questions.length} solved</span>
-        <button type="button" className="oa-del" onClick={onDelete} title="Delete" aria-label="Delete">✕</button>
+        <ConfirmAction className="oa-del" message="Delete this debrief?" confirmLabel="Delete" onConfirm={onDelete}>
+          ✕
+        </ConfirmAction>
       </div>
 
       {a.primary_lesson && <p className="oa-lesson"><span className="eyebrow">Primary lesson</span>{a.primary_lesson}</p>}
@@ -182,6 +197,7 @@ function OAForm({ apps, onSaved, onCancel }: { apps: ApplicationRow[]; onSaved: 
   const [nextRule, setNextRule] = useState("");
   const [topics, setTopics] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   function setQ(i: number, patch: Partial<OAQuestion>) {
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
@@ -193,8 +209,9 @@ function OAForm({ apps, onSaved, onCancel }: { apps: ApplicationRow[]; onSaved: 
   }
 
   async function save() {
-    if (!company.trim()) { alert("Add a company."); return; }
+    if (!company.trim()) { setError("Add a company."); return; }
     setBusy(true);
+    setError("");
     try {
       await createOAAttempt({
         application_id: appId, company, role_title: role, taken_on: takenOn,
@@ -203,7 +220,7 @@ function OAForm({ apps, onSaved, onCancel }: { apps: ApplicationRow[]; onSaved: 
         topics_review: topics.split(",").map((t) => t.trim()).filter(Boolean),
       });
       onSaved();
-    } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(userErrorMessage(e, "Couldn't save this OA debrief.")); }
     finally { setBusy(false); }
   }
 
@@ -252,6 +269,7 @@ function OAForm({ apps, onSaved, onCancel }: { apps: ApplicationRow[]; onSaved: 
         <label className="oa-wide">Next-OA rule<input value={nextRule} onChange={(e) => setNextRule(e.target.value)} placeholder="Move on after 15 min without progress" /></label>
       </div>
 
+      {error && <p className="hint text-red">{error}</p>}
       <div className="oa-form-acts">
         <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
         <button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save debrief"}</button>
