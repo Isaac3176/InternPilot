@@ -9,6 +9,7 @@ import { extractTeam } from "../networking/connections";
 import { bestConnection } from "../networking/graph";
 import { matchCompany, trackFor, TRACK_LABEL, PRIORITY_LABEL, type TargetCompany } from "../ranking/companies";
 import { resumeIdForCompany } from "../ranking/resumeTracks";
+import { getPrefs } from "../ranking/prefs";
 import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription } from "../listings/description";
@@ -25,6 +26,13 @@ import PeopleFinder from "../components/PeopleFinder";
 const MAX_SHOWN = 200;
 const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
 type JobType = (typeof JOB_TYPES)[number];
+
+function jobTypeFromPref(value: string): JobType | null {
+  if (value === "internship") return "Internship";
+  if (value === "coop") return "Co-op";
+  if (value === "new_grad") return "Full-time";
+  return null;
+}
 
 const STAGES = ["Saved", "Applied", "Assessment", "Interview", "Offer"];
 const STATUS_STAGE: Record<Status, number> = {
@@ -145,7 +153,10 @@ export default function Internships() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<JobType[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<JobType[]>(() => {
+    const types = getPrefs().employmentTypes.map(jobTypeFromPref).filter((x): x is JobType => !!x);
+    return [...new Set(types)];
+  });
   const [location, setLocation] = useState("");
   const [onlyNew, setOnlyNew] = useState(false);
   const [matchesMyRoles, setMatchesMyRoles] = useState(false);
@@ -328,6 +339,15 @@ export default function Internships() {
   const selReferrals = selected ? referrals.filter((r) => (r.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
   const selTeam = selected ? extractTeam(selected.title, selDesc) : { areas: [], keywords: [] };
   const bestPath = bestConnection(selContacts, selTeam, profile);
+  const prefs = getPrefs();
+  const targetRoles = (profile?.target_roles ?? prefs.targetRoles.join(", ")).split(",").map((r) => r.trim()).filter(Boolean);
+  const targetLocations = (profile?.locations ?? "").split(",").map((r) => r.trim()).filter(Boolean);
+  const targetChips = [
+    ...targetRoles.slice(0, 3),
+    prefs.targetSeason,
+    ...selectedTypes,
+    ...targetLocations.slice(0, 2),
+  ].filter(Boolean);
 
   return (
     <>
@@ -370,6 +390,20 @@ export default function Internships() {
 
       {error && <p className="hint text-red">{error}</p>}
 
+      <div className="target-summary">
+        <div>
+          <span className="eyebrow">Tailored from your profile</span>
+          <p>
+            Showing roles that match your target role family, season, job type, eligibility, and work preferences.
+          </p>
+        </div>
+        <div className="target-summary-chips">
+          {targetChips.slice(0, 8).map((chip) => <span key={chip}>{chip}</span>)}
+          {targetChips.length > 8 && <span>+{targetChips.length - 8}</span>}
+        </div>
+        <button type="button" className="secondary small" onClick={() => navigate("/profile")}>Edit profile</button>
+      </div>
+
       {targetOpenings.length > 0 && !openingsDismissed && (
         <div className="target-openings">
           <div className="to-head">
@@ -396,7 +430,7 @@ export default function Internships() {
       <div className="workspace">
         <aside className="results">
           <div className="results-head">
-            <div className="count">Showing <b>{shown.length}</b> of <b>{total}</b> internships</div>
+            <div className="count">Showing <b>{shown.length}</b> of <b>{total}</b> tailored roles</div>
             <div className="seg">
               <button type="button" className={sort === "relevance" ? "on" : ""} onClick={() => setSort("relevance")}>Best fit</button>
               <button type="button" className={sort === "recent" ? "on" : ""} onClick={() => setSort("recent")}>Newest</button>

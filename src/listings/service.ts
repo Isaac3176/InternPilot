@@ -19,13 +19,27 @@ function sponsorshipOk(listing: Listing, profile: Profile | null): boolean {
   return !(s.includes("does not offer") || s.includes("citizenship is required"));
 }
 
-function listingEmploymentType(title: string): "internship" | "coop" | "new_grad" | "parttime" | "unknown" {
+export function listingEmploymentType(title: string): "internship" | "coop" | "new_grad" | "parttime" | "unknown" {
   const t = title.toLowerCase();
   if (/co-?op|\bcoop\b/.test(t)) return "coop";
   if (/part[- ]?time/.test(t)) return "parttime";
   if (/new ?grad|university grad|early career|full[- ]?time|graduate/.test(t)) return "new_grad";
   if (/intern|internship/.test(t)) return "internship";
   return "unknown";
+}
+
+export function hasSeniorLevelSignal(title: string): boolean {
+  return /\b(senior|sr\.?|staff|principal|lead|manager|director|head of)\b/i.test(title);
+}
+
+export function targetsEarlyCareer(employmentTypes: string[], roles: string[]): boolean {
+  return employmentTypes.some((t) => t === "internship" || t === "coop" || t === "new_grad") ||
+    roles.some((r) => /intern|co-?op|new ?grad|graduate|early career/i.test(r));
+}
+
+export function matchesSeniority(title: string, employmentTypes: string[], roles: string[]): boolean {
+  if (!hasSeniorLevelSignal(title)) return true;
+  return !targetsEarlyCareer(employmentTypes, roles);
 }
 
 function matchesEmploymentPrefs(listing: Listing, prefs: RankingPrefs): boolean {
@@ -99,17 +113,26 @@ export function isGenericSwe(roles: string[]): boolean {
   return roles.some((r) => /software|full[\s-]?stack|front[\s-]?end|back[\s-]?end|swe|sde|developer|engineer/i.test(r));
 }
 
+function genericEngineeringMatch(title: string, roles: string[]): boolean {
+  if (!isGenericSwe(roles) || !ENG_SIGNAL.test(title)) return false;
+  const t = title.toLowerCase();
+  const wantsData = roles.some((r) => /data scien|data engineer|analytics/i.test(r));
+  if (!wantsData && /data scien|business intelligence|analytics/.test(t)) return false;
+  return true;
+}
+
 /** Whether a listing is a real role matching the user's target roles. */
 export function matchesTargetRoles(title: string, roles: string[]): boolean {
   if (NON_ROLE.test(title)) return false;
   if (!roles.length) return true;
   if (roleScore(title, roles) >= 0.5) return true;
-  return isGenericSwe(roles) && ENG_SIGNAL.test(title);
+  return genericEngineeringMatch(title, roles);
 }
 
 /** Normalized 0-100 profile match, weighted toward target-role fit. */
-function scoreListing(listing: Listing, profile: Profile | null): number {
+function scoreListing(listing: Listing, profile: Profile | null, prefs: RankingPrefs): number {
   const roles = splitCsv(profile?.target_roles);
+  const effectiveRoles = roles.length ? roles : prefs.targetRoles.map((r) => r.toLowerCase());
   const skills = splitCsv(profile?.skills);
   const locs = splitCsv(profile?.locations);
   const title = listing.title.toLowerCase();
@@ -118,9 +141,9 @@ function scoreListing(listing: Listing, profile: Profile | null): number {
   // Courses / bootcamps / tutoring / talent pools are not internships — sink them.
   if (NON_ROLE.test(listing.title)) return 3;
 
-  let rScore = roles.length ? roleScore(listing.title, roles) : 0.5;
+  let rScore = effectiveRoles.length ? roleScore(listing.title, effectiveRoles) : 0.5;
   // A software-engineer's search should rank any engineering internship highly.
-  if (rScore < 0.8 && isGenericSwe(roles) && ENG_SIGNAL.test(listing.title)) rScore = Math.max(rScore, 0.8);
+  if (rScore < 0.8 && genericEngineeringMatch(listing.title, effectiveRoles)) rScore = Math.max(rScore, 0.8);
 
   const skillHit = skills.length ? skills.filter((s) => title.includes(s)).length / skills.length : 0;
   const locHit = locs.length ? (locs.some((l) => listingLocs.includes(l)) ? 1 : 0) : 0;
@@ -144,12 +167,13 @@ export interface Feed {
 export async function getFeed(force = false): Promise<Feed> {
   const [listings, profile] = await Promise.all([fetchAllListings(force), getProfile()]);
   const prefs = getPrefs();
-  const roles = splitCsv(profile?.target_roles);
+  const profileRoles = splitCsv(profile?.target_roles);
+  const roles = profileRoles.length ? profileRoles : prefs.targetRoles.map((r) => r.toLowerCase());
   const freshCutoff = Date.now() / 1000 - 5 * 24 * 60 * 60; // posted within 5 days
 
   const ranked: RankedListing[] = listings.map((l) => ({
     ...l,
-    score: scoreListing(l, profile),
+    score: scoreListing(l, profile, prefs),
     isNew: !!l.datePosted && l.datePosted > freshCutoff,
     matchesRoles: matchesTargetRoles(l.title, roles),
     sponsorshipOk: sponsorshipOk(l, profile),
@@ -167,6 +191,8 @@ export async function getFeed(force = false): Promise<Feed> {
   const undergrad = isUndergradDegree(profile?.degree);
   const onTarget = (l: RankedListing): boolean =>
     matchesEmploymentPrefs(l, prefs) &&
+    matchesSeniority(l.title, prefs.employmentTypes, prefs.targetRoles) &&
+    (roles.length === 0 || l.matchesRoles) &&
     matchesSeason(l.title, targetSeason) &&
     (!l.season || l.seasonInferred || matchesSeason(l.season, targetSeason)) &&
     !(undergrad && requiresGradDegree(l.title));

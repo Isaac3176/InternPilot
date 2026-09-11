@@ -936,6 +936,45 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 /* ---------- Discover (Internships) ---------- */
 .lbl { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--slate); }
+.target-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff, var(--surface-2));
+}
+.target-summary p {
+  margin: 3px 0 0;
+  color: var(--slate);
+  font-size: 12.5px;
+}
+.target-summary-chips {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.target-summary-chips span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  max-width: 180px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 11.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .workspace {
   display: grid;
@@ -2017,6 +2056,13 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   .field-row {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+  .target-summary {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .target-summary-chips {
+    justify-content: flex-start;
   }
   .card {
     padding: 16px;

@@ -1,7 +1,15 @@
 import type { Profile } from "../db/types";
 import type { RankedListing } from "../listings/types";
 import { assessEligibility } from "../listings/eligibility";
-import { roleScore, matchesTargetRoles, isGenericSwe, ENG_SIGNAL, NON_ROLE } from "../listings/service";
+import {
+  roleScore,
+  matchesTargetRoles,
+  isGenericSwe,
+  ENG_SIGNAL,
+  NON_ROLE,
+  listingEmploymentType,
+  matchesSeniority,
+} from "../listings/service";
 import { matchCompany, PRIORITY_WEIGHT } from "./companies";
 import { getMutedPatterns } from "./feedback";
 import { learningAdjustment } from "./learning";
@@ -63,15 +71,6 @@ function needsSponsorship(p: Profile | null): boolean {
     ["f1_opt", "f1_cpt", "h1b", "tn", "need_sponsorship", "other"].includes(p.work_auth ?? ""));
 }
 
-function listingEmploymentType(title: string): "internship" | "coop" | "new_grad" | "parttime" | "unknown" {
-  const t = title.toLowerCase();
-  if (/co-?op|\bcoop\b/.test(t)) return "coop";
-  if (/part[- ]?time/.test(t)) return "parttime";
-  if (/new ?grad|university grad|early career|full[- ]?time|graduate/.test(t)) return "new_grad";
-  if (/intern|internship/.test(t)) return "internship";
-  return "unknown";
-}
-
 function remotePreferenceScore(l: RankedListing, p: Profile | null): number {
   const pref = p?.remote_pref;
   if (!pref || pref === "any") return 0;
@@ -116,6 +115,12 @@ function passesHardFilters(l: RankedListing, ctx: RankContext, eligLevel: string
   const type = listingEmploymentType(l.title);
   if (type !== "unknown" && prefs.employmentTypes.length && !prefs.employmentTypes.includes(type)) {
     return { hidden: true, reason: "Outside your selected job type" };
+  }
+  if (!matchesSeniority(l.title, prefs.employmentTypes, prefs.targetRoles)) {
+    return { hidden: true, reason: "Seniority mismatch" };
+  }
+  if (!matchesTargetRoles(l.title, prefs.targetRoles)) {
+    return { hidden: true, reason: "Outside your target roles" };
   }
 
   return { hidden: false };
