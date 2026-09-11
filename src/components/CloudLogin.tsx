@@ -4,6 +4,7 @@ import { getRemember, setRemember } from "../cloud/supabase";
 import { AscentIcon } from "./Logo";
 
 type View = "login" | "signup" | "reset";
+type MessageKind = "error" | "info";
 
 /** Sign-in gate for the web/phone build (no local account — Supabase only). */
 export default function CloudLogin({ onDone }: { onDone: () => void }) {
@@ -14,9 +15,11 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
   const [remember, setRememberState] = useState(getRemember());
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [msgKind, setMsgKind] = useState<MessageKind>("error");
   const [notice, setNotice] = useState(""); // carried across views (e.g. after signup)
 
   const go = (v: View) => { setView(v); setMsg(""); setPassword(""); setConfirm(""); };
+  const showError = (text: string) => { setMsgKind("error"); setMsg(text); };
 
   async function login() {
     setBusy(true); setMsg("");
@@ -25,20 +28,20 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       await cloudSignIn(email, password);
       onDone();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally { setBusy(false); }
   }
 
   async function signup() {
-    if (password !== confirm) { setMsg("Passwords don't match."); return; }
-    if (password.length < 8) { setMsg("Use at least 8 characters."); return; }
+    if (password !== confirm) { showError("Passwords don't match."); return; }
+    if (password.length < 8) { showError("Use at least 8 characters."); return; }
     setBusy(true); setMsg("");
     setRemember(remember);
     try {
       const result = await cloudSignUp(email, password);
       if (result === "already_exists") {
         go("login"); // go() clears msg, so set it after
-        setMsg("That email already has an account — sign in, or use “Forgot password?”");
+        showError("That email already has an account. Sign in, or use Forgot password.");
         return;
       }
       if (result === "confirm_email") {
@@ -50,7 +53,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       await cloudSignIn(email, password);
       onDone();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally { setBusy(false); }
   }
 
@@ -61,7 +64,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       setNotice("If that email has an account, a password-reset link is on its way.");
       go("login");
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally { setBusy(false); }
   }
 
@@ -87,7 +90,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
               <button type="button" className="linklike" onClick={() => go("reset")}>Forgot password?</button>
             </div>
             <button type="button" style={{ width: "100%" }} disabled={busy || !email || !password} onClick={login}>
-              {busy ? "…" : "Log in"}
+              {busy ? "Signing in..." : "Log in"}
             </button>
             <p className="auth-switch">New to InternPilot? <button type="button" className="linklike" onClick={() => { setNotice(""); go("signup"); }}>Create an account</button></p>
           </>
@@ -106,7 +109,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
               <span>Remember this device</span>
             </label>
             <button type="button" style={{ width: "100%" }} disabled={busy || !email || !password || !confirm} onClick={signup}>
-              {busy ? "…" : "Create account"}
+              {busy ? "Creating..." : "Create account"}
             </button>
             <p className="auth-switch">Already have an account? <button type="button" className="linklike" onClick={() => go("login")}>Sign in</button></p>
           </>
@@ -119,13 +122,13 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
             <Field id="rs-email" label="Email" type="email" autoComplete="username" value={email} onChange={setEmail}
               onEnter={() => email && reset()} />
             <button type="button" style={{ width: "100%" }} disabled={busy || !email} onClick={reset}>
-              {busy ? "…" : "Send reset link"}
+              {busy ? "Sending..." : "Send reset link"}
             </button>
             <p className="auth-switch"><button type="button" className="linklike" onClick={() => go("login")}>← Back to sign in</button></p>
           </>
         )}
 
-        {msg && <p className="hint" style={{ marginTop: 12 }}>{msg}</p>}
+        {msg && <p className={`hint ${msgKind === "error" ? "text-red" : ""}`} style={{ marginTop: 12 }}>{msg}</p>}
       </div>
     </div>
   );

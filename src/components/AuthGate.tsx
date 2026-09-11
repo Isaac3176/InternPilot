@@ -18,6 +18,13 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<Mode>("loading");
   const [recovering, setRecovering] = useState(false);
 
+  function completeOnboarding() {
+    if (typeof window !== "undefined" && window.location.pathname === "/") {
+      window.history.replaceState(null, "", "/dashboard");
+    }
+    setMode("authed");
+  }
+
   const evalSession = useCallback(async (session: Session | null) => {
     if (!session) { setMode("login"); return; }
     try {
@@ -52,7 +59,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return (
       <SignupWizard
         skipAccount
-        onDone={() => setMode("authed")}
+        onDone={completeOnboarding}
         onSignOut={() => cloudSignOut().finally(() => setMode("login"))}
       />
     );

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { LoadingState } from "./components/PageState";
 import { isTauri } from "./lib/env";
 import { cloudMode } from "./cloud/supabase";
 import { useIsPhone } from "./mobile/ui/useIsPhone";
@@ -113,7 +114,7 @@ export default function App() {
       />
       <main className="main">
         <ErrorBoundary level="page" key={pathname}>
-          <Suspense fallback={<p className="hint" style={{ padding: "8px 2px" }}>Loading…</p>}>
+          <Suspense fallback={<LoadingState title="Loading page" detail="Getting this workspace ready." />}>
             <Outlet />
           </Suspense>
         </ErrorBoundary>
