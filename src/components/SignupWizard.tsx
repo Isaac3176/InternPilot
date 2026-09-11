@@ -52,6 +52,14 @@ const LOCATION_SUGGESTIONS = [
 ];
 
 const ONBOARDING_KEY = "internpilot.onboarding.answers";
+const QUICK_ROLES = [
+  "Software Engineer",
+  "Backend Engineer",
+  "Frontend Engineer",
+  "Machine Learning Engineer",
+  "Data Engineer",
+  "Product Manager",
+];
 
 function dateMonthsFromNow(months: number): string {
   const d = new Date();
@@ -176,6 +184,15 @@ export default function SignupWizard({
     if (targetDate) h.set("target_date", targetDate);
   }
 
+  function selectedRoles(): string[] {
+    return h.s.target_roles.split(",").map((x) => x.trim()).filter(Boolean);
+  }
+
+  function toggleRole(role: string) {
+    const roles = selectedRoles();
+    h.set("target_roles", roles.includes(role) ? roles.filter((r) => r !== role).join(", ") : [...roles, role].join(", "));
+  }
+
   async function finish() {
     setBusy(true);
     setError("");
@@ -248,6 +265,18 @@ export default function SignupWizard({
               <OptionChips multi options={EMPLOYMENT_TYPES} value={empTypes} onChange={(v) => setEmpTypes(v as string[])} />
             </div>
             {h.tags("target_roles", "Roles", ROLE_SUGGESTIONS, "Search roles, like Backend or Machine Learning")}
+            <div className="quick-picks" aria-label="Popular roles">
+              {QUICK_ROLES.map((role) => (
+                <button
+                  type="button"
+                  key={role}
+                  className={selectedRoles().includes(role) ? "on" : ""}
+                  onClick={() => toggleRole(role)}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
           </section>
         )}
 
@@ -293,6 +322,11 @@ export default function SignupWizard({
             {resumeMsg && <p className="hint onboarding-success">{resumeMsg}</p>}
             {resumeErr && <p className="hint text-red">{resumeErr}</p>}
             <div className="privacy-strip"><b>Privacy first.</b> Your resume is only used to power your profile and matching.</div>
+            {!resumeMsg && (
+              <button type="button" className="linklike onboarding-skip" onClick={next}>
+                Skip resume for now
+              </button>
+            )}
           </section>
         )}
 
