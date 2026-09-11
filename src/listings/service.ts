@@ -2,7 +2,7 @@ import { getProfile } from "../db/profile";
 import type { Profile } from "../db/types";
 import { fetchAllListings } from "./sources";
 import type { Listing, RankedListing } from "./types";
-import { getPrefs } from "../ranking/prefs";
+import { getPrefs, type RankingPrefs } from "../ranking/prefs";
 import { matchesSeason, requiresGradDegree, isUndergradDegree } from "./relevance";
 
 function splitCsv(value: string | null | undefined): string[] {
@@ -17,6 +17,35 @@ function sponsorshipOk(listing: Listing, profile: Profile | null): boolean {
   if (profile?.work_auth !== "need_sponsorship") return true;
   const s = (listing.sponsorship ?? "").toLowerCase();
   return !(s.includes("does not offer") || s.includes("citizenship is required"));
+}
+
+function listingEmploymentType(title: string): "internship" | "coop" | "new_grad" | "parttime" | "unknown" {
+  const t = title.toLowerCase();
+  if (/co-?op|\bcoop\b/.test(t)) return "coop";
+  if (/part[- ]?time/.test(t)) return "parttime";
+  if (/new ?grad|university grad|early career|full[- ]?time|graduate/.test(t)) return "new_grad";
+  if (/intern|internship/.test(t)) return "internship";
+  return "unknown";
+}
+
+function matchesEmploymentPrefs(listing: Listing, prefs: RankingPrefs): boolean {
+  if (!prefs.employmentTypes.length) return true;
+  const type = listingEmploymentType(listing.title);
+  if (type === "unknown") return true;
+  return prefs.employmentTypes.includes(type);
+}
+
+function remotePreferenceScore(listing: Listing, profile: Profile | null): number {
+  const pref = profile?.remote_pref;
+  if (!pref || pref === "any") return 0;
+  const loc = listing.locations.join(" ").toLowerCase();
+  const remote = !!listing.remote || /\bremote\b/.test(loc);
+  const hybrid = /\bhybrid\b/.test(loc);
+  const onsite = !remote && !hybrid;
+  if (pref === "remote") return remote ? 1 : -0.25;
+  if (pref === "hybrid") return hybrid ? 1 : remote ? 0.35 : 0;
+  if (pref === "onsite") return onsite ? 1 : -0.15;
+  return 0;
 }
 
 // Generic words that don't help distinguish a role.
@@ -95,8 +124,9 @@ function scoreListing(listing: Listing, profile: Profile | null): number {
 
   const skillHit = skills.length ? skills.filter((s) => title.includes(s)).length / skills.length : 0;
   const locHit = locs.length ? (locs.some((l) => listingLocs.includes(l)) ? 1 : 0) : 0;
+  const remoteScore = remotePreferenceScore(listing, profile);
 
-  let score = 0.8 * rScore + 0.12 * skillHit + 0.08 * locHit;
+  let score = 0.74 * rScore + 0.12 * skillHit + 0.08 * locHit + 0.06 * remoteScore;
   if (!sponsorshipOk(listing, profile)) score *= 0.5;
   return Math.round(score * 100);
 }
@@ -113,6 +143,7 @@ export interface Feed {
  */
 export async function getFeed(force = false): Promise<Feed> {
   const [listings, profile] = await Promise.all([fetchAllListings(force), getProfile()]);
+  const prefs = getPrefs();
   const roles = splitCsv(profile?.target_roles);
   const freshCutoff = Date.now() / 1000 - 5 * 24 * 60 * 60; // posted within 5 days
 
@@ -132,9 +163,10 @@ export async function getFeed(force = false): Promise<Feed> {
 
   // Filter to the user's target: drop roles from a different season/year and (for
   // undergrads) grad-only roles. Ambiguous roles with no stated season are kept.
-  const targetSeason = getPrefs().targetSeason;
+  const targetSeason = prefs.targetSeason;
   const undergrad = isUndergradDegree(profile?.degree);
   const onTarget = (l: RankedListing): boolean =>
+    matchesEmploymentPrefs(l, prefs) &&
     matchesSeason(l.title, targetSeason) &&
     (!l.season || l.seasonInferred || matchesSeason(l.season, targetSeason)) &&
     !(undergrad && requiresGradDegree(l.title));

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../db/profile";
 import { listResumeVersions } from "../db/resumes";
+import { syncPrefsFromProfile } from "../ranking/prefs";
 import TagMultiSelect from "./TagMultiSelect";
 import OptionChips, { type ChipOption } from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
@@ -106,6 +107,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
         veteran_status: str(s.veteran_status), disability_status: str(s.disability_status),
       };
       await saveProfile(payload);
+      syncPrefsFromProfile(payload);
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 1600);
       onSaved?.();

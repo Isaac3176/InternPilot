@@ -63,6 +63,28 @@ function needsSponsorship(p: Profile | null): boolean {
     ["f1_opt", "f1_cpt", "h1b", "tn", "need_sponsorship", "other"].includes(p.work_auth ?? ""));
 }
 
+function listingEmploymentType(title: string): "internship" | "coop" | "new_grad" | "parttime" | "unknown" {
+  const t = title.toLowerCase();
+  if (/co-?op|\bcoop\b/.test(t)) return "coop";
+  if (/part[- ]?time/.test(t)) return "parttime";
+  if (/new ?grad|university grad|early career|full[- ]?time|graduate/.test(t)) return "new_grad";
+  if (/intern|internship/.test(t)) return "internship";
+  return "unknown";
+}
+
+function remotePreferenceScore(l: RankedListing, p: Profile | null): number {
+  const pref = p?.remote_pref;
+  if (!pref || pref === "any") return 0;
+  const loc = l.locations.join(" ").toLowerCase();
+  const remote = !!l.remote || /\bremote\b/.test(loc);
+  const hybrid = /\bhybrid\b/.test(loc);
+  const onsite = !remote && !hybrid;
+  if (pref === "remote") return remote ? 6 : -6;
+  if (pref === "hybrid") return hybrid ? 6 : remote ? 2 : 0;
+  if (pref === "onsite") return onsite ? 5 : -3;
+  return 0;
+}
+
 interface HardResult { hidden: boolean; reason?: string }
 
 /** Deterministic exclusions applied before any scoring. */
@@ -90,6 +112,11 @@ function passesHardFilters(l: RankedListing, ctx: RankContext, eligLevel: string
   const cls = l.title.match(/class of (20\d\d)|graduat\w*\s+(?:in\s+)?(20\d\d)/i);
   const year = cls ? Number(cls[1] || cls[2]) : 0;
   if (year && year !== prefs.graduationYear) return { hidden: true, reason: `Class of ${year} (you're ${prefs.graduationYear})` };
+
+  const type = listingEmploymentType(l.title);
+  if (type !== "unknown" && prefs.employmentTypes.length && !prefs.employmentTypes.includes(type)) {
+    return { hidden: true, reason: "Outside your selected job type" };
+  }
 
   return { hidden: false };
 }
@@ -137,6 +164,9 @@ export function scoreOpportunity(l: RankedListing, ctx: RankContext): RankedOppo
   const listingLocs = l.locations.join(" ").toLowerCase();
   const locPts = locs.length && locs.some((x) => listingLocs.includes(x)) ? 5 : 0;
   if (locPts) add("Preferred location", locPts);
+
+  const remotePts = remotePreferenceScore(l, ctx.profile);
+  if (remotePts) add(remotePts > 0 ? "Preferred work style" : "Work style mismatch", remotePts);
 
   const refPts = hasReferral ? 5 : 0;
   if (refPts) add("Referral contact available", refPts);

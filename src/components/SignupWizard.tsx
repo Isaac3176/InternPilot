@@ -6,7 +6,7 @@ import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { parseResume } from "../ai/resumeParse";
 import { createResumeVersion } from "../db/resumes";
 import { mirrorLocalSetting } from "../cloud/userSettings";
-import { getPrefs, savePrefs } from "../ranking/prefs";
+import { getPrefs, syncPrefsFromProfile } from "../ranking/prefs";
 import OptionChips from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
 import { REMOTE_PREF_LABELS, REMOTE_PREFS, YES_NO } from "../db/types";
@@ -199,13 +199,7 @@ export default function SignupWizard({
     try {
       if (!skipAccount) await signup(email.trim().toLowerCase(), password);
 
-      const gradYear = graduationYearFor(collegeYear);
       const roles = h.s.target_roles.split(",").map((x) => x.trim()).filter(Boolean);
-      savePrefs({
-        employmentTypes: empTypes.length ? empTypes : ["internship"],
-        graduationYear: gradYear ? Number(gradYear) : getPrefs().graduationYear,
-        targetRoles: roles.length ? roles.map((r) => empTypes.includes("internship") && !/intern/i.test(r) ? `${r} Intern` : r) : getPrefs().targetRoles,
-      });
       localStorage.setItem(ONBOARDING_KEY, JSON.stringify({
         collegeYear,
         timeline,
@@ -216,6 +210,7 @@ export default function SignupWizard({
       mirrorLocalSetting(ONBOARDING_KEY);
 
       await h.save();
+      syncPrefsFromProfile(h.s, empTypes.length ? empTypes : ["internship"]);
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
