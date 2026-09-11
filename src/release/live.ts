@@ -8,6 +8,8 @@ import { fetchCompanyPostings, type AtsPosting } from "./ats";
 import { getWatchlist, type CompanyPriority } from "../ranking/companies";
 import { notify } from "../lib/notify";
 import { matchesSeason, requiresGradDegree, isUndergradDegree } from "../listings/relevance";
+import { getProfile } from "../db/profile";
+import { getPrefs } from "../ranking/prefs";
 
 // Re-export so callers (and tests) can reach the shared filters through live.ts.
 export { matchesSeason, requiresGradDegree, isUndergradDegree };
@@ -77,10 +79,8 @@ export async function detectLiveOpenings(opts: { markSeen?: boolean } = {}): Pro
   const openings: LiveOpening[] = [];
 
   // Tailor to the user's target: season/year (prefs) + degree level (profile).
-  // Dynamic import keeps the DB layer out of this module's import graph (tests).
-  const { getPrefs } = await import("../ranking/prefs");
   let degree: string | null = null;
-  try { degree = (await (await import("../db/profile")).getProfile())?.degree ?? null; } catch { /* ignore */ }
+  try { degree = (await getProfile())?.degree ?? null; } catch { /* ignore */ }
   const filter: OpeningFilter = { targetSeason: getPrefs().targetSeason, undergrad: isUndergradDegree(degree) };
 
   const queue = [...targets];

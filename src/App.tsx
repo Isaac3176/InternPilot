@@ -4,6 +4,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { LoadingState } from "./components/PageState";
 import { isTauri } from "./lib/env";
 import { cloudMode } from "./cloud/supabase";
+import { cloudSignOut } from "./cloud/auth";
+import { getProfile } from "./db/profile";
+import { listResumeBullets } from "./db/resumes";
 import { useIsPhone } from "./mobile/ui/useIsPhone";
 import Sidebar from "./components/sidebar/Sidebar";
 import type { NavCounts } from "./components/sidebar/nav";
@@ -84,11 +87,10 @@ export default function App() {
       .then(({ countEmails }) => countEmails())
       .then((n) => merge({ replies: n }))
       .catch(() => {});
-    import("./db/resumes")
-      .then(({ listResumeBullets }) => listResumeBullets())
+    listResumeBullets()
       .then((bs) => merge({ flaggedBullets: bs.filter((b) => !b.improved_text || !b.improved_text.trim()).length }))
       .catch(() => {});
-    import("./db/profile").then(({ getProfile }) => getProfile()).then((p) => {
+    getProfile().then((p) => {
       if (!p) return;
       const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.email || "You";
       const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "··";
@@ -110,7 +112,7 @@ export default function App() {
         counts={counts}
         user={user}
         onStartFocus={() => navigate("/focus")}
-        onSignOut={cloudMode() ? () => { import("./cloud/auth").then(({ cloudSignOut }) => cloudSignOut()).catch(console.error); } : undefined}
+        onSignOut={cloudMode() ? () => { cloudSignOut().catch(console.error); } : undefined}
       />
       <main className="main">
         <ErrorBoundary level="page" key={pathname}>
