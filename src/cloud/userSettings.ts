@@ -15,6 +15,7 @@ const EXACT_KEYS = new Set([
   "internpilot.listings.logosOn",
   "internpilot.listings.simplifyOn",
   "internpilot.listings.simplifyUrl",
+  "internpilot.onboarding.answers",
   "internpilot.trackResumes",
 ]);
 

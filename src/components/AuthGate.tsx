@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { cloudSession, onCloudAuth, onPasswordRecovery } from "../cloud/auth";
+import { cloudSession, cloudSignOut, onCloudAuth, onPasswordRecovery } from "../cloud/auth";
 import { syncLocalSettingsFromCloud } from "../cloud/userSettings";
 import { isOnboarded } from "../db/profile";
 import SignupWizard from "./SignupWizard";
@@ -48,6 +48,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
   if (mode === "loading") return null;
   if (mode === "login") return <CloudLogin onDone={() => cloudSession().then(evalSession)} />;
-  if (mode === "onboarding") return <SignupWizard skipAccount onDone={() => setMode("authed")} />;
+  if (mode === "onboarding") {
+    return (
+      <SignupWizard
+        skipAccount
+        onDone={() => setMode("authed")}
+        onSignOut={() => cloudSignOut().finally(() => setMode("login"))}
+      />
+    );
+  }
   return <>{children}</>;
 }
