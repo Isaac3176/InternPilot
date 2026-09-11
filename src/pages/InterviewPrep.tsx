@@ -17,17 +17,22 @@ import { generatePrepPlan, type PrepPlan } from "../ai/prep";
 import { hasApiKey } from "../ai/settings";
 import InterviewModal from "../components/InterviewModal";
 import { userErrorMessage } from "../lib/errors";
+import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
 export default function InterviewPrep() {
   const [rows, setRows] = useState<InterviewRow[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [generatingId, setGeneratingId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
+  const [loading, setLoading] = useState(true);
 
   function load() {
+    setLoading(true);
     listInterviews()
-      .then((next) => { setRows(next); setMessage(""); })
-      .catch((e) => setMessage(userErrorMessage(e, "Couldn't load interview events.")));
+      .then((next) => { setRows(next); })
+      .catch((e) => { setMessageKind("error"); setMessage(userErrorMessage(e, "Couldn't load interview events.")); })
+      .finally(() => setLoading(false));
   }
   useEffect(load, []);
 
@@ -46,8 +51,11 @@ export default function InterviewPrep() {
       });
       await savePrepPlan(row.id, JSON.stringify(plan));
       if (row.prep_status === "not_started") await setPrepStatus(row.id, "in_progress");
+      setMessageKind("success");
+      setMessage("Prep plan generated.");
       load();
     } catch (e) {
+      setMessageKind("error");
       setMessage(userErrorMessage(e, "Couldn't generate this prep plan."));
     } finally {
       setGeneratingId(null);
@@ -58,8 +66,11 @@ export default function InterviewPrep() {
     setMessage("");
     try {
       await setPrepStatus(id, status);
+      setMessageKind("success");
+      setMessage("Prep status updated.");
       load();
     } catch (e) {
+      setMessageKind("error");
       setMessage(userErrorMessage(e, "Couldn't update prep status."));
     }
   }
@@ -69,8 +80,11 @@ export default function InterviewPrep() {
     setMessage("");
     try {
       await deleteInterview(id);
+      setMessageKind("success");
+      setMessage("Interview event deleted.");
       load();
     } catch (e) {
+      setMessageKind("error");
       setMessage(userErrorMessage(e, "Couldn't delete this event."));
     }
   }
@@ -89,10 +103,16 @@ export default function InterviewPrep() {
         <p className="hint">No OpenAI key set — generated plans use an offline template. Add a key in Settings for tailored plans.</p>
       )}
 
-      {message && <p className="hint text-red">{message}</p>}
+      {message && <PageNotice kind={messageKind}>{message}</PageNotice>}
 
-      {rows.length === 0 ? (
-        <div className="empty">No events yet. Add an OA or interview to generate a prep plan.</div>
+      {loading ? (
+        <LoadingState title="Loading interview prep" detail="Getting upcoming OA and interview events." />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          title="No OA or interview events yet"
+          detail="When an application moves forward, add the event here and generate a focused prep plan for the company, role, and timeline."
+          action={<button type="button" onClick={() => setModalOpen(true)}>Add event</button>}
+        />
       ) : (
         rows.map((row) => {
           const plan = parsePlan(row.prep_plan);
@@ -135,6 +155,8 @@ export default function InterviewPrep() {
           onClose={() => setModalOpen(false)}
           onSaved={() => {
             setModalOpen(false);
+            setMessageKind("success");
+            setMessage("Interview event saved.");
             load();
           }}
         />

@@ -20,6 +20,7 @@ import { hasApiKey } from "../ai/settings";
 import { isConnected } from "../gmail/config";
 import { syncGmail } from "../gmail/sync";
 import { userErrorMessage } from "../lib/errors";
+import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
 const CATEGORY_BADGE: Record<EmailCategory, string> = {
   confirmation: "applied",
@@ -39,6 +40,7 @@ export default function Emails() {
   const [form, setForm] = useState(emptyForm);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"info" | "error">("info");
   const gmailConnected = isConnected();
@@ -68,8 +70,11 @@ export default function Emails() {
   }
 
   function load() {
-    listEmails().then(setRows).catch((e) => showError(e, "Couldn't load emails."));
-    listApplications().then(setApps).catch((e) => showError(e, "Couldn't load applications."));
+    setLoading(true);
+    Promise.all([listEmails(), listApplications()])
+      .then(([nextRows, nextApps]) => { setRows(nextRows); setApps(nextApps); })
+      .catch((e) => showError(e, "Couldn't load inbox data."))
+      .finally(() => setLoading(false));
   }
   useEffect(load, []);
 
@@ -88,6 +93,7 @@ export default function Emails() {
         await setEmailClassification(id, result.category, result.confidence);
       }
       setForm(emptyForm);
+      showInfo("Email added and classified.");
       load();
     } catch (e) {
       showError(e, "Couldn't add this email.");
@@ -100,6 +106,7 @@ export default function Emails() {
     try {
       const result = await classifyEmail(row);
       await setEmailClassification(row.id, result.category, result.confidence);
+      showInfo("Email reclassified.");
       load();
     } catch (e) {
       showError(e, "Couldn't classify this email.");
@@ -112,6 +119,7 @@ export default function Emails() {
     setMessage("");
     try {
       await linkEmailApplication(row.id, applicationId);
+      showInfo(applicationId ? "Email linked to application." : "Email unlinked.");
       load();
     } catch (e) {
       showError(e, "Couldn't link this email.");
@@ -137,6 +145,7 @@ export default function Emails() {
     setMessage("");
     try {
       await deleteEmail(id);
+      showInfo("Email deleted.");
       load();
     } catch (e) {
       showError(e, "Couldn't delete this email.");
@@ -156,7 +165,7 @@ export default function Emails() {
           </button>
         )}
       </div>
-      {message && <p className={`hint ${messageKind === "error" ? "text-red" : ""}`}>{message}</p>}
+      {message && <PageNotice kind={messageKind === "error" ? "error" : "success"}>{message}</PageNotice>}
 
       <div className="card">
         <h2>Add an email</h2>
@@ -185,8 +194,13 @@ export default function Emails() {
         </button>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="empty">No emails yet. Paste one above or connect Gmail in Settings.</div>
+      {loading ? (
+        <LoadingState title="Loading inbox" detail="Checking saved emails and application links." />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          title="No job emails yet"
+          detail="Paste an email above to classify it, or connect Gmail in Settings to pull application updates into this workflow."
+        />
       ) : (
         rows.map((row) => {
           const suggested = row.classification ? CATEGORY_TO_STATUS[row.classification] : null;

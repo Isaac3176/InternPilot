@@ -24,6 +24,8 @@ import { matchCompany } from "../ranking/companies";
 import ContactModal from "../components/ContactModal";
 import ReferralModal from "../components/ReferralModal";
 import PeopleFinder from "../components/PeopleFinder";
+import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
+import { userErrorMessage } from "../lib/errors";
 
 const TERMINAL: ReferralStatus[] = ["declined", "no_response", "expired", "applied_through_referral"];
 
@@ -63,15 +65,35 @@ export default function Networking() {
   const [employment, setEmployment] = useState<ContactEmployment[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [peopleTarget, setPeopleTarget] = useState<{ company: string; contacts: ContactRow[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
 
   function load() {
-    listReferrals().then(setReferrals).catch(console.error);
-    listContacts().then(setContacts).catch(console.error);
-    getNetworkingStats().then(setStats).catch(console.error);
-    getConversionByOutreach().then(setOutreach).catch(console.error);
-    getResumeVersionPerformance().then(setResumePerf).catch(console.error);
-    listAllEmployment().then(setEmployment).catch(console.error);
-    getProfile().then(setProfile).catch(console.error);
+    setLoading(true);
+    Promise.all([
+      listReferrals(),
+      listContacts(),
+      getNetworkingStats(),
+      getConversionByOutreach(),
+      getResumeVersionPerformance(),
+      listAllEmployment(),
+      getProfile(),
+    ])
+      .then(([nextReferrals, nextContacts, nextStats, nextOutreach, nextResumePerf, nextEmployment, nextProfile]) => {
+        setReferrals(nextReferrals);
+        setContacts(nextContacts);
+        setStats(nextStats);
+        setOutreach(nextOutreach);
+        setResumePerf(nextResumePerf);
+        setEmployment(nextEmployment);
+        setProfile(nextProfile);
+      })
+      .catch((e) => {
+        setMessageKind("error");
+        setMessage(userErrorMessage(e, "Couldn't load networking data."));
+      })
+      .finally(() => setLoading(false));
   }
 
   const map = networkMap(contacts, employment, profile);
@@ -88,18 +110,42 @@ export default function Networking() {
   useEffect(load, []);
 
   async function changeStatus(id: number, status: ReferralStatus) {
-    await setReferralStatus(id, status);
-    load();
+    setMessage("");
+    try {
+      await setReferralStatus(id, status);
+      setMessageKind("success");
+      setMessage("Referral status updated.");
+      load();
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't update referral status."));
+    }
   }
   async function removeReferral(id: number) {
     if (!confirm("Delete this referral?")) return;
-    await deleteReferral(id);
-    load();
+    setMessage("");
+    try {
+      await deleteReferral(id);
+      setMessageKind("success");
+      setMessage("Referral deleted.");
+      load();
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't delete this referral."));
+    }
   }
   async function removeContact(id: number) {
     if (!confirm("Delete this contact?")) return;
-    await deleteContact(id);
-    load();
+    setMessage("");
+    try {
+      await deleteContact(id);
+      setMessageKind("success");
+      setMessage("Contact deleted.");
+      load();
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(userErrorMessage(e, "Couldn't delete this contact."));
+    }
   }
 
   return (
@@ -114,6 +160,11 @@ export default function Networking() {
           <button type="button" onClick={() => { setEditingReferral(null); setReferralModal(true); }}>+ Referral</button>
         </div>
       </div>
+      {message && <PageNotice kind={messageKind}>{message}</PageNotice>}
+
+      {loading && referrals.length === 0 && contacts.length === 0 && (
+        <LoadingState title="Loading networking" detail="Gathering contacts, referral paths, and outcomes." />
+      )}
 
       {map.length > 0 && (
         <div className="card">
@@ -226,8 +277,14 @@ export default function Networking() {
 
       <div className="card">
         <h2>Referral pipeline</h2>
-        {referrals.length === 0 ? (
-          <div className="empty">No referrals yet. Add one to start tracking a referral path.</div>
+        {loading && referrals.length === 0 ? (
+          <LoadingState title="Loading referrals" />
+        ) : referrals.length === 0 ? (
+          <EmptyState
+            title="No referral paths yet"
+            detail="Create a referral when you have a target company, contact, or follow-up date. This keeps outreach from turning into mental tabs."
+            action={<button type="button" onClick={() => { setEditingReferral(null); setReferralModal(true); }}>Add referral</button>}
+          />
         ) : (
           referrals.map((r) => {
             const warnings = referralWarnings(r);
@@ -263,8 +320,14 @@ export default function Networking() {
 
       <div className="card">
         <h2>Contacts</h2>
-        {contacts.length === 0 ? (
-          <div className="empty">No contacts yet.</div>
+        {loading && contacts.length === 0 ? (
+          <LoadingState title="Loading contacts" />
+        ) : contacts.length === 0 ? (
+          <EmptyState
+            title="Build your first contact list"
+            detail="Add classmates, alumni, recruiters, professors, and coworkers. InternPilot can turn that into warm paths for target companies."
+            action={<button type="button" onClick={() => { setEditingContact(null); setContactModal(true); }}>Add contact</button>}
+          />
         ) : (
           <table>
             <thead>
@@ -291,10 +354,10 @@ export default function Networking() {
       </div>
 
       {contactModal && (
-        <ContactModal initial={editingContact} onClose={() => setContactModal(false)} onSaved={() => { setContactModal(false); load(); }} />
+        <ContactModal initial={editingContact} onClose={() => setContactModal(false)} onSaved={() => { setContactModal(false); setMessageKind("success"); setMessage(editingContact ? "Contact updated." : "Contact saved."); load(); }} />
       )}
       {referralModal && (
-        <ReferralModal initial={editingReferral} onClose={() => setReferralModal(false)} onSaved={() => { setReferralModal(false); load(); }} />
+        <ReferralModal initial={editingReferral} onClose={() => setReferralModal(false)} onSaved={() => { setReferralModal(false); setMessageKind("success"); setMessage(editingReferral ? "Referral updated." : "Referral saved."); load(); }} />
       )}
       {peopleTarget && (
         <PeopleFinder

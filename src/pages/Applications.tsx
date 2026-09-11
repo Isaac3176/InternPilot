@@ -8,6 +8,7 @@ import ApplicationModal from "../components/ApplicationModal";
 import MilestoneCelebration, { isMilestone, type Kind, type Terminal } from "../components/MilestoneCelebration";
 import CompanyLogo from "../components/CompanyLogo";
 import { userErrorMessage } from "../lib/errors";
+import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
 const JOURNEY_LABELS = ["Saved", "Applied", "OA", "Interview", "Offer"];
 const journeyIndex = (s: Status): number =>
@@ -70,12 +71,16 @@ export default function Applications() {
   const [openPop, setOpenPop] = useState<number | null>(null);
   const [celebrate, setCelebrate] = useState<Celebrate | null>(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(true);
   const ghostShownRef = useRef(false);
 
   const load = useCallback((clearMessage = true) => {
+    setLoading(true);
     listApplications({ search, status: "all" })
-      .then((rows) => { setAll(rows); if (clearMessage) setError(""); })
-      .catch((e) => setError(userErrorMessage(e, "Couldn't load applications.")));
+      .then((rows) => { setAll(rows); if (clearMessage) { setError(""); setNotice(""); } })
+      .catch((e) => setError(userErrorMessage(e, "Couldn't load applications.")))
+      .finally(() => setLoading(false));
   }, [search]);
 
   useEffect(() => { load(); }, [load]);
@@ -143,7 +148,8 @@ export default function Applications() {
     setError("");
     try {
       await deleteApplication(row.id);
-      load();
+      setNotice("Application deleted.");
+      load(false);
     } catch (e) {
       setError(userErrorMessage(e, "Couldn't delete this application."));
     }
@@ -155,6 +161,7 @@ export default function Applications() {
     setAll((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
     try {
       await setApplicationStatus(row.id, next);
+      setNotice(`Moved to ${STATUS_LABELS[next]}.`);
       if (isMilestone(next)) {
         const reach = next === "rejected" ? journeyIndex(row.status) : journeyIndex(next);
         const terminal: Terminal = next === "rejected" ? "rejected" : null;
@@ -269,9 +276,24 @@ export default function Applications() {
         })}
       </div>
       {error && <p className="hint text-red">{error}</p>}
+      {notice && <PageNotice kind="success">{notice}</PageNotice>}
 
-      {view.length === 0 ? (
-        <div className="empty">No applications match. Add one to get started.</div>
+      {loading && all.length === 0 ? (
+        <LoadingState title="Loading applications" detail="Pulling your tracker into view." />
+      ) : view.length === 0 ? (
+        all.length === 0 ? (
+          <EmptyState
+            title="Track your first application"
+            detail="Save a role once you apply or want to follow up. InternPilot will keep the stage, resume, notes, and next actions together."
+            action={<button type="button" onClick={openNew}>Add application</button>}
+          />
+        ) : (
+          <EmptyState
+            title="No applications match this view"
+            detail="Try another status filter or clear the search to get back to your full pipeline."
+            action={<button type="button" className="secondary" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</button>}
+          />
+        )
       ) : (
         <div className="tablewrap">
           <table>
@@ -373,7 +395,7 @@ export default function Applications() {
         <ApplicationModal
           initial={editing}
           onClose={() => setModalOpen(false)}
-          onSaved={() => { setModalOpen(false); load(); }}
+          onSaved={() => { setModalOpen(false); setNotice(editing ? "Application updated." : "Application saved."); load(false); }}
         />
       )}
 

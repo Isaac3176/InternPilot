@@ -12,6 +12,7 @@ import type { ResumeMatchResult } from "../ai/types";
 import { hasApiKey } from "../ai/settings";
 import { ACCEPTED_RESUME_TYPES, extractTextFromFile } from "../lib/extractText";
 import { userErrorMessage } from "../lib/errors";
+import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 
 const emptyForm = { name: "", targetRole: "", content: "" };
 
@@ -22,6 +23,8 @@ export default function ResumeCenter() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const [versionMsg, setVersionMsg] = useState("");
+  const [versionMsgKind, setVersionMsgKind] = useState<"success" | "error">("success");
+  const [loadingVersions, setLoadingVersions] = useState(true);
 
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jobDescription, setJobDescription] = useState("");
@@ -31,9 +34,11 @@ export default function ResumeCenter() {
   const [bulletMsg, setBulletMsg] = useState("");
 
   function load() {
+    setLoadingVersions(true);
     listResumeVersions()
-      .then((rows) => { setVersions(rows); setVersionMsg(""); })
-      .catch((e) => setVersionMsg(userErrorMessage(e, "Couldn't load resume versions.")));
+      .then((rows) => { setVersions(rows); })
+      .catch((e) => { setVersionMsgKind("error"); setVersionMsg(userErrorMessage(e, "Couldn't load resume versions.")); })
+      .finally(() => setLoadingVersions(false));
   }
   useEffect(load, []);
 
@@ -60,6 +65,8 @@ export default function ResumeCenter() {
         content: text,
         name: f.name.trim() ? f.name : file.name.replace(/\.[^.]+$/, ""),
       }));
+      setVersionMsgKind("success");
+      setVersionMsg("Resume text imported. Review it, then save this version.");
     } catch (err) {
       setImportError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -74,9 +81,12 @@ export default function ResumeCenter() {
     try {
       if (editingId) await updateResumeVersion(editingId, payload);
       else await createResumeVersion(payload);
+      setVersionMsgKind("success");
+      setVersionMsg(editingId ? "Resume version updated." : "Resume version saved.");
       resetForm();
       load();
     } catch (e) {
+      setVersionMsgKind("error");
       setVersionMsg(userErrorMessage(e, "Couldn't save this resume version."));
     }
   }
@@ -88,8 +98,11 @@ export default function ResumeCenter() {
       await deleteResumeVersion(id);
       if (selectedId === id) setSelectedId("");
       if (editingId === id) resetForm();
+      setVersionMsgKind("success");
+      setVersionMsg("Resume version deleted.");
       load();
     } catch (e) {
+      setVersionMsgKind("error");
       setVersionMsg(userErrorMessage(e, "Couldn't delete this resume version."));
     }
   }
@@ -180,13 +193,18 @@ export default function ResumeCenter() {
             <button type="button" className="secondary" onClick={resetForm}>Cancel</button>
           )}
         </div>
-        {versionMsg && <p className="hint text-red">{versionMsg}</p>}
+        {versionMsg && <PageNotice kind={versionMsgKind}>{versionMsg}</PageNotice>}
       </div>
 
       <div className="card">
         <h2>Resume versions</h2>
-        {versions.length === 0 ? (
-          <div className="empty">No resume versions yet.</div>
+        {loadingVersions ? (
+          <LoadingState title="Loading resumes" detail="Getting your saved versions." />
+        ) : versions.length === 0 ? (
+          <EmptyState
+            title="Add your first resume version"
+            detail="Import a PDF or DOCX above, or paste resume text manually. Targeted versions make matching and application packets much stronger."
+          />
         ) : (
           <table>
             <thead>
@@ -239,7 +257,14 @@ export default function ResumeCenter() {
         </button>
 
         {error && <p className="hint text-red">{error}</p>}
-        {bulletMsg && <p className="hint">{bulletMsg}</p>}
+        {bulletMsg && <PageNotice kind="success">{bulletMsg}</PageNotice>}
+
+        {!result && !running && (
+          <EmptyState
+            title="Ready to compare a resume to a role"
+            detail="Choose a saved resume, paste a job description, and run a match to see missing keywords and bullet rewrite ideas."
+          />
+        )}
 
         {result && (
           <div className="mt-lg">

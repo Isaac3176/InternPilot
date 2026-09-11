@@ -13,6 +13,8 @@ import type { ResumeVersion, Status } from "../db/types";
 import { APP_RECORDED_EVENT } from "../bridge";
 import CompanyLogo from "../components/CompanyLogo";
 import OpeningSoonBanner from "../components/OpeningSoonBanner";
+import { EmptyState, PageNotice } from "../components/PageState";
+import { userErrorMessage } from "../lib/errors";
 
 function scoreColor(v: number): string {
   return v >= 85 ? "var(--beacon)" : v >= 70 ? "var(--accent)" : v >= 55 ? "var(--warn)" : "var(--slate)";
@@ -22,13 +24,16 @@ export default function Queue() {
   const navigate = useNavigate();
   const [queue, setQueue] = useState<OpportunityQueue | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [showDigest, setShowDigest] = useState(false);
 
   const load = useCallback((force = false) => {
     setLoading(true);
+    setError("");
     getOpportunityQueue(force)
       .then(setQueue)
-      .catch((e) => console.error("queue load failed", e))
+      .catch((e) => setError(userErrorMessage(e, "Couldn't load your opportunity queue.")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -55,13 +60,20 @@ export default function Queue() {
       await track(o, "applied");
       recordApplySignal(o); // applying is a strong positive signal
       openExternal(o.url).catch((e) => console.error("open posting failed", e));
+      setNotice("Application recorded as applied.");
       load();
     } catch (e) {
-      console.error(e);
+      setError(userErrorMessage(e, "Couldn't record this application."));
     }
   }
   async function saveForLater(o: RankedOpportunity) {
-    try { await track(o, "interested"); load(); } catch (e) { console.error(e); }
+    try {
+      await track(o, "interested");
+      setNotice("Saved to Applications.");
+      load();
+    } catch (e) {
+      setError(userErrorMessage(e, "Couldn't save this role."));
+    }
   }
   function prepare(o: RankedOpportunity) {
     navigate(`/packet?job=${encodeURIComponent(o.id)}`);
@@ -70,12 +82,15 @@ export default function Queue() {
     navigate("/networking");
   }
   async function onFeedback(o: RankedOpportunity, kind: FeedbackAction) {
-    if (kind === "good") { recordFeedback(o, "good"); load(); return; }
-    if (kind === "mute") { mutePattern(similarPhrase(o.title)); dismiss(o.id); load(); return; }
-    if (kind === "dismiss") { dismiss(o.id); load(); return; }
+    if (kind === "good") { recordFeedback(o, "good"); setNotice("Feedback saved."); load(); return; }
+    if (kind === "mute") { mutePattern(similarPhrase(o.title)); dismiss(o.id); setNotice("Similar roles muted."); load(); return; }
+    if (kind === "dismiss") { dismiss(o.id); setNotice("Role dismissed."); load(); return; }
     recordFeedback(o, kind);
-    if (kind === "already_applied") { try { await track(o, "applied"); } catch (e) { console.error(e); } }
+    if (kind === "already_applied") {
+      try { await track(o, "applied"); } catch (e) { setError(userErrorMessage(e, "Couldn't record this application.")); }
+    }
     dismiss(o.id);
+    setNotice("Feedback saved.");
     load();
   }
 
@@ -110,6 +125,8 @@ export default function Queue() {
           <button type="button" className="btn" onClick={() => load(true)}>Refresh</button>
         </div>
       </div>
+      {error && <PageNotice kind="error">{error}</PageNotice>}
+      {notice && <PageNotice kind="success">{notice}</PageNotice>}
 
       <OpeningSoonBanner />
 
@@ -123,11 +140,11 @@ export default function Queue() {
 
       <div className="qsection-label">Apply now</div>
       {today.length === 0 ? (
-        <div className="empty">
-          <b>Nothing urgent right now</b>
-          <p>New roles from your Priority-0/1 companies will surface here first. Meanwhile, lower-scored matches are in the digest below.</p>
-          <button type="button" className="btn small" onClick={() => navigate("/internships")}>Open Discover</button>
-        </div>
+        <EmptyState
+          title="Nothing urgent right now"
+          detail="New roles from your Priority-0/1 companies will surface here first. Meanwhile, lower-scored matches are in the digest below."
+          action={<button type="button" className="btn small" onClick={() => navigate("/internships")}>Open Discover</button>}
+        />
       ) : (
         <div className="qlist">
           {today.map((o, i) => (
