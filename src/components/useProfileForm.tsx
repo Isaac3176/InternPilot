@@ -50,7 +50,7 @@ export interface ProfileFormApi {
   saving: boolean;
   savedMsg: boolean;
   error: string;
-  save: () => Promise<void>;
+  save: () => Promise<boolean>;
   text: (k: string, label: string, ph?: string) => ReactNode;
   choice: (k: string, label: string, opts: string[]) => ReactNode;
   cards: (k: string, label: string, opts: ChipOption[]) => ReactNode;
@@ -84,7 +84,7 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
     setS((prev) => ({ ...prev, [k]: v }));
   }
 
-  async function save() {
+  async function save(): Promise<boolean> {
     setSaving(true);
     setError("");
     try {
@@ -111,8 +111,10 @@ export function useProfileForm(onSaved?: () => void): ProfileFormApi {
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 1600);
       onSaved?.();
+      return true;
     } catch (e) {
       setError(userErrorMessage(e, "Couldn't save your profile."));
+      return false;
     } finally {
       setSaving(false);
     }

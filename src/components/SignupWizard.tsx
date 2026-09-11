@@ -200,16 +200,21 @@ export default function SignupWizard({
       if (!skipAccount) await signup(email.trim().toLowerCase(), password);
 
       const roles = h.s.target_roles.split(",").map((x) => x.trim()).filter(Boolean);
-      localStorage.setItem(ONBOARDING_KEY, JSON.stringify({
+      const onboardingAnswers = {
         collegeYear,
         timeline,
         employmentTypes: empTypes,
         targetRoles: roles,
         locations: h.s.locations.split(",").map((x) => x.trim()).filter(Boolean),
-      }));
-      mirrorLocalSetting(ONBOARDING_KEY);
+      };
 
-      await h.save();
+      const saved = await h.save();
+      if (!saved) {
+        setBusy(false);
+        return;
+      }
+      localStorage.setItem(ONBOARDING_KEY, JSON.stringify(onboardingAnswers));
+      mirrorLocalSetting(ONBOARDING_KEY);
       syncPrefsFromProfile(h.s, empTypes.length ? empTypes : ["internship"]);
       onDone();
     } catch (e) {
