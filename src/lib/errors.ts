@@ -10,3 +10,11 @@ export function userErrorMessage(error: unknown, fallback = "Something went wron
   }
   return fallback;
 }
+
+export function authErrorMessage(error: unknown): string {
+  const message = userErrorMessage(error, "Couldn't complete authentication. Try again.");
+  if (/confirmation email|send.*email|email.*send|smtp/i.test(message)) {
+    return "We couldn't send the confirmation email. The account was not created. Ask the InternPilot admin to disable email confirmations for the instant onboarding flow, or configure Supabase SMTP, then try again.";
+  }
+  return message;
+}

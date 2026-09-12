@@ -2,6 +2,7 @@ import { useState } from "react";
 import { cloudSignIn, cloudSignUp, cloudResetPassword } from "../cloud/auth";
 import { getRemember, setRemember } from "../cloud/supabase";
 import { AscentIcon } from "./Logo";
+import { authErrorMessage } from "../lib/errors";
 
 type View = "login" | "signup" | "reset";
 type MessageKind = "error" | "info";
@@ -28,7 +29,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       await cloudSignIn(email, password);
       onDone();
     } catch (e) {
-      showError(e instanceof Error ? e.message : String(e));
+      showError(authErrorMessage(e));
     } finally { setBusy(false); }
   }
 
@@ -53,7 +54,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       await cloudSignIn(email, password);
       onDone();
     } catch (e) {
-      showError(e instanceof Error ? e.message : String(e));
+      showError(authErrorMessage(e));
     } finally { setBusy(false); }
   }
 
@@ -64,7 +65,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       setNotice("If that email has an account, a password-reset link is on its way.");
       go("login");
     } catch (e) {
-      showError(e instanceof Error ? e.message : String(e));
+      showError(authErrorMessage(e));
     } finally { setBusy(false); }
   }
 

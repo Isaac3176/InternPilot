@@ -40,6 +40,7 @@ import { supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
 import { isTauri } from "../lib/env";
+import { authErrorMessage } from "../lib/errors";
 import ConfirmAction from "../components/ConfirmAction";
 
 const APP_DATA_TABLES = [
@@ -132,7 +133,7 @@ export default function Settings() {
   async function cloudDo(fn: () => Promise<void>, ok: string) {
     setCBusy(true); setCMsg("");
     try { await fn(); setCMsg(ok); }
-    catch (e) { setCMsg(e instanceof Error ? e.message : String(e)); }
+    catch (e) { setCMsg(authErrorMessage(e)); }
     finally { setCBusy(false); }
   }
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
