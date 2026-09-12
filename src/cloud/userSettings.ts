@@ -1,4 +1,5 @@
 import { cloudMode, supabase, throwIfSupabaseError } from "./supabase";
+import { E2E_SMOKE } from "../lib/e2e";
 
 const EXACT_KEYS = new Set([
   "internpilot.answers",
@@ -65,6 +66,7 @@ async function deleteSetting(key: string): Promise<void> {
 }
 
 export function mirrorLocalSetting(key: string): void {
+  if (E2E_SMOKE) return;
   if (!isSyncedKey(key)) return;
   const raw = localStorage.getItem(key);
   if (raw == null) {
@@ -75,6 +77,7 @@ export function mirrorLocalSetting(key: string): void {
 }
 
 export function removeMirroredLocalSetting(key: string): void {
+  if (E2E_SMOKE) return;
   if (!isSyncedKey(key)) return;
   void deleteSetting(key).catch(console.error);
 }
@@ -85,6 +88,7 @@ export function removeMirroredLocalSetting(key: string): void {
  * their preferences when they first sign in after the sync bridge ships.
  */
 export async function syncLocalSettingsFromCloud(): Promise<void> {
+  if (E2E_SMOKE) return;
   if (!cloudMode()) return;
   const { data, error } = await supabase.from("user_settings").select("key, value");
   throwIfSupabaseError(error);

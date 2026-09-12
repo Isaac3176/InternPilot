@@ -1,6 +1,7 @@
 import { getDb, validFk, blankToNull } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { ReferralRow, ReferralStatus, Status } from "./types";
+import { E2E_SMOKE } from "../lib/e2e";
 
 export interface ReferralInput {
   contact_id: number | null;
@@ -41,6 +42,7 @@ function params(input: ReferralInput): unknown[] {
 }
 
 export async function listReferrals(): Promise<ReferralRow[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("referrals")
       .select("*, contacts(name, companies(name)), companies(name), applications(role_title)");

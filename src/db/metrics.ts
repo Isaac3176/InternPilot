@@ -1,12 +1,17 @@
 import { getDb } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
-import { STATUSES, type Status } from "./types";
+import { STATUSES, type ApplicationRow, type Status } from "./types";
+import { E2E_SMOKE, e2eRead } from "../lib/e2e";
 
 export type StatusCounts = Record<Status, number> & { total: number };
 
 export async function getStatusCounts(): Promise<StatusCounts> {
   const counts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>;
   let total = 0;
+  if (E2E_SMOKE) {
+    for (const r of e2eRead<ApplicationRow[]>("applications", [])) { if (r.status in counts) counts[r.status] += 1; total += 1; }
+    return { ...counts, total };
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("applications").select("status");
     throwIfSupabaseError(error);

@@ -2,6 +2,7 @@ import { getDb } from "./index";
 import { isTauri } from "../lib/env";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { EmailCategory, EmailRow } from "./types";
+import { E2E_SMOKE } from "../lib/e2e";
 
 export interface EmailInput {
   sender?: string | null;
@@ -13,6 +14,7 @@ export interface EmailInput {
 }
 
 export async function listEmails(): Promise<EmailRow[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase
       .from("emails")
@@ -113,6 +115,7 @@ export async function linkEmailApplication(id: number, applicationId: number | n
 
 /** Total stored emails — cheap count for the sidebar "Replies" badge. */
 export async function countEmails(): Promise<number> {
+  if (E2E_SMOKE) return 0;
   if (cloudMode()) {
     const { count, error } = await supabase.from("emails").select("*", { count: "exact", head: true });
     throwIfSupabaseError(error);

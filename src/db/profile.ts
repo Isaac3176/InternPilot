@@ -1,6 +1,7 @@
 import { getDb } from "./index";
 import { cloudMode, cloudUserId, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Profile, RemotePref, WorkAuth } from "./types";
+import { E2E_SMOKE, e2eRead, e2eWrite } from "../lib/e2e";
 
 /** Every writable profile column, in a fixed order used to build the upsert. */
 const PROFILE_COLUMNS = [
@@ -20,6 +21,7 @@ export type ProfileInput = {
 } & Record<Exclude<(typeof PROFILE_COLUMNS)[number], "work_auth" | "remote_pref" | "preferred_resume_id">, string | null>;
 
 export async function getProfile(): Promise<Profile | null> {
+  if (E2E_SMOKE) return e2eRead<Profile | null>("profile", null);
   if (cloudMode()) {
     const { data, error } = await supabase.from("profiles").select("*").maybeSingle();
     throwIfSupabaseError(error);
@@ -37,6 +39,15 @@ export async function isOnboarded(): Promise<boolean> {
 
 /** Upsert the single profile row and mark it onboarded. */
 export async function saveProfile(input: ProfileInput): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite<Profile>("profile", {
+      id: 1,
+      ...input,
+      onboarded: 1,
+      updated_at: new Date().toISOString(),
+    });
+    return;
+  }
   if (cloudMode()) {
     const row: Record<string, unknown> = { user_id: cloudUserId(), onboarded: 1 };
     for (const c of PROFILE_COLUMNS) row[c] = (input as Record<string, unknown>)[c] ?? null;

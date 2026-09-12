@@ -26,6 +26,10 @@ jobs:
         run: npm test
       - name: Type-check + build
         run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Fresh-user smoke test
+        run: npm run test:e2e
 
   rust:
     name: Compile check (Rust / Tauri)

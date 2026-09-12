@@ -2,6 +2,7 @@ import { getDb } from "./index";
 import { upsertCompany } from "./companies";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Application, ApplicationRow, Status } from "./types";
+import { E2E_SMOKE, e2eNextId, e2eRead, e2eWrite } from "../lib/e2e";
 
 export interface ApplicationInput {
   company_name: string;
@@ -31,6 +32,18 @@ export async function listApplications(opts?: {
   search?: string;
   status?: Status | "all";
 }): Promise<ApplicationRow[]> {
+  if (E2E_SMOKE) {
+    let rows = e2eRead<ApplicationRow[]>("applications", []);
+    if (opts?.status && opts.status !== "all") rows = rows.filter((a) => a.status === opts.status);
+    const term = opts?.search?.trim().toLowerCase();
+    if (term) {
+      rows = rows.filter((a) =>
+        a.role_title.toLowerCase().includes(term) ||
+        (a.company_name ?? "").toLowerCase().includes(term) ||
+        (a.location ?? "").toLowerCase().includes(term));
+    }
+    return rows;
+  }
   if (cloudMode()) {
     let q = supabase.from("applications").select("*, companies(name), resume_versions(name)").order("date_saved", { ascending: false });
     if (opts?.status && opts.status !== "all") q = q.eq("status", opts.status);
@@ -75,6 +88,7 @@ export async function listApplications(opts?: {
 }
 
 export async function getApplication(id: number): Promise<Application | null> {
+  if (E2E_SMOKE) return e2eRead<ApplicationRow[]>("applications", []).find((a) => a.id === id) ?? null;
   if (cloudMode()) {
     const { data, error } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
     throwIfSupabaseError(error);
@@ -86,6 +100,7 @@ export async function getApplication(id: number): Promise<Application | null> {
 }
 
 async function validResumeId(id: number | null | undefined): Promise<number | null> {
+  if (E2E_SMOKE) return id ?? null;
   if (id == null) return null;
   if (cloudMode()) {
     const { data, error } = await supabase.from("resume_versions").select("id").eq("id", id).maybeSingle();
@@ -104,6 +119,38 @@ function dateOrNull(s: string | null | undefined): string | null {
 }
 
 export async function createApplication(input: ApplicationInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    const id = e2eNextId("application.nextId");
+    const now = nowIso();
+    const row: ApplicationRow = {
+      id,
+      company_id: id,
+      company_name: input.company_name,
+      resume_version_name: null,
+      role_title: input.role_title,
+      job_link: input.job_link ?? null,
+      location: input.location ?? null,
+      status: input.status,
+      date_saved: now,
+      date_applied: dateOrNull(input.date_applied),
+      resume_version_id: input.resume_version_id ?? null,
+      job_description: input.job_description ?? null,
+      notes: input.notes ?? null,
+      referral: input.referral ?? null,
+      created_at: now,
+      discovered_at: input.discovered_at ?? now,
+      applied_at: input.applied_at ?? (input.status === "applied" ? now : null),
+      posting_posted_at: input.posting_posted_at ?? null,
+      match_score: input.match_score ?? null,
+      eligibility: input.eligibility ?? null,
+      source: input.source ?? null,
+      company_priority: input.company_priority ?? null,
+      furthest_stage: input.status,
+      result_date: null,
+    };
+    e2eWrite("applications", [row, ...e2eRead<ApplicationRow[]>("applications", [])]);
+    return id;
+  }
   const companyId = await upsertCompany(input.company_name);
   const resumeId = await validResumeId(input.resume_version_id);
   // Diagnostics signals: default the timestamps so every new row is measurable.

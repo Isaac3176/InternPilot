@@ -1,6 +1,7 @@
 import { httpFetch } from "../lib/http";
 import { getAutoUrl, getSimplifyUrl, isAutoOn, isSimplifyOn } from "./config";
 import type { Listing } from "./types";
+import { E2E_SMOKE } from "../lib/e2e";
 
 interface SimplifyRaw {
   company_name?: string;
@@ -134,6 +135,53 @@ let feedCache: { at: number; listings: Listing[] } | null = null;
 let inFlight: Promise<Listing[]> | null = null;
 const FEED_TTL_MS = 10 * 60 * 1000;
 
+function smokeListings(): Listing[] {
+  const now = Math.floor(Date.now() / 1000);
+  return [
+    {
+      id: "smoke:garmin-swe",
+      company: "Garmin",
+      title: "Software Engineer Intern",
+      url: "https://example.test/jobs/garmin-swe",
+      locations: ["Austin, TX"],
+      datePosted: now - 3 * 3600,
+      firstSeen: now - 3 * 3600,
+      season: "Summer 2027",
+      seasonInferred: false,
+      remote: false,
+      skills: ["React", "TypeScript", "REST"],
+      source: "SmokeFeed",
+    },
+    {
+      id: "smoke:deepmind-ml",
+      company: "DeepMind",
+      title: "Machine Learning Engineer Intern",
+      url: "https://example.test/jobs/deepmind-ml",
+      locations: ["Remote in USA"],
+      datePosted: now - 5 * 3600,
+      firstSeen: now - 5 * 3600,
+      season: "Summer 2027",
+      seasonInferred: false,
+      remote: true,
+      skills: ["Python", "Machine Learning"],
+      source: "SmokeFeed",
+    },
+    {
+      id: "smoke:walmart-senior-ds",
+      company: "Walmart",
+      title: "Senior Data Scientist Intern",
+      url: "https://example.test/jobs/walmart-senior-ds",
+      locations: ["Bentonville, AR"],
+      datePosted: now - 2 * 3600,
+      firstSeen: now - 2 * 3600,
+      season: "Summer 2027",
+      seasonInferred: false,
+      skills: ["SQL", "Experimentation"],
+      source: "SmokeFeed",
+    },
+  ];
+}
+
 /** Drop the cached feed (call when a source toggle/URL changes). */
 export function clearListingsCache(): void {
   feedCache = null;
@@ -169,6 +217,10 @@ async function fetchAndMerge(): Promise<Listing[]> {
  * Concurrent callers share one in-flight request.
  */
 export async function fetchAllListings(force = false): Promise<Listing[]> {
+  if (E2E_SMOKE) {
+    void force;
+    return smokeListings();
+  }
   if (!force && feedCache && Date.now() - feedCache.at < FEED_TTL_MS) return feedCache.listings;
   if (!force && inFlight) return inFlight;
 

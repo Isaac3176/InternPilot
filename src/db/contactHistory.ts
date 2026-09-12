@@ -1,5 +1,6 @@
 import { getDb, blankToNull } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
+import { E2E_SMOKE } from "../lib/e2e";
 
 /** One role a contact has held — lets us preserve a person as they change jobs. */
 export interface ContactEmployment {
@@ -28,6 +29,7 @@ export interface EmploymentInput {
 
 /** Every employment row for the user (for building shared-employer paths). */
 export async function listAllEmployment(): Promise<ContactEmployment[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("contact_employment_history").select("*").order("is_current", { ascending: false }).order("id", { ascending: false });
     throwIfSupabaseError(error);
@@ -40,6 +42,10 @@ export async function listAllEmployment(): Promise<ContactEmployment[]> {
 }
 
 export async function listEmployment(contactId: number): Promise<ContactEmployment[]> {
+  if (E2E_SMOKE) {
+    void contactId;
+    return [];
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("contact_employment_history").select("*").eq("contact_id", contactId).order("is_current", { ascending: false }).order("id", { ascending: false });
     throwIfSupabaseError(error);

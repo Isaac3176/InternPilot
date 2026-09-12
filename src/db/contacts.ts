@@ -2,6 +2,7 @@ import { getDb, numOrNull } from "./index";
 import { upsertCompany } from "./companies";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { ContactRow, RelationshipType } from "./types";
+import { E2E_SMOKE } from "../lib/e2e";
 
 export interface ContactInput {
   name: string;
@@ -18,6 +19,7 @@ export interface ContactInput {
 }
 
 export async function listContacts(): Promise<ContactRow[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("contacts").select("*, companies(name)").order("name");
     throwIfSupabaseError(error);

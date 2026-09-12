@@ -1,6 +1,7 @@
 import { getDb } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { ResumeBullet, ResumeVersion } from "./types";
+import { E2E_SMOKE, e2eNextId, e2eRead, e2eWrite } from "../lib/e2e";
 
 export interface ResumeVersionInput {
   name: string;
@@ -10,6 +11,7 @@ export interface ResumeVersionInput {
 }
 
 export async function listResumeVersions(): Promise<ResumeVersion[]> {
+  if (E2E_SMOKE) return e2eRead<ResumeVersion[]>("resumes", []);
   if (cloudMode()) {
     const { data, error } = await supabase.from("resume_versions").select("*").order("created_at", { ascending: false });
     throwIfSupabaseError(error);
@@ -20,6 +22,7 @@ export async function listResumeVersions(): Promise<ResumeVersion[]> {
 }
 
 export async function getResumeVersion(id: number): Promise<ResumeVersion | null> {
+  if (E2E_SMOKE) return e2eRead<ResumeVersion[]>("resumes", []).find((r) => r.id === id) ?? null;
   if (cloudMode()) {
     const { data, error } = await supabase.from("resume_versions").select("*").eq("id", id).maybeSingle();
     throwIfSupabaseError(error);
@@ -31,6 +34,20 @@ export async function getResumeVersion(id: number): Promise<ResumeVersion | null
 }
 
 export async function createResumeVersion(input: ResumeVersionInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    const id = e2eNextId("resume.nextId");
+    const rows = e2eRead<ResumeVersion[]>("resumes", []);
+    rows.unshift({
+      id,
+      name: input.name,
+      content: input.content ?? null,
+      target_role: input.target_role ?? null,
+      file_path: input.file_path ?? null,
+      created_at: new Date().toISOString(),
+    });
+    e2eWrite("resumes", rows);
+    return id;
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("resume_versions")
       .insert({ name: input.name, content: input.content ?? null, target_role: input.target_role ?? null, file_path: input.file_path ?? null })
@@ -96,6 +113,7 @@ export async function saveResumeBullet(
 }
 
 export async function listResumeBullets(): Promise<ResumeBullet[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("resume_bullets").select("*").order("created_at", { ascending: false });
     throwIfSupabaseError(error);

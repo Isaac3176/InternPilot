@@ -1,4 +1,5 @@
 import { httpFetch } from "../lib/http";
+import { E2E_SMOKE } from "../lib/e2e";
 
 /** Decode common HTML entities and strip tags into readable, line-broken text. */
 function toText(input: string): string {
@@ -58,6 +59,21 @@ async function fetchText(url: string): Promise<string> {
  * HTML. Throws if nothing usable is found (e.g. JS-only pages like Workday).
  */
 export async function fetchJobDescription(url: string): Promise<string> {
+  if (E2E_SMOKE) {
+    void url;
+    return [
+      "Build product features with React, TypeScript, and REST APIs.",
+      "",
+      "Responsibilities",
+      "• Ship user-facing improvements with engineers and designers.",
+      "• Write tests for critical workflows.",
+      "",
+      "Requirements",
+      "• React",
+      "• TypeScript",
+      "• REST",
+    ].join("\n");
+  }
   // Greenhouse
   if (/greenhouse\.io/i.test(url)) {
     const m = url.match(/(?:for=([\w-]+)[^]*?token=(\d+))|([\w-]+)\/jobs\/(\d+)/i);
