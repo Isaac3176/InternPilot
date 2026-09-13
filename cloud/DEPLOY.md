@@ -17,14 +17,14 @@ already sets the build command, output dir, and SPA routing.
    - `VITE_SUPABASE_KEY` is still accepted as a legacy fallback
 5. **Deploy.** You'll get a URL like `https://internpilot.vercel.app`.
 
-**Live deployment:** https://intern-pilot-seven.vercel.app
+**Live deployment:** https://internpilotapp.live
 
 Every push to `main` redeploys automatically.
 
 ## Point Supabase at the deployed URL (so auth emails/links work)
 Supabase → **Authentication → URL Configuration**:
-- **Site URL:** `https://intern-pilot-seven.vercel.app`
-- **Redirect URLs:** add `https://intern-pilot-seven.vercel.app` (and `https://intern-pilot-seven.vercel.app/**`).
+- **Site URL:** `https://internpilotapp.live`
+- **Redirect URLs:** add `https://internpilotapp.live` (and `https://internpilotapp.live/**`).
 (If you turned **off** "Confirm email", this isn't strictly required to log in, but
 set it anyway for password resets.)
 

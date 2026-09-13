@@ -73,7 +73,7 @@ export async function cloudSignIn(email: string, password: string, challenge: Au
 // current origin (incl. localhost in dev); on desktop (tauri://…, which a browser
 // can't open) fall back to the hosted web app. This URL must also be allow-listed
 // in Supabase → Auth → URL Configuration → Redirect URLs.
-const WEB_APP_URL = "https://intern-pilot-seven.vercel.app";
+const WEB_APP_URL = "https://internpilotapp.live";
 function resetRedirectTo(): string {
   if (typeof window !== "undefined" && window.location.origin.startsWith("http")) return window.location.origin;
   return WEB_APP_URL;
