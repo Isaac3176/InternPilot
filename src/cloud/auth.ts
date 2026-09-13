@@ -3,6 +3,9 @@ import { setCloudSessionUserId, supabase } from "./supabase";
 import { E2E_SMOKE, e2eKey } from "../lib/e2e";
 
 export type SignUpResult = "created" | "confirm_email" | "already_exists";
+interface AuthChallenge {
+  captchaToken?: string;
+}
 
 const E2E_USER_ID = "00000000-0000-4000-8000-000000000001";
 const E2E_SESSION_KEY = e2eKey("session");
@@ -31,28 +34,39 @@ function e2eSession(): Session {
  * "already_exists" so the UI can steer the user to sign in / reset instead of
  * silently pretending to create a second account.
  */
-export async function cloudSignUp(email: string, password: string): Promise<SignUpResult> {
+export async function cloudSignUp(email: string, password: string, challenge: AuthChallenge = {}): Promise<SignUpResult> {
   if (E2E_SMOKE) {
-    void email; void password;
+    void email; void password; void challenge;
+    localStorage.setItem(E2E_SESSION_KEY, "1");
+    setCloudSessionUserId(E2E_USER_ID);
     return "created";
   }
-  const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: challenge.captchaToken ? { captchaToken: challenge.captchaToken } : undefined,
+  });
   if (error) {
     if (/already|registered|exists/i.test(error.message)) return "already_exists";
     throw error;
   }
   if (data.user && (data.user.identities?.length ?? 0) === 0) return "already_exists";
   if (!data.session) return "confirm_email"; // email confirmation required
+  setCloudSessionUserId(data.session.user.id);
   return "created";
 }
-export async function cloudSignIn(email: string, password: string): Promise<void> {
+export async function cloudSignIn(email: string, password: string, challenge: AuthChallenge = {}): Promise<void> {
   if (E2E_SMOKE) {
-    void email; void password;
+    void email; void password; void challenge;
     localStorage.setItem(E2E_SESSION_KEY, "1");
     setCloudSessionUserId(E2E_USER_ID);
     return;
   }
-  const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+    options: challenge.captchaToken ? { captchaToken: challenge.captchaToken } : undefined,
+  });
   if (error) throw error;
 }
 // Where the password-reset email should send the user back to. On web that's the

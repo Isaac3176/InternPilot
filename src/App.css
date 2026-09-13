@@ -569,6 +569,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .auth-row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
 .auth-row-between .remember-row { margin: 0; }
 .auth-switch { margin: 14px 0 0; font-size: 13px; color: var(--ink-2, #33445a); text-align: center; }
+.auth-captcha { margin: 12px 0 14px; min-height: 66px; }
+.auth-captcha .hint { margin: 8px 0 0; }
 .brand-lg {
   display: flex;
   align-items: center;

@@ -40,6 +40,17 @@ VITE_SUPABASE_URL=https://<your-project>.supabase.co
 VITE_SUPABASE_ANON_KEY=<your-anon-public-key>
 ```
 
+For production auth abuse protection, configure Cloudflare Turnstile in Supabase Auth and
+set the public site key in your hosting environment:
+
+```
+VITE_TURNSTILE_SITE_KEY=<your-cloudflare-turnstile-site-key>
+```
+
+When this env var is present, the login and signup screens require the security check and
+send its token to Supabase. Leave it unset for local development unless you are testing the
+production auth flow.
+
 The **anon** key is safe to ship (Row-Level Security protects the data). Never commit the
 `service_role` key or the database password. Full cloud setup: [../cloud/SETUP.md](../cloud/SETUP.md).
 Without these, the app still builds and runs in the desktop/SQLite path.

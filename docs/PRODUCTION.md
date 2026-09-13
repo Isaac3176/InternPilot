@@ -8,8 +8,11 @@ is tagged **[code]** (in the app), **[ops]** (accounts / billing / config), or
 
 - [ ] **[ops] Turn ON email confirmation** in Supabase → Auth → Providers → Email.
       (SETUP.md tells you to turn it *off* for personal use — reverse that.)
+- [x] **[code] Support auth CAPTCHA tokens** — when `VITE_TURNSTILE_SITE_KEY` is set,
+      sign-up/sign-in render a Cloudflare Turnstile check and pass the token to Supabase.
 - [ ] **[ops] Enable auth abuse protection** — Supabase rate limiting + CAPTCHA on
-      sign-up/sign-in; review the anon key is the only key shipped (it is).
+      sign-up/sign-in; review the anon key is the only key shipped (it is). Configure
+      the Turnstile secret key in Supabase and the public site key in Vercel.
 - [ ] **[ops] Configure custom SMTP for auth emails** (Auth → Emails → SMTP). The
       built-in Supabase email sender is **rate-limited to a few messages/hour** and is
       not for production — password-reset and confirmation emails will silently fail
