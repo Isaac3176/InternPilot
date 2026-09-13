@@ -38,7 +38,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
 
   const go = (v: View) => { setView(v); setMsg(""); setPassword(""); setConfirm(""); setCaptchaToken(""); };
   const showError = (text: string) => { setMsgKind("error"); setMsg(text); };
-  const needsCaptcha = AUTH_CAPTCHA_ENABLED && (view === "login" || view === "signup");
+  const needsCaptcha = AUTH_CAPTCHA_ENABLED && (view === "login" || view === "signup" || view === "reset");
   const authBlocked = busy || (needsCaptcha && !captchaToken);
 
   async function login() {
@@ -81,13 +81,15 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
   }
 
   async function reset() {
+    if (needsCaptcha && !captchaToken) { showError("Complete the security check first."); return; }
     setBusy(true); setMsg("");
     try {
-      await cloudResetPassword(email);
+      await cloudResetPassword(email, { captchaToken });
       setNotice("If that email has an account, a password-reset link is on its way.");
       go("login");
     } catch (e) {
       showError(authErrorMessage(e));
+      setCaptchaToken("");
     } finally { setBusy(false); }
   }
 
@@ -146,7 +148,8 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
             <p className="hint mb-md">We'll email you a link to set a new password.</p>
             <Field id="rs-email" label="Email" type="email" autoComplete="username" value={email} onChange={setEmail}
               onEnter={() => email && reset()} />
-            <button type="button" style={{ width: "100%" }} disabled={busy || !email} onClick={reset}>
+            {needsCaptcha && <TurnstileChallenge onToken={setCaptchaToken} />}
+            <button type="button" style={{ width: "100%" }} disabled={authBlocked || !email} onClick={reset}>
               {busy ? "Sending..." : "Send reset link"}
             </button>
             <p className="auth-switch"><button type="button" className="linklike" onClick={() => go("login")}>← Back to sign in</button></p>

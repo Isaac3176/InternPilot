@@ -79,12 +79,15 @@ function resetRedirectTo(): string {
   return WEB_APP_URL;
 }
 
-export async function cloudResetPassword(email: string): Promise<void> {
+export async function cloudResetPassword(email: string, challenge: AuthChallenge = {}): Promise<void> {
   if (E2E_SMOKE) {
-    void email;
+    void email; void challenge;
     return;
   }
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: resetRedirectTo() });
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: resetRedirectTo(),
+    captchaToken: challenge.captchaToken,
+  });
   if (error) throw error;
 }
 
