@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { deleteApplication, listApplications, setApplicationStatus } from "../db/applications";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import { matchCompany } from "../ranking/companies";
-import { APP_RECORDED_EVENT } from "../bridge";
+import { APP_RECORDED_EVENT } from "../bridge/shared";
 import ApplicationModal from "../components/ApplicationModal";
 import MilestoneCelebration, { isMilestone, type Kind, type Terminal } from "../components/MilestoneCelebration";
 import CompanyLogo from "../components/CompanyLogo";

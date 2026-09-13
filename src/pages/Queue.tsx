@@ -10,7 +10,7 @@ import type { RankedOpportunity } from "../ranking/types";
 
 type FeedbackAction = FeedbackKind | "dismiss" | "mute";
 import type { ResumeVersion, Status } from "../db/types";
-import { APP_RECORDED_EVENT } from "../bridge";
+import { APP_RECORDED_EVENT } from "../bridge/shared";
 import CompanyLogo from "../components/CompanyLogo";
 import OpeningSoonBanner from "../components/OpeningSoonBanner";
 import { EmptyState, PageNotice } from "../components/PageState";

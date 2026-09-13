@@ -5,7 +5,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getBridgeToken, APP_RECORDED_EVENT } from "../bridge";
+import { getBridgeToken, APP_RECORDED_EVENT } from "../bridge/shared";
 import { getProfile } from "../db/profile";
 import { createApplication, listApplications, setApplicationStatus } from "../db/applications";
 import { listInterviews } from "../db/interviews";

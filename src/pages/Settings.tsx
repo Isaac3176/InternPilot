@@ -14,9 +14,8 @@ import {
   setClientId,
   setClientSecret,
 } from "../gmail/config";
-import { connectGmail, disconnectGmail } from "../gmail/oauth";
 import { getAccountEmail, logout } from "../auth";
-import { BRIDGE_PORT, getBridgeToken } from "../bridge";
+import { BRIDGE_PORT, getBridgeToken } from "../bridge/shared";
 import {
   DEFAULT_AUTO_URL,
   DEFAULT_SIMPLIFY_URL,
@@ -33,7 +32,6 @@ import { probeSources, clearListingsCache, type SourceProbe } from "../listings/
 import { isLogosOn, setLogosOn, getLogoToken, setLogoToken } from "../listings/logo";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
-import { getPhoneAccess } from "../mobile/sync";
 import { QRCodeSVG } from "qrcode.react";
 import { cloudSignIn, cloudSignUp, cloudSignOut, cloudSession, onCloudAuth, cloudTestConnection } from "../cloud/auth";
 import { supabase, throwIfSupabaseError } from "../cloud/supabase";
@@ -119,7 +117,10 @@ export default function Settings() {
 
   // Phone access (LAN)
   const [phone, setPhone] = useState<{ url: string; token: string }>({ url: "", token: "" });
-  useEffect(() => { getPhoneAccess().then(setPhone).catch(() => {}); }, []);
+  useEffect(() => {
+    if (!isTauri()) return;
+    import("../mobile/sync").then(({ getPhoneAccess }) => getPhoneAccess()).then(setPhone).catch(() => {});
+  }, []);
 
   // Cloud sync (Supabase)
   const [cloud, setCloud] = useState<Session | null>(null);
@@ -204,6 +205,8 @@ export default function Settings() {
     setConnecting(true);
     setGmailError("");
     try {
+      if (!isTauri()) throw new Error("Gmail sync is only available in the desktop app.");
+      const { connectGmail } = await import("../gmail/oauth");
       await connectGmail();
       setConnected(true);
     } catch (e) {
@@ -215,8 +218,13 @@ export default function Settings() {
 
   function disconnect() {
     if (!GMAIL_SYNC_ENABLED) return;
-    disconnectGmail();
-    setConnected(false);
+    if (!isTauri()) {
+      setConnected(false);
+      return;
+    }
+    import("../gmail/oauth")
+      .then(({ disconnectGmail }) => disconnectGmail())
+      .finally(() => setConnected(false));
   }
 
   async function exportData() {

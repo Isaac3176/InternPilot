@@ -9,14 +9,17 @@ import {
 } from "../apply/answers";
 import { draftAnswer } from "../ai/answerDraft";
 import { hasApiKey } from "../ai/settings";
-import { pushAnswersToBridge } from "../bridge";
+import { isTauri } from "../lib/env";
 import { userErrorMessage } from "../lib/errors";
 
 export default function AnswerVault() {
   const [answers, setAnswers] = useState<ApplicationAnswer[]>([]);
 
   useEffect(() => { ensureSeededAnswers(); setAnswers(getAnswers()); }, []);
-  const reload = () => { setAnswers(getAnswers()); pushAnswersToBridge().catch(() => {}); };
+  const reload = () => {
+    setAnswers(getAnswers());
+    if (isTauri()) import("../bridge").then(({ pushAnswersToBridge }) => pushAnswersToBridge()).catch(() => {});
+  };
 
   const grouped = useMemo(() => {
     const g: Record<string, ApplicationAnswer[]> = {};

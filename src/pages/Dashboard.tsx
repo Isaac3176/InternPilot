@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { getNextActions, type ActionKind, type NextAction } from "../actions/engine";
-import { APP_RECORDED_EVENT } from "../bridge";
+import { APP_RECORDED_EVENT } from "../bridge/shared";
 import {
   getFunnelRates,
   getReferralStats,
