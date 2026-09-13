@@ -9,7 +9,7 @@ import MilestoneCelebration, { isMilestone, type Kind, type Terminal } from "../
 import CompanyLogo from "../components/CompanyLogo";
 import ConfirmAction from "../components/ConfirmAction";
 import { userErrorMessage } from "../lib/errors";
-import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
+import { EmptyState, ErrorState, LoadingState, PageNotice } from "../components/PageState";
 
 const JOURNEY_LABELS = ["Saved", "Applied", "OA", "Interview", "Offer"];
 const journeyIndex = (s: Status): number =>
@@ -275,11 +275,17 @@ export default function Applications() {
           );
         })}
       </div>
-      {error && <p className="hint text-red">{error}</p>}
+      {error && all.length > 0 && <PageNotice kind="error">{error}</PageNotice>}
       {notice && <PageNotice kind="success">{notice}</PageNotice>}
 
       {loading && all.length === 0 ? (
         <LoadingState title="Loading applications" detail="Pulling your tracker into view." />
+      ) : error && all.length === 0 ? (
+        <ErrorState
+          title="Couldn't load applications"
+          detail={error}
+          action={<button type="button" onClick={() => load()}>Retry</button>}
+        />
       ) : view.length === 0 ? (
         all.length === 0 ? (
           <EmptyState

@@ -28,7 +28,7 @@ import { getLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../rel
 import { openExternal } from "../lib/open";
 import { reportError } from "../lib/report";
 import CompanyLogo from "../components/CompanyLogo";
-import { PageNotice } from "../components/PageState";
+import { ErrorState, PageNotice } from "../components/PageState";
 import type { ApplicationRow, Status } from "../db/types";
 
 const WEEKLY_GOAL = 5;
@@ -65,6 +65,8 @@ export default function Dashboard() {
   const [loadingStrategy, setLoadingStrategy] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [message, setMessage] = useState("");
+  const [metricsError, setMetricsError] = useState("");
+  const [actionsError, setActionsError] = useState("");
 
   const loadMetrics = useCallback(async () => {
     setCounts(await getStatusCounts());
@@ -78,22 +80,41 @@ export default function Dashboard() {
     notifyNewReminders(rem);
   }, []);
 
+  const refreshMetrics = useCallback(async () => {
+    try {
+      await loadMetrics();
+      setMetricsError("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMetricsError(msg);
+      reportError("dashboard: metrics", e);
+    }
+  }, [loadMetrics]);
+
+  const refreshActions = useCallback(() => {
+    setActionsLoading(true);
+    getNextActions()
+      .then((next) => { setActions(next); setActionsError(""); })
+      .catch((e) => {
+        setActionsError(e instanceof Error ? e.message : String(e));
+        reportError("dashboard: next actions", e);
+      })
+      .finally(() => setActionsLoading(false));
+  }, []);
+
   useEffect(() => {
-    loadMetrics().catch(console.error);
+    refreshMetrics();
 
     // Next best actions load separately (the feed fetch is large) so the rest renders first.
-    getNextActions()
-      .then(setActions)
-      .catch(console.error)
-      .finally(() => setActionsLoading(false));
-  }, [loadMetrics]);
+    refreshActions();
+  }, [refreshMetrics, refreshActions]);
 
   // Refresh metrics when the browser extension records a job while this page is open.
   useEffect(() => {
-    const onRecorded = () => loadMetrics().catch(console.error);
+    const onRecorded = () => refreshMetrics();
     window.addEventListener(APP_RECORDED_EVENT, onRecorded);
     return () => window.removeEventListener(APP_RECORDED_EVENT, onRecorded);
-  }, [loadMetrics]);
+  }, [refreshMetrics]);
 
   async function loadStrategy() {
     setLoadingStrategy(true);
@@ -144,6 +165,14 @@ export default function Dashboard() {
         </div>
       </div>
       {message && <PageNotice kind="error">{message}</PageNotice>}
+      {metricsError && counts !== null && <PageNotice kind="error">Couldn't refresh dashboard: {metricsError}</PageNotice>}
+      {metricsError && counts === null && (
+        <ErrorState
+          title="Couldn't load dashboard"
+          detail={metricsError}
+          action={<button type="button" onClick={refreshMetrics}>Retry</button>}
+        />
+      )}
 
       {reminders.length > 0 && (
         <div className="reminders">
@@ -198,6 +227,12 @@ export default function Dashboard() {
           </div>
           {actionsLoading ? (
             <p className="hint">Prioritizing your day…</p>
+          ) : actionsError ? (
+            <ErrorState
+              title="Couldn't load next actions"
+              detail={actionsError}
+              action={<button type="button" className="btn small" onClick={refreshActions}>Retry</button>}
+            />
           ) : actions.length === 0 ? (
             <div className="empty">
               <b>You're all caught up</b>

@@ -37,3 +37,22 @@ export function EmptyState({
     </div>
   );
 }
+
+export function ErrorState({
+  title = "Couldn't load this page",
+  detail,
+  action,
+}: {
+  title?: string;
+  detail?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="empty state-empty error-state" role="alert">
+      <span className="state-error-icon" aria-hidden="true">!</span>
+      <b>{title}</b>
+      {detail && <p>{detail}</p>}
+      {action && <div className="state-actions">{action}</div>}
+    </div>
+  );
+}

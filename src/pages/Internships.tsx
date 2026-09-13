@@ -22,6 +22,7 @@ import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
 import CompanyLogo from "../components/CompanyLogo";
 import PeopleFinder from "../components/PeopleFinder";
+import { ErrorState, LoadingState, PageNotice } from "../components/PageState";
 
 const MAX_SHOWN = 200;
 const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
@@ -388,7 +389,7 @@ export default function Internships() {
         <button type="button" className="secondary" onClick={() => load(true)} disabled={loading} style={{ marginLeft: "auto" }}>{loading ? "Loading…" : "Refresh"}</button>
       </div>
 
-      {error && <p className="hint text-red">{error}</p>}
+      {error && listings.length > 0 && <PageNotice kind="error">{error}</PageNotice>}
 
       <div className="target-summary">
         <div>
@@ -442,7 +443,15 @@ export default function Internships() {
             <button type="button" className={listView === "queue" ? "on" : ""} onClick={() => setListView("queue")}>Queue{queueList.length ? <span className="vn">{queueList.length}</span> : null}</button>
           </div>
           <div className="list">
-            {shown.length === 0 ? (
+            {loading && listings.length === 0 ? (
+              <LoadingState title="Loading jobs" detail="Fetching and tailoring the internship feed." />
+            ) : error && listings.length === 0 ? (
+              <ErrorState
+                title="Couldn't load jobs"
+                detail={error}
+                action={<button type="button" onClick={() => load(true)}>Retry</button>}
+              />
+            ) : shown.length === 0 ? (
               <div className="empty">
                 {listView === "saved" ? "No saved roles yet — click Save on a posting to keep it here."
                   : listView === "queue" ? "Your apply queue is clear — strong matches you haven't applied to show up here."
