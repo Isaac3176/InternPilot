@@ -157,6 +157,10 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
         )}
 
         {msg && <p className={`hint ${msgKind === "error" ? "text-red" : ""}`} style={{ marginTop: 12 }}>{msg}</p>}
+        <p className="auth-legal">
+          By using InternPilot, you agree to the <a href="/terms.html" target="_blank" rel="noreferrer">Terms</a>{" "}
+          and acknowledge the <a href="/privacy.html" target="_blank" rel="noreferrer">Privacy Policy</a>.
+        </p>
       </div>
     </div>
   );

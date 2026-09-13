@@ -29,9 +29,9 @@ is tagged **[code]** (in the app), **[ops]** (accounts / billing / config), or
 - [x] **[code] Gate Gmail sync in production.** Production web builds hide and block
       Gmail sync unless `VITE_ENABLE_GMAIL_SYNC=1` is explicitly set; desktop/dev/e2e
       builds keep the feature available.
-- [ ] **[legal] Publish a Privacy Policy and Terms of Service** (drafts in
-      `PRIVACY-POLICY.md` / `TERMS.md`) — required for handling PII and for Google
-      OAuth. Have a lawyer review before publishing.
+- [x] **[code] Add visible Privacy Policy and Terms links** on auth and Settings.
+- [ ] **[legal] Lawyer-review Privacy Policy and Terms of Service** — required for
+      handling PII and for Google OAuth before a broad public launch.
 - [x] **[code] Global error boundary** so one component crash can't white-screen the
       app (`components/ErrorBoundary.tsx`, app- and page-level).
 - [ ] **[code+ops] Move AI calls server-side (optional but recommended).** Today the

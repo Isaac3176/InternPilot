@@ -281,6 +281,17 @@ export default function Settings() {
       </div>
 
       <div className="card">
+        <h2>Legal</h2>
+        <p className="hint mb-md">
+          Review how InternPilot handles your data and the terms that apply to using the service.
+        </p>
+        <div className="actions">
+          <a className="legal-link-btn" href="/privacy.html" target="_blank" rel="noreferrer">Privacy Policy</a>
+          <a className="legal-link-btn" href="/terms.html" target="_blank" rel="noreferrer">Terms of Service</a>
+        </div>
+      </div>
+
+      <div className="card">
         <h2>Browser extension</h2>
         <p className="hint mb-md">
           The InternPilot extension autofills applications from your profile and records them here.
