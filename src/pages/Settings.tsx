@@ -41,6 +41,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
 import { isTauri } from "../lib/env";
 import { authErrorMessage } from "../lib/errors";
+import { GMAIL_SYNC_ENABLED } from "../lib/features";
 import ConfirmAction from "../components/ConfirmAction";
 
 const APP_DATA_TABLES = [
@@ -194,6 +195,10 @@ export default function Settings() {
   }
 
   async function connect() {
+    if (!GMAIL_SYNC_ENABLED) {
+      setGmailError("Gmail sync is disabled in this production build.");
+      return;
+    }
     setClientId(clientId.trim());
     setClientSecret(clientSecret.trim());
     setConnecting(true);
@@ -209,6 +214,7 @@ export default function Settings() {
   }
 
   function disconnect() {
+    if (!GMAIL_SYNC_ENABLED) return;
     disconnectGmail();
     setConnected(false);
   }
@@ -529,7 +535,12 @@ export default function Settings() {
 
       <div className="card">
         <h2>Gmail</h2>
-        {connected ? (
+        {!GMAIL_SYNC_ENABLED ? (
+          <p className="hint mb-0">
+            Gmail sync is disabled in this production build while Google OAuth verification is pending.
+            You can still paste job emails into the inbox manually.
+          </p>
+        ) : connected ? (
           <>
             <p className="hint mb-md">
               Connected{getTokens()?.email ? ` as ${getTokens()?.email}` : ""}. InternPilot reads only job-related

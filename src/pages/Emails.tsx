@@ -20,6 +20,7 @@ import { hasApiKey } from "../ai/settings";
 import { isConnected } from "../gmail/config";
 import { syncGmail } from "../gmail/sync";
 import { userErrorMessage } from "../lib/errors";
+import { GMAIL_SYNC_ENABLED } from "../lib/features";
 import { EmptyState, LoadingState, PageNotice } from "../components/PageState";
 import ConfirmAction from "../components/ConfirmAction";
 
@@ -44,7 +45,7 @@ export default function Emails() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"info" | "error">("info");
-  const gmailConnected = isConnected();
+  const gmailConnected = GMAIL_SYNC_ENABLED && isConnected();
 
   function showInfo(text: string) {
     setMessageKind("info");
@@ -57,6 +58,10 @@ export default function Emails() {
   }
 
   async function sync() {
+    if (!GMAIL_SYNC_ENABLED) {
+      showInfo("Gmail sync is disabled in this build.");
+      return;
+    }
     setSyncing(true);
     setMessage("");
     try {
@@ -156,7 +161,7 @@ export default function Emails() {
       <div className="page-header">
         <div>
           <h1>Email Inbox</h1>
-          <p>Classify job-related emails and update application statuses after your review.</p>
+          <p>Classify pasted job emails and update application statuses after your review.</p>
         </div>
         {gmailConnected && (
           <button type="button" onClick={sync} disabled={syncing}>
@@ -168,7 +173,10 @@ export default function Emails() {
 
       <div className="card">
         <h2>Add an email</h2>
-        <p className="hint">Paste an email to classify it. Live Gmail sync connects in Settings.</p>
+        <p className="hint">
+          Paste an email to classify it.
+          {GMAIL_SYNC_ENABLED ? " Live Gmail sync connects in Settings." : " Gmail sync is disabled for this production build."}
+        </p>
         <div className="field-row">
           <div className="field">
             <label htmlFor="em-sender">From</label>
@@ -198,7 +206,11 @@ export default function Emails() {
       ) : rows.length === 0 ? (
         <EmptyState
           title="No job emails yet"
-          detail="Paste an email above to classify it, or connect Gmail in Settings to pull application updates into this workflow."
+          detail={
+            GMAIL_SYNC_ENABLED
+              ? "Paste an email above to classify it, or connect Gmail in Settings to pull application updates into this workflow."
+              : "Paste an email above to classify it and link it to an application."
+          }
         />
       ) : (
         rows.map((row) => {

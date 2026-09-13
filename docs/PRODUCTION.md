@@ -23,6 +23,9 @@ is tagged **[code]** (in the app), **[ops]** (accounts / billing / config), or
       assessment for production. Until then you're capped at 100 test users behind an
       "unverified app" warning. **Recommended v1: ship with the email feature off or
       gated**, pursue verification in parallel.
+- [x] **[code] Gate Gmail sync in production.** Production web builds hide and block
+      Gmail sync unless `VITE_ENABLE_GMAIL_SYNC=1` is explicitly set; desktop/dev/e2e
+      builds keep the feature available.
 - [ ] **[legal] Publish a Privacy Policy and Terms of Service** (drafts in
       `PRIVACY-POLICY.md` / `TERMS.md`) — required for handling PII and for Google
       OAuth. Have a lawyer review before publishing.
