@@ -16,6 +16,7 @@ import { fetchJobDescription, MAX_DESCRIPTION_CHARS } from "../listings/descript
 import { jdSkillMatch } from "../listings/match";
 import { assessEligibility } from "../listings/eligibility";
 import { scoreTier } from "../listings/scoreTier";
+import { leadSentence, parseDuties } from "../listings/parse";
 import { getResumeVersion, listResumeVersions } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Profile, ReferralRow, ResumeVersion, Status } from "../db/types";
@@ -72,37 +73,7 @@ function shortLocations(locs: string[]): string {
   return `${locs.slice(0, 3).join(", ")} +${locs.length - 3} more`;
 }
 
-// ── "About the role" helpers ──────────────────────────────────────────────
-/** First real sentence of a description, for the pull quote. Empty if too short. */
-function leadSentence(text: string): string {
-  const clean = text.replace(/^\s*[•\-*]\s*/, "").replace(/\s+/g, " ").trim();
-  const m = clean.match(/^(.{40,220}?[.!?])(\s|$)/);
-  const s = (m ? m[1] : clean.slice(0, 160)).trim();
-  return s.length >= 30 ? s : "";
-}
-const RESP_HEAD = /responsib|what you'?ll do|what you will do|in this role|day[- ]?to[- ]?day|you will\b/i;
-const STOP_HEAD = /requirement|qualification|what we'?re looking for|about you|minimum|preferred|benefit|perk|compensation|equal opportunity|eeo/i;
-/** Pull the "responsibilities / what you'll do" bullets out of a JD, if present. */
-function parseDuties(text: string): string[] {
-  const out: string[] = [];
-  let on = false;
-  for (const raw of text.split(/\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-    const isBullet = /^[•\-*]/.test(line);
-    const isHead = !isBullet && line.length <= 64 && !/[.!?]$/.test(line);
-    if (!on) { if (isHead && RESP_HEAD.test(line)) on = true; continue; }
-    if (isHead && STOP_HEAD.test(line)) break;
-    if (isBullet) {
-      const b = line.replace(/^[•\-*]\s*/, "").trim();
-      if (b.length >= 10 && b.length <= 240) out.push(b);
-    }
-    if (out.length >= 5) break;
-  }
-  return out;
-}
-
-const svgSm = { width: 11, height: 11, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 3.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const svgSm ={ width: 11, height: 11, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 3.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 const IC_CHECK = <svg {...svgSm}><path d="M20 6 9 17l-5-5" /></svg>;
 const IC_DASH = <svg {...svgSm}><path d="M5 12h14" /></svg>;
 const IC_CHEV = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>;
