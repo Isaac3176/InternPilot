@@ -35,6 +35,8 @@ function looksLikeJunk(text: string): boolean {
   if (/%LABEL_|%BUTTON_|%DROPDOWN_|%HEADER_|%DOC_/.test(text)) return true;
   if ((text.match(/%[A-Z0-9_]+%/g) || []).length >= 3) return true; // template placeholders
   if ((text.match(/\bapply\b/gi) || []).length >= 8) return true; // job-list page
+  // cookie-consent walls, bot checks, and other interstitials instead of the real page
+  if (/enable\s+cookies|enable\s+javascript|checking your browser|verify you are (a )?human|are you a robot|access denied|complete the (security )?check|captcha|just a moment/i.test(text)) return true;
   return false;
 }
 
