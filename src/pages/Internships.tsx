@@ -172,6 +172,7 @@ export default function Internships() {
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
   const [descByUrl, setDescByUrl] = useState<Map<string, string>>(new Map());
+  const [descErrByUrl, setDescErrByUrl] = useState<Map<string, string>>(new Map());
   const [descLoading, setDescLoading] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
 
@@ -252,8 +253,8 @@ export default function Internships() {
     let cancelled = false;
     setDescLoading(true);
     fetchJobDescription(selectedUrl)
-      .then((txt) => { if (!cancelled) setDescByUrl((m) => new Map(m).set(selectedUrl, txt)); })
-      .catch((e) => console.error("description fetch failed", e))
+      .then((txt) => { if (!cancelled) { setDescByUrl((m) => new Map(m).set(selectedUrl, txt)); setDescErrByUrl((m) => { const n = new Map(m); n.delete(selectedUrl); return n; }); } })
+      .catch((e) => { console.error("description fetch failed", e); if (!cancelled) setDescErrByUrl((m) => new Map(m).set(selectedUrl, e instanceof Error ? e.message : String(e))); })
       .finally(() => { if (!cancelled) setDescLoading(false); });
     return () => { cancelled = true; };
   }, [selectedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -265,8 +266,10 @@ export default function Internships() {
     try {
       const txt = await fetchJobDescription(url);
       setDescByUrl((m) => new Map(m).set(url, txt));
+      setDescErrByUrl((m) => { const n = new Map(m); n.delete(url); return n; });
     } catch (e) {
       console.error("description re-fetch failed", e);
+      setDescErrByUrl((m) => new Map(m).set(url, e instanceof Error ? e.message : String(e)));
     } finally {
       setDescLoading(false);
     }
@@ -579,6 +582,7 @@ export default function Internships() {
                   const lead = desc ? leadSentence(desc) : "";
                   const duties = desc ? parseDuties(desc) : [];
                   const req = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch : null;
+                  const descErr = selectedUrl ? descErrByUrl.get(selectedUrl) : undefined;
                   const age = selected.datePosted ? postedAgo(selected.datePosted).replace(/^Posted /, "") : "";
                   const signals: { ok: boolean; b: string; s: string }[] = [];
                   if (selected.season || selected.locations[0]) signals.push({ ok: true, b: `${selected.season ?? jobTypeOf(selected.title)}${selected.locations[0] ? `, ${selected.locations[0]}` : ""}`, s: "From the feed listing — matches your filters" });
@@ -625,8 +629,8 @@ export default function Internships() {
                           <div className="rb-thin">
                             <span className="ic">{IC_INFO}</span>
                             <div className="bd">
-                              <b>The feed didn't carry a description</b>
-                              <p>{selected.source} gave us the role, company, and location. What the posting says about requirements lives on {selected.company}'s site — here are two ways to get it.</p>
+                              <b>{descErr ? "Couldn't fetch the description" : "The feed didn't carry a description"}</b>
+                              <p>{descErr ?? `${selected.source} gave us the role, company, and location. What the posting says about requirements lives on ${selected.company}'s site — here are two ways to get it.`}</p>
                               <div className="acts">
                                 <button type="button" className="rb-btn warnp" onClick={() => openExternal(selected.url)}>Open the posting {IC_EXT}</button>
                                 <button type="button" className="rb-btn warns" onClick={() => navigate("/chat")}>Have AI Chat summarise it</button>

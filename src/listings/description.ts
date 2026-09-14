@@ -167,6 +167,13 @@ export async function fetchJobDescription(url: string): Promise<string> {
     }
   }
 
+  // Workday/iCIMS render the description client-side with JavaScript we don't
+  // execute, so the generic HTML fetch below would always come back empty —
+  // fail fast with a message that explains why, instead of a generic one.
+  if (/myworkdayjobs\.com|\.workday\.com|icims\.com/i.test(url)) {
+    throw new Error("This posting is hosted on Workday/iCIMS, which renders the description with JavaScript we can't run — open it on the company site to read the details.");
+  }
+
   // Generic HTML → text (best effort; reject careers-page templates / listings)
   const html = await fetchText(url);
   const txt = toText(html);
