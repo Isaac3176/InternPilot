@@ -39,6 +39,14 @@ const STATUS_C: Record<Status, string> = {
 };
 
 function Empty({ label }: { label: string }) { return <div className="empty">{label}</div>; }
+function ErrorNote({ label, onRetry }: { label: string; onRetry: () => void }) {
+  return (
+    <div className="empty">
+      <p>{label}</p>
+      <button type="button" className="btn ghost sm" style={{ marginTop: 10 }} onClick={onRetry}>Retry</button>
+    </div>
+  );
+}
 
 // ── shell ──────────────────────────────────────────────────────────────────
 export default function MobileApp() {
@@ -193,9 +201,18 @@ function Jobs({ avatar, onSheet }: TabProps) {
   const [queue, setQueue] = useState<RankedListing[]>(() => queueC.peek() ?? []);
   const [apps, setApps] = useState<ApplicationRow[]>(() => appsC.peek() ?? []);
   const [feedLoading, setFeedLoading] = useState(() => feedC.peek() == null);
+  const [feedError, setFeedError] = useState<string | null>(null);
+
+  function loadFeed() {
+    setFeedLoading(true);
+    setFeedError(null);
+    feedC.load().then(setFeed)
+      .catch((e) => setFeedError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setFeedLoading(false));
+  }
 
   useEffect(() => {
-    feedC.load().then(setFeed).catch(console.error).finally(() => setFeedLoading(false));
+    loadFeed();
     queueC.load().then(setQueue).catch(console.error);
     appsC.load().then(setApps).catch(console.error);
   }, []);
@@ -231,6 +248,8 @@ function Jobs({ avatar, onSheet }: TabProps) {
       <div className="jobs" style={{ paddingBottom: 24 }}>
         {seg === "saved" ? (
           savedApps.length ? savedApps.map((a) => <SavedCard key={a.id} a={a} />) : <Empty label="Nothing saved yet. Tap the bookmark on a role to keep it here." />
+        ) : feedError && seg === "browse" ? (
+          <ErrorNote label="Couldn't load your feed. Check your connection and try again." onRetry={loadFeed} />
         ) : feedLoading && seg === "browse" ? (
           <Empty label="Loading your feed…" />
         ) : list.length ? (
