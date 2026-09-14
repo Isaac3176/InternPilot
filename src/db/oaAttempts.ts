@@ -1,5 +1,6 @@
 import { getDb, blankToNull, numOrNull } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
+import { E2E_SMOKE } from "../lib/e2e";
 
 /** One question within an OA debrief. */
 export interface OAQuestion {
@@ -64,6 +65,7 @@ function normalize(row: Record<string, unknown>): OAAttempt {
 }
 
 export async function listOAAttempts(): Promise<OAAttempt[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("oa_attempts").select("*").order("taken_on", { ascending: false });
     throwIfSupabaseError(error);
@@ -75,6 +77,10 @@ export async function listOAAttempts(): Promise<OAAttempt[]> {
 }
 
 export async function createOAAttempt(input: OAAttemptInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void input;
+    return Date.now();
+  }
   const questions = input.questions ?? [];
   const numQ = questions.length;
   const topics = input.topics_review ?? [];
@@ -102,6 +108,10 @@ export async function createOAAttempt(input: OAAttemptInput): Promise<number | n
 }
 
 export async function deleteOAAttempt(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("oa_attempts").delete().eq("id", id);
     if (error) throw error;

@@ -109,6 +109,19 @@
   }
 }
 
+@media (max-width: 720px) {
+  .demo-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demo-banner div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {
@@ -230,6 +243,41 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 28px 32px 48px;
+}
+
+.demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 11px 13px;
+  border: 1px solid var(--accent-line);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.demo-banner div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+.demo-banner strong {
+  flex: none;
+  font-size: 13px;
+}
+.demo-banner span {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.demo-banner button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 12.5px;
 }
 
 .page-header {
@@ -647,6 +695,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 }
 .auth-card .linklike { background: none; border: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; box-shadow: none; }
 .auth-card .linklike:hover { text-decoration: underline; }
+.auth-demo-btn { width: 100%; margin-top: 10px; justify-content: center; }
 .auth-notice { background: var(--good-soft, #e4f3ee); border: 1px solid var(--good-line, #bfe3d5); color: var(--good, #157f5f); border-radius: 9px; padding: 9px 12px; font-size: 13px; margin: 0 0 14px; }
 .auth-row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
 .auth-row-between .remember-row { margin: 0; }

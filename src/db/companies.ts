@@ -1,8 +1,10 @@
 import { getDb } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Company } from "./types";
+import { E2E_SMOKE } from "../lib/e2e";
 
 export async function listCompanies(): Promise<Company[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("companies").select("*").order("name");
     throwIfSupabaseError(error);
@@ -16,6 +18,7 @@ export async function listCompanies(): Promise<Company[]> {
 export async function upsertCompany(name: string): Promise<number | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
+  if (E2E_SMOKE) return Math.abs([...trimmed].reduce((n, ch) => n + ch.charCodeAt(0), 0));
   if (cloudMode()) {
     const found = await supabase.from("companies").select("id").ilike("name", trimmed).limit(1);
     throwIfSupabaseError(found.error);

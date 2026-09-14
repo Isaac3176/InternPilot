@@ -1,5 +1,7 @@
 import { getDb } from "./index";
 import { INTERVIEW_TYPE_LABELS, type InterviewType } from "./types";
+import { E2E_SMOKE, e2eRead } from "../lib/e2e";
+import type { ApplicationRow, InterviewRow } from "./types";
 
 export interface Reminder {
   /** Stable key so we can avoid re-notifying for the same reminder. */
@@ -26,9 +28,37 @@ export async function getReminders(opts?: {
 }): Promise<Reminder[]> {
   const followupDays = opts?.followupDays ?? 10;
   const upcomingDays = opts?.upcomingDays ?? 7;
-  const db = await getDb();
   const now = new Date();
   const reminders: Reminder[] = [];
+
+  if (E2E_SMOKE) {
+    const apps = e2eRead<ApplicationRow[]>("applications", []);
+    for (const a of apps.filter((row) => row.status === "applied" && row.date_applied)) {
+      const elapsed = daysBetween(new Date(a.date_applied as string), now);
+      if (elapsed >= followupDays) {
+        reminders.push({
+          key: `followup-${a.id}`,
+          kind: "followup",
+          title: "Follow-up suggested",
+          detail: `${a.company_name ?? "A company"} · ${a.role_title} — applied ${elapsed} days ago with no response.`,
+        });
+      }
+    }
+    for (const iv of e2eRead<InterviewRow[]>("interviews", []).filter((row) => row.date)) {
+      const inDays = daysBetween(now, new Date(iv.date as string));
+      if (inDays >= 0 && inDays <= upcomingDays) {
+        reminders.push({
+          key: `interview-${iv.id}`,
+          kind: "interview",
+          title: `${INTERVIEW_TYPE_LABELS[iv.type]} ${inDays === 0 ? "today" : `in ${inDays} day(s)`}`,
+          detail: `${iv.company_name ?? "A company"}${iv.role_title ? " · " + iv.role_title : ""} — ${iv.date}.`,
+        });
+      }
+    }
+    return reminders;
+  }
+
+  const db = await getDb();
 
   const stale = await db.select<
     { id: number; role_title: string; company_name: string | null; date_applied: string }[]

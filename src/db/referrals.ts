@@ -71,6 +71,10 @@ export async function listReferrals(): Promise<ReferralRow[]> {
 }
 
 export async function createReferral(input: ReferralInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void input;
+    return Date.now();
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("referrals").insert(row(input)).select("id").single();
     if (error) throw error;
@@ -88,6 +92,10 @@ export async function createReferral(input: ReferralInput): Promise<number | nul
 }
 
 export async function updateReferral(id: number, input: ReferralInput): Promise<void> {
+  if (E2E_SMOKE) {
+    void id; void input;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("referrals").update(row(input)).eq("id", id);
     if (error) throw error;
@@ -105,6 +113,10 @@ export async function updateReferral(id: number, input: ReferralInput): Promise<
 }
 
 export async function setReferralStatus(id: number, status: ReferralStatus): Promise<void> {
+  if (E2E_SMOKE) {
+    void id; void status;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("referrals").update({ status, last_interaction: new Date().toISOString() }).eq("id", id);
     if (error) throw error;
@@ -118,6 +130,10 @@ export async function setReferralStatus(id: number, status: ReferralStatus): Pro
 }
 
 export async function deleteReferral(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("referrals").delete().eq("id", id);
     if (error) throw error;
@@ -173,7 +189,10 @@ export async function getNetworkingStats(): Promise<NetworkingStats> {
   let refs: { status: ReferralStatus; next_follow_up: string | null; application_id: number | null }[];
   let apps: { id: number; status: Status }[];
 
-  if (cloudMode()) {
+  if (E2E_SMOKE) {
+    refs = [];
+    apps = [];
+  } else if (cloudMode()) {
     const [{ data: r, error: rError }, { data: a, error: aError }] = await Promise.all([
       supabase.from("referrals").select("status, next_follow_up, application_id"),
       supabase.from("applications").select("id, status"),

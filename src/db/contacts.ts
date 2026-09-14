@@ -50,6 +50,10 @@ function row(input: ContactInput, companyId: number | null): Record<string, unkn
 }
 
 export async function createContact(input: ContactInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void input;
+    return Date.now();
+  }
   const companyId = await upsertCompany(input.company_name);
   if (cloudMode()) {
     const { data, error } = await supabase.from("contacts").insert(row(input, companyId)).select("id").single();
@@ -69,6 +73,10 @@ export async function createContact(input: ContactInput): Promise<number | null>
 }
 
 export async function updateContact(id: number, input: ContactInput): Promise<void> {
+  if (E2E_SMOKE) {
+    void id; void input;
+    return;
+  }
   const companyId = await upsertCompany(input.company_name);
   if (cloudMode()) {
     const { error } = await supabase.from("contacts").update(row(input, companyId)).eq("id", id);
@@ -88,6 +96,10 @@ export async function updateContact(id: number, input: ContactInput): Promise<vo
 }
 
 export async function deleteContact(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("contacts").delete().eq("id", id);
     if (error) throw error;

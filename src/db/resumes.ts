@@ -64,6 +64,16 @@ export async function createResumeVersion(input: ResumeVersionInput): Promise<nu
 }
 
 export async function updateResumeVersion(id: number, input: ResumeVersionInput): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite("resumes", e2eRead<ResumeVersion[]>("resumes", []).map((r) => r.id === id ? {
+      ...r,
+      name: input.name,
+      content: input.content ?? null,
+      target_role: input.target_role ?? null,
+      file_path: input.file_path ?? null,
+    } : r));
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("resume_versions")
       .update({ name: input.name, content: input.content ?? null, target_role: input.target_role ?? null, file_path: input.file_path ?? null })
@@ -79,6 +89,10 @@ export async function updateResumeVersion(id: number, input: ResumeVersionInput)
 }
 
 export async function deleteResumeVersion(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite("resumes", e2eRead<ResumeVersion[]>("resumes", []).filter((r) => r.id !== id));
+    return;
+  }
   if (cloudMode()) {
     // profiles.preferred_resume_id is ON DELETE SET NULL in the cloud schema,
     // so Postgres clears the pointer automatically.
@@ -96,6 +110,10 @@ export async function deleteResumeVersion(id: number): Promise<void> {
 export async function saveResumeBullet(
   bullet: Omit<ResumeBullet, "id" | "created_at">,
 ): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void bullet;
+    return Date.now();
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("resume_bullets")
       .insert({ experience_name: bullet.experience_name, original_text: bullet.original_text, improved_text: bullet.improved_text, tags: bullet.tags, application_id: bullet.application_id })
@@ -124,6 +142,10 @@ export async function listResumeBullets(): Promise<ResumeBullet[]> {
 }
 
 export async function deleteResumeBullet(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("resume_bullets").delete().eq("id", id);
     if (error) throw error;
@@ -134,6 +156,10 @@ export async function deleteResumeBullet(id: number): Promise<void> {
 }
 
 export async function updateResumeBulletText(id: number, improvedText: string): Promise<void> {
+  if (E2E_SMOKE) {
+    void id; void improvedText;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("resume_bullets").update({ improved_text: improvedText }).eq("id", id);
     if (error) throw error;

@@ -41,6 +41,10 @@ export async function listEmails(): Promise<EmailRow[]> {
 }
 
 export async function createEmail(input: EmailInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void input;
+    return Date.now();
+  }
   if (cloudMode()) {
     // Empty strings are invalid for a Postgres timestamptz — coerce to null.
     const received = input.received_at && input.received_at.trim() ? input.received_at : null;
@@ -72,6 +76,7 @@ export async function createEmail(input: EmailInput): Promise<number | null> {
 
 /** Gmail message ids already stored, used to avoid re-importing on sync. */
 export async function getExistingGmailIds(): Promise<string[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("emails").select("gmail_id").not("gmail_id", "is", null);
     throwIfSupabaseError(error);
@@ -90,6 +95,12 @@ export async function setEmailClassification(
   classification: EmailCategory,
   confidence: number,
 ): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    void classification;
+    void confidence;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("emails").update({ classification, confidence }).eq("id", id);
     throwIfSupabaseError(error);
@@ -104,6 +115,11 @@ export async function setEmailClassification(
 }
 
 export async function linkEmailApplication(id: number, applicationId: number | null): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    void applicationId;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("emails").update({ application_id: applicationId }).eq("id", id);
     throwIfSupabaseError(error);
@@ -128,6 +144,10 @@ export async function countEmails(): Promise<number> {
 }
 
 export async function deleteEmail(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("emails").delete().eq("id", id);
     throwIfSupabaseError(error);

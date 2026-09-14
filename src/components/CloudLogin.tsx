@@ -4,6 +4,7 @@ import { getRemember, setRemember } from "../cloud/supabase";
 import { AscentIcon } from "./Logo";
 import { authErrorMessage } from "../lib/errors";
 import { AUTH_CAPTCHA_ENABLED, TURNSTILE_SITE_KEY } from "../lib/features";
+import { startDemoSession } from "../demo/session";
 
 type View = "login" | "signup" | "reset";
 type MessageKind = "error" | "info";
@@ -93,6 +94,11 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
     } finally { setBusy(false); }
   }
 
+  function tryDemo() {
+    startDemoSession();
+    onDone();
+  }
+
   return (
     <div className="auth-screen">
       <div className="auth-card">
@@ -117,6 +123,9 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
             {needsCaptcha && <TurnstileChallenge onToken={setCaptchaToken} />}
             <button type="button" style={{ width: "100%" }} disabled={authBlocked || !email || !password} onClick={login}>
               {busy ? "Signing in..." : "Log in"}
+            </button>
+            <button type="button" className="secondary auth-demo-btn" disabled={busy} onClick={tryDemo}>
+              Try demo workspace
             </button>
             <p className="auth-switch">New to InternPilot? <button type="button" className="linklike" onClick={() => { setNotice(""); go("signup"); }}>Create an account</button></p>
           </>

@@ -6,6 +6,7 @@ import { isOnboarded } from "../db/profile";
 import SignupWizard from "./SignupWizard";
 import CloudLogin from "./CloudLogin";
 import NewPassword from "./NewPassword";
+import { endDemoSession, isDemoSession } from "../demo/session";
 
 type Mode = "loading" | "login" | "onboarding" | "authed";
 
@@ -60,7 +61,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       <SignupWizard
         skipAccount
         onDone={completeOnboarding}
-        onSignOut={() => cloudSignOut().finally(() => setMode("login"))}
+        onSignOut={() => {
+          if (isDemoSession()) {
+            endDemoSession();
+            setMode("login");
+            return;
+          }
+          cloudSignOut().finally(() => setMode("login"));
+        }}
       />
     );
   }

@@ -1,6 +1,7 @@
 import { getDb, validFk, blankToNull } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { InterviewRow, InterviewType, PrepStatus } from "./types";
+import { E2E_SMOKE, e2eNextId, e2eRead, e2eWrite } from "../lib/e2e";
 
 export interface InterviewInput {
   application_id: number | null;
@@ -10,6 +11,7 @@ export interface InterviewInput {
 }
 
 export async function listInterviews(): Promise<InterviewRow[]> {
+  if (E2E_SMOKE) return e2eRead<InterviewRow[]>("interviews", []);
   if (cloudMode()) {
     const { data, error } = await supabase.from("interviews")
       .select("*, applications(role_title, job_description, resume_version_id, companies(name))");
@@ -38,6 +40,25 @@ export async function listInterviews(): Promise<InterviewRow[]> {
 }
 
 export async function createInterview(input: InterviewInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    const id = e2eNextId("interview.nextId");
+    const row: InterviewRow = {
+      id,
+      application_id: input.application_id,
+      type: input.type,
+      date: blankToNull(input.date),
+      notes: input.notes ?? null,
+      prep_status: "not_started",
+      prep_plan: null,
+      created_at: new Date().toISOString(),
+      company_name: null,
+      role_title: null,
+      job_description: null,
+      resume_version_id: null,
+    };
+    e2eWrite("interviews", [...e2eRead<InterviewRow[]>("interviews", []), row]);
+    return id;
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("interviews")
       .insert({ application_id: input.application_id, type: input.type, date: blankToNull(input.date), notes: input.notes ?? null, prep_status: "not_started" })
@@ -54,6 +75,10 @@ export async function createInterview(input: InterviewInput): Promise<number | n
 }
 
 export async function deleteInterview(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite("interviews", e2eRead<InterviewRow[]>("interviews", []).filter((r) => r.id !== id));
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("interviews").delete().eq("id", id);
     if (error) throw error;
@@ -64,6 +89,10 @@ export async function deleteInterview(id: number): Promise<void> {
 }
 
 export async function setPrepStatus(id: number, status: PrepStatus): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite("interviews", e2eRead<InterviewRow[]>("interviews", []).map((r) => r.id === id ? { ...r, prep_status: status } : r));
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("interviews").update({ prep_status: status }).eq("id", id);
     if (error) throw error;
@@ -74,6 +103,10 @@ export async function setPrepStatus(id: number, status: PrepStatus): Promise<voi
 }
 
 export async function savePrepPlan(id: number, planJson: string): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite("interviews", e2eRead<InterviewRow[]>("interviews", []).map((r) => r.id === id ? { ...r, prep_plan: planJson } : r));
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("interviews").update({ prep_plan: planJson }).eq("id", id);
     if (error) throw error;

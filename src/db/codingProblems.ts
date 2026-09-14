@@ -1,6 +1,7 @@
 import { getDb, blankToNull, numOrNull } from "./index";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Difficulty, FailureReason, Pattern, ProblemResult, SolutionQuality } from "../prep/patterns";
+import { E2E_SMOKE } from "../lib/e2e";
 
 export interface CodingProblem {
   id: number;
@@ -66,6 +67,7 @@ function normalize(row: Record<string, unknown>): CodingProblem {
 }
 
 export async function listCodingProblems(): Promise<CodingProblem[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("coding_problems").select("*").order("solved_at", { ascending: false });
     throwIfSupabaseError(error);
@@ -77,6 +79,10 @@ export async function listCodingProblems(): Promise<CodingProblem[]> {
 }
 
 export async function createCodingProblem(input: CodingProblemInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void input;
+    return Date.now();
+  }
   const rec = {
     name: input.name, url: blankToNull(input.url), difficulty: input.difficulty ?? null,
     patterns: input.patterns ?? [], result: input.result ?? null, time_minutes: numOrNull(input.time_minutes),
@@ -103,6 +109,10 @@ export async function createCodingProblem(input: CodingProblemInput): Promise<nu
 
 /** After a re-solve, update the result + spaced-repetition schedule. */
 export async function updateCodingReview(id: number, patch: { result: ProblemResult; confidence: number | null; next_review_at: string | null; review_stage: number | null; solved_at: string }): Promise<void> {
+  if (E2E_SMOKE) {
+    void id; void patch;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("coding_problems").update(patch).eq("id", id);
     if (error) throw error;
@@ -116,6 +126,10 @@ export async function updateCodingReview(id: number, patch: { result: ProblemRes
 }
 
 export async function deleteCodingProblem(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("coding_problems").delete().eq("id", id);
     if (error) throw error;

@@ -64,6 +64,11 @@ export interface ReferralStats {
 }
 
 export async function getReferralStats(): Promise<ReferralStats> {
+  if (E2E_SMOKE) {
+    const apps = e2eRead<ApplicationRow[]>("applications", []);
+    const referred = apps.filter((a) => a.referral && a.referral.trim()).length;
+    return { referred, total: apps.length, rate: apps.length > 0 ? Math.round((referred / apps.length) * 100) : 0 };
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("applications").select("referral");
     throwIfSupabaseError(error);
@@ -94,6 +99,21 @@ export interface ResumeVersionPerf {
 
 /** Per-resume-version funnel performance, to answer "which resume works best?". */
 export async function getResumeVersionPerformance(): Promise<ResumeVersionPerf[]> {
+  if (E2E_SMOKE) {
+    const versions = e2eRead<{ id: number; name: string }[]>("resumes", []);
+    const apps = e2eRead<ApplicationRow[]>("applications", []);
+    return versions.map((v) => {
+      const rel = apps.filter((a) => a.resume_version_id === v.id);
+      return {
+        id: v.id,
+        name: v.name,
+        total: rel.length,
+        reachedOa: rel.filter((a) => ["oa", "interview", "offer"].includes(a.status)).length,
+        reachedInterview: rel.filter((a) => ["interview", "offer"].includes(a.status)).length,
+        offers: rel.filter((a) => a.status === "offer").length,
+      };
+    }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  }
   if (cloudMode()) {
     const [{ data: versions, error: versionsError }, { data: apps, error: appsError }] = await Promise.all([
       supabase.from("resume_versions").select("id, name"),
@@ -152,6 +172,24 @@ const SENT_STATUSES = ["outreach_sent", "follow_up_due", "contact_responded", ..
  * referral / alumni referral. Correlational, not causal — read with the sample sizes.
  */
 export async function getConversionByOutreach(): Promise<OutreachBucket[]> {
+  if (E2E_SMOKE) {
+    const apps = e2eRead<ApplicationRow[]>("applications", []);
+    const buckets: Record<OutreachBucket["key"], Status[]> = { none: [], outreach: [], referral: [], alumni_referral: [] };
+    for (const app of apps) buckets[app.referral?.trim() ? "referral" : "none"].push(app.status);
+    const LABEL: Record<OutreachBucket["key"], string> = {
+      none: "No outreach", outreach: "Employee outreach", referral: "Confirmed referral", alumni_referral: "Alumni referral",
+    };
+    const rate = (rows: Status[], reached: Status[]) => (rows.length ? Math.round((rows.filter((s) => reached.includes(s)).length / rows.length) * 100) : 0);
+    return (Object.keys(buckets) as OutreachBucket["key"][]).map((key) => {
+      const rows = buckets[key];
+      return {
+        key, label: LABEL[key], count: rows.length,
+        oaRate: rate(rows, ["oa", "interview", "offer"]),
+        interviewRate: rate(rows, ["interview", "offer"]),
+        offerRate: rate(rows, ["offer"]),
+      };
+    });
+  }
   let apps: { id: number; status: Status; referral: string | null }[];
   let refs: { application_id: number | null; contact_id: number | null; status: string }[];
   let contacts: { id: number; relationship_type: string | null }[];
@@ -223,7 +261,11 @@ function startOfWeek(d: Date): Date {
 /** Applications per week (by date applied, falling back to date saved) for the last N weeks. */
 export async function getWeeklyApplications(weeks = 8): Promise<WeekBucket[]> {
   let rows: { d: string }[];
-  if (cloudMode()) {
+  if (E2E_SMOKE) {
+    rows = e2eRead<ApplicationRow[]>("applications", [])
+      .map((r) => ({ d: r.date_applied ?? r.date_saved }))
+      .filter((r) => !!r.d);
+  } else if (cloudMode()) {
     const { data, error } = await supabase.from("applications").select("date_applied, date_saved");
     throwIfSupabaseError(error);
     rows = (data ?? [])

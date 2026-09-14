@@ -190,6 +190,23 @@ export async function createApplication(input: ApplicationInput): Promise<number
 }
 
 export async function updateApplication(id: number, input: ApplicationInput): Promise<void> {
+  if (E2E_SMOKE) {
+    const rows = e2eRead<ApplicationRow[]>("applications", []);
+    e2eWrite("applications", rows.map((a) => a.id === id ? {
+      ...a,
+      company_name: input.company_name,
+      role_title: input.role_title,
+      job_link: input.job_link ?? null,
+      location: input.location ?? null,
+      status: input.status,
+      date_applied: dateOrNull(input.date_applied),
+      resume_version_id: input.resume_version_id ?? null,
+      job_description: input.job_description ?? null,
+      notes: input.notes ?? null,
+      referral: input.referral ?? null,
+    } : a));
+    return;
+  }
   const companyId = await upsertCompany(input.company_name);
   const resumeId = await validResumeId(input.resume_version_id);
   if (cloudMode()) {
@@ -214,6 +231,10 @@ export async function updateApplication(id: number, input: ApplicationInput): Pr
 }
 
 export async function deleteApplication(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    e2eWrite("applications", e2eRead<ApplicationRow[]>("applications", []).filter((a) => a.id !== id));
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("applications").delete().eq("id", id);
     if (error) throw error;
@@ -238,6 +259,7 @@ export function needsBackfill(a: ApplicationRow): boolean {
  * fabricated reject timestamp would poison the rejection-timing view.
  */
 export async function backfillDiagnostics(): Promise<number> {
+  if (E2E_SMOKE) return 0;
   // Funnel statuses map to themselves; any terminal status (rejected) implies the
   // role was at least Applied, so it counts toward the funnel base.
   const stageFor = (status: string): string =>
@@ -276,6 +298,19 @@ export async function backfillDiagnostics(): Promise<number> {
 }
 
 export async function setApplicationStatus(id: number, status: Status): Promise<void> {
+  if (E2E_SMOKE) {
+    const now = nowIso();
+    e2eWrite("applications", e2eRead<ApplicationRow[]>("applications", []).map((a) => {
+      if (a.id !== id) return a;
+      const patch: Partial<ApplicationRow> = { status };
+      const curRank = a.furthest_stage != null ? FUNNEL_RANK[a.furthest_stage] ?? -1 : -1;
+      if (FUNNEL_RANK[status] != null && FUNNEL_RANK[status] > curRank) patch.furthest_stage = status;
+      if (status === "applied" && !a.applied_at) patch.applied_at = now;
+      if (status === "offer" || status === "rejected") patch.result_date = now;
+      return { ...a, ...patch };
+    }));
+    return;
+  }
   // Also advance the diagnostics signals: keep the deepest funnel stage ever
   // reached (so a rejection still remembers it got to OA/interview), stamp
   // applied_at on first apply, and record result_date on a terminal outcome.

@@ -2,6 +2,7 @@ import { getDb } from "./index";
 import { upsertCompany } from "./companies";
 import { cloudMode, supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Difficulty, ExperienceRow } from "./types";
+import { E2E_SMOKE } from "../lib/e2e";
 
 export interface ExperienceInput {
   company_name: string;
@@ -13,6 +14,7 @@ export interface ExperienceInput {
 }
 
 export async function listExperiences(): Promise<ExperienceRow[]> {
+  if (E2E_SMOKE) return [];
   if (cloudMode()) {
     const { data, error } = await supabase.from("interview_experiences").select("*, companies(name)");
     throwIfSupabaseError(error);
@@ -33,6 +35,10 @@ export async function listExperiences(): Promise<ExperienceRow[]> {
 }
 
 export async function createExperience(input: ExperienceInput): Promise<number | null> {
+  if (E2E_SMOKE) {
+    void input;
+    return Date.now();
+  }
   const companyId = await upsertCompany(input.company_name);
   if (cloudMode()) {
     const { data, error } = await supabase.from("interview_experiences")
@@ -51,6 +57,10 @@ export async function createExperience(input: ExperienceInput): Promise<number |
 }
 
 export async function deleteExperience(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("interview_experiences").delete().eq("id", id);
     if (error) throw error;

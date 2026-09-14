@@ -60,6 +60,11 @@ export async function listEmployment(contactId: number): Promise<ContactEmployme
 
 export async function addEmployment(input: EmploymentInput): Promise<number | null> {
   const cur = input.is_current ? 1 : 0;
+  if (E2E_SMOKE) {
+    void input;
+    void cur;
+    return Date.now();
+  }
   if (cloudMode()) {
     const { data, error } = await supabase.from("contact_employment_history").insert({
       contact_id: input.contact_id, company: input.company, title: input.title ?? null, team: input.team ?? null,
@@ -78,6 +83,10 @@ export async function addEmployment(input: EmploymentInput): Promise<number | nu
 }
 
 export async function deleteEmployment(id: number): Promise<void> {
+  if (E2E_SMOKE) {
+    void id;
+    return;
+  }
   if (cloudMode()) {
     const { error } = await supabase.from("contact_employment_history").delete().eq("id", id);
     throwIfSupabaseError(error);

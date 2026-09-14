@@ -7,6 +7,7 @@ import { cloudMode } from "./cloud/supabase";
 import { cloudSignOut } from "./cloud/auth";
 import { getProfile } from "./db/profile";
 import { listResumeBullets } from "./db/resumes";
+import { endDemoSession, isDemoSession } from "./demo/session";
 import { useIsPhone } from "./mobile/ui/useIsPhone";
 import Sidebar from "./components/sidebar/Sidebar";
 import type { NavCounts } from "./components/sidebar/nav";
@@ -21,8 +22,13 @@ export default function App() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isPhone = useIsPhone();
+  const demo = isDemoSession();
   const [counts, setCounts] = useState<NavCounts>({});
-  const [user, setUser] = useState({ initials: "··", name: "You", note: cloudMode() ? "Cloud · synced" : "Local · Beta" });
+  const [user, setUser] = useState({
+    initials: "..",
+    name: "You",
+    note: demo ? "Demo workspace" : cloudMode() ? "Cloud synced" : "Local beta",
+  });
 
   useEffect(() => {
     if (startupRan) return;
@@ -93,8 +99,8 @@ export default function App() {
     getProfile().then((p) => {
       if (!p) return;
       const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.email || "You";
-      const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "··";
-      setUser({ name, initials, note: cloudMode() ? "Cloud · synced" : "Local · Beta" });
+      const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "..";
+      setUser({ name, initials, note: demo ? "Demo workspace" : cloudMode() ? "Cloud synced" : "Local beta" });
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -106,21 +112,39 @@ export default function App() {
     );
   }
 
+  function exitDemo() {
+    endDemoSession();
+    window.location.href = "/";
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
         counts={counts}
         user={user}
         onStartFocus={() => navigate("/focus")}
-        onSignOut={cloudMode() ? () => { cloudSignOut().catch(console.error); } : undefined}
+        onSignOut={demo ? exitDemo : cloudMode() ? () => { cloudSignOut().catch(console.error); } : undefined}
       />
       <main className="main">
+        {demo && <DemoBanner onCreateAccount={exitDemo} />}
         <ErrorBoundary level="page" key={pathname}>
           <Suspense fallback={<LoadingState title="Loading page" detail="Getting this workspace ready." />}>
             <Outlet />
           </Suspense>
         </ErrorBoundary>
       </main>
+    </div>
+  );
+}
+
+function DemoBanner({ onCreateAccount }: { onCreateAccount: () => void }) {
+  return (
+    <div className="demo-banner">
+      <div>
+        <strong>Demo workspace</strong>
+        <span>Explore with sample data. Create an account to save your own search across devices.</span>
+      </div>
+      <button type="button" onClick={onCreateAccount}>Create account</button>
     </div>
   );
 }

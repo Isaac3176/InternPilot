@@ -1,4 +1,15 @@
-export const E2E_SMOKE = import.meta.env.VITE_E2E_SMOKE === "1";
+const DEMO_SESSION_KEY = "internpilot.demo";
+
+function hasDemoSession(): boolean {
+  try { return localStorage.getItem(DEMO_SESSION_KEY) === "1"; } catch { return false; }
+}
+
+export let E2E_SMOKE = import.meta.env.VITE_E2E_SMOKE === "1" || hasDemoSession();
+
+export function setE2eRuntimeMode(on: boolean): void {
+  if (import.meta.env.VITE_E2E_SMOKE === "1") return;
+  E2E_SMOKE = on;
+}
 
 const PREFIX = "internpilot.e2e.";
 
