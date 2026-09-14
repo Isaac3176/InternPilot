@@ -245,12 +245,26 @@ function Jobs({ avatar, onSheet }: TabProps) {
 
 function JobCard({ o, saved, onSave }: { o: RankedListing; saved?: boolean; onSave?: () => void }) {
   const ago = postedShort(o.datePosted);
+  // A real <button> can't be nested inside the bookmark's own button, so the
+  // card itself is a div acting as a button and only the bookmark is a <button>.
   return (
-    <button type="button" className="job" onClick={() => openExternal(o.url)}>
+    <div
+      className="job" role="button" tabIndex={0}
+      onClick={() => openExternal(o.url)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openExternal(o.url); } }}
+    >
       <div className="job-top">
         <CompanyLogo company={o.company} />
         <span className="org"><b>{o.company}</b><span>{o.locations[0] ?? "—"}{ago ? ` · ${ago}` : ""}</span></span>
-        {onSave && <span className={"bk" + (saved ? " on" : "")} onClick={(e) => { e.stopPropagation(); onSave(); }}>{I.bookmark(!!saved)}</span>}
+        {onSave && (
+          <button
+            type="button" className={"bk" + (saved ? " on" : "")} aria-pressed={!!saved}
+            aria-label={saved ? `Remove ${o.company} from saved` : `Save ${o.company}`}
+            onClick={(e) => { e.stopPropagation(); onSave(); }}
+          >
+            {I.bookmark(!!saved)}
+          </button>
+        )}
       </div>
       <h4>{o.title}</h4>
       <div className="facts">
@@ -263,7 +277,7 @@ function JobCard({ o, saved, onSave }: { o: RankedListing; saved?: boolean; onSa
         <span className="posted">{ago ? `Posted ${ago}` : "Recently"}</span>
         <span className="matchpill" style={{ ["--c" as string]: bandColor(o.score) }}><i />{o.score}</span>
       </div>
-    </button>
+    </div>
   );
 }
 

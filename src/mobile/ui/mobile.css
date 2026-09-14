@@ -95,7 +95,7 @@
 
 /* job cards */
 .m-shell .jobs { padding: 8px 20px 0; display: flex; flex-direction: column; gap: 11px; }
-.m-shell .job { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 15px; display: block; width: 100%; }
+.m-shell .job { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 15px; display: block; width: 100%; cursor: pointer; }
 .m-shell .job-top { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
 .m-shell .job-top .logo { width: 34px; height: 34px; border-radius: 9px; font-size: 13px; }
 .m-shell .job-top .org { flex: 1; min-width: 0; }
