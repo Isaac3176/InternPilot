@@ -113,6 +113,32 @@
 .m-shell .matchpill { display: inline-flex; align-items: center; gap: 7px; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; background: var(--surface-2); border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px 3px 7px; }
 .m-shell .matchpill i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
 
+/* job detail sheet */
+.m-shell .jobsheet { max-height: 88vh; overflow-y: auto; }
+.m-shell .jd-head { display: flex; align-items: center; gap: 11px; }
+.m-shell .jd-head .tx { flex: 1; min-width: 0; }
+.m-shell .jd-head .tx b { display: block; font-size: 13.5px; font-weight: 600; letter-spacing: -.015em; }
+.m-shell .jd-head .tx span { display: block; font-size: 11.5px; color: var(--muted); }
+.m-shell .jd-close { width: 30px; height: 30px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; flex: none; font-size: 13px; color: var(--muted); }
+.m-shell .jd-title { margin: 14px 0 10px; font-size: 19px; font-weight: 700; letter-spacing: -.02em; line-height: 1.28; }
+.m-shell .jd-acts { display: flex; gap: 10px; margin: 16px 0 4px; }
+.m-shell .jd-acts .btn { flex: 1; }
+.m-shell .jd-lead { font-size: 14px; font-weight: 500; font-style: italic; color: var(--ink-2); border-left: 3px solid var(--accent-line); padding-left: 12px; }
+.m-shell .jd-body { margin-top: 16px; }
+.m-shell .jd-body h4 { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 20px 0 9px; }
+.m-shell .jd-body p { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin: 0 0 11px; }
+.m-shell .jd-duties { padding-left: 18px; margin: 0 0 11px; }
+.m-shell .jd-duties li { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); margin-bottom: 7px; }
+.m-shell .jd-link { display: inline; font-size: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; padding: 0; }
+.m-shell .skills { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 4px; }
+.m-shell .skill { font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 8px; background: var(--good-soft); color: var(--good); }
+.m-shell .skill.miss { background: var(--surface-2); color: var(--muted); }
+.m-shell .elig { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border-radius: 12px; font-size: 12.5px; margin: 14px 0 4px; }
+.m-shell .elig span { color: var(--ink-2); }
+.m-shell .elig-eligible { background: var(--good-soft); } .m-shell .elig-eligible b { color: var(--good); }
+.m-shell .elig-review { background: var(--warn-soft); } .m-shell .elig-review b { color: var(--warn); }
+.m-shell .elig-ineligible { background: color-mix(in srgb, var(--risk) 14%, transparent); } .m-shell .elig-ineligible b { color: var(--risk); }
+
 /* résumé card + building blocks */
 .m-shell .resumecard { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
 .m-shell .rver { display: flex; align-items: center; gap: 11px; padding: 10px 0; }

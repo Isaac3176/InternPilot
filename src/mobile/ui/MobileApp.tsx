@@ -2,8 +2,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import CompanyLogo from "../../components/CompanyLogo";
 import { openExternal } from "../../lib/open";
 import { createApplication } from "../../db/applications";
+import { getResumeVersion } from "../../db/resumes";
 import { askChat, type ChatMessage } from "../../ai/chat";
 import { cloudSignOut } from "../../cloud/auth";
+import { fetchJobDescription, MAX_DESCRIPTION_CHARS } from "../../listings/description";
+import { leadSentence, parseDuties } from "../../listings/parse";
+import { jdSkillMatch } from "../../listings/match";
+import { assessEligibility, type EligibilityLevel } from "../../listings/eligibility";
 import type { RankedListing } from "../../listings/types";
 import type { ApplicationRow, Profile, ResumeVersion, Status } from "../../db/types";
 import type { StatusCounts, FunnelRates, ResumeVersionPerf } from "../../db/metrics";
@@ -202,6 +207,7 @@ function Jobs({ avatar, onSheet }: TabProps) {
   const [apps, setApps] = useState<ApplicationRow[]>(() => appsC.peek() ?? []);
   const [feedLoading, setFeedLoading] = useState(() => feedC.peek() == null);
   const [feedError, setFeedError] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<RankedListing | null>(null);
 
   function loadFeed() {
     setFeedLoading(true);
@@ -253,24 +259,34 @@ function Jobs({ avatar, onSheet }: TabProps) {
         ) : feedLoading && seg === "browse" ? (
           <Empty label="Loading your feed…" />
         ) : list.length ? (
-          list.map((o) => <JobCard key={o.id} o={o} saved={savedUrls.has(o.url)} onSave={() => save(o)} />)
+          list.map((o) => <JobCard key={o.id} o={o} saved={savedUrls.has(o.url)} onSave={() => save(o)} onOpen={() => setSelectedJob(o)} />)
         ) : (
           <Empty label={seg === "queue" ? "Your queue is clear — nice." : "No roles match right now."} />
         )}
       </div>
+
+      {selectedJob && (
+        <JobDetail
+          o={selectedJob}
+          saved={savedUrls.has(selectedJob.url)}
+          onSave={() => save(selectedJob)}
+          onClose={() => setSelectedJob(null)}
+        />
+      )}
     </div>
   );
 }
 
-function JobCard({ o, saved, onSave }: { o: RankedListing; saved?: boolean; onSave?: () => void }) {
+function JobCard({ o, saved, onSave, onOpen }: { o: RankedListing; saved?: boolean; onSave?: () => void; onOpen?: () => void }) {
   const ago = postedShort(o.datePosted);
+  const open = onOpen ?? (() => openExternal(o.url));
   // A real <button> can't be nested inside the bookmark's own button, so the
   // card itself is a div acting as a button and only the bookmark is a <button>.
   return (
     <div
       className="job" role="button" tabIndex={0}
-      onClick={() => openExternal(o.url)}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openExternal(o.url); } }}
+      onClick={open}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
     >
       <div className="job-top">
         <CompanyLogo company={o.company} />
@@ -297,6 +313,112 @@ function JobCard({ o, saved, onSave }: { o: RankedListing; saved?: boolean; onSa
         <span className="matchpill" style={{ ["--c" as string]: bandColor(o.score) }}><i />{o.score}</span>
       </div>
     </div>
+  );
+}
+
+const ELIG_LABEL: Record<EligibilityLevel, string> = {
+  eligible: "Likely eligible", review: "Review", ineligible: "Likely ineligible", unknown: "Eligibility",
+};
+
+/** Full-screen job detail sheet — mirrors the desktop "About the role" panel (JD, eligibility,
+ * skill match) since the phone previously had no in-app detail view at all, only an external link. */
+function JobDetail({ o, saved, onSave, onClose }: { o: RankedListing; saved: boolean; onSave: () => void; onClose: () => void }) {
+  const [desc, setDesc] = useState<string | null>(null);
+  const [descErr, setDescErr] = useState<string | null>(null);
+  const [descLoading, setDescLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(() => profileC.peek());
+  const [resumeHay, setResumeHay] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setDescLoading(true);
+    setDescErr(null);
+    fetchJobDescription(o.url)
+      .then((txt) => { if (!cancelled) setDesc(txt); })
+      .catch((e) => { if (!cancelled) setDescErr(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (!cancelled) setDescLoading(false); });
+    return () => { cancelled = true; };
+  }, [o.url]);
+
+  useEffect(() => {
+    let cancelled = false;
+    profileC.load().then(async (p) => {
+      if (cancelled) return;
+      setProfile(p);
+      const content = p?.preferred_resume_id ? (await getResumeVersion(p.preferred_resume_id))?.content ?? "" : "";
+      if (!cancelled) setResumeHay(`${content} ${p?.skills ?? ""}`.toLowerCase());
+    }).catch(console.error);
+    return () => { cancelled = true; };
+  }, []);
+
+  const ago = postedShort(o.datePosted);
+  const lead = desc ? leadSentence(desc) : "";
+  const duties = desc ? parseDuties(desc) : [];
+  const truncated = !!desc && desc.length >= MAX_DESCRIPTION_CHARS;
+  const match = desc && resumeHay.trim() ? jdSkillMatch(desc, resumeHay) : null;
+  const elig = profile ? assessEligibility(profile, o, desc ?? undefined) : null;
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div className="msheet jobsheet">
+        <div className="grabber" />
+        <div className="jd-head">
+          <CompanyLogo company={o.company} />
+          <span className="tx"><b>{o.company}</b><span>{o.locations[0] ?? "—"}{ago ? ` · ${ago}` : ""}</span></span>
+          <button type="button" className="jd-close" aria-label="Close" onClick={onClose}>✕</button>
+        </div>
+        <h2 className="jd-title">{o.title}</h2>
+        <div className="facts">
+          {o.salary ? <span className="fact pay">{o.salary}</span> : <span className="fact na">Pay not listed</span>}
+          {o.season && <span className="fact">{o.season}</span>}
+          {o.remote && <span className="fact">Remote</span>}
+          {!o.sponsorshipOk && <span className="fact na">No sponsorship</span>}
+          <span className="matchpill" style={{ ["--c" as string]: bandColor(o.score) }}><i />{o.score}</span>
+        </div>
+
+        {elig && elig.level !== "unknown" && (
+          <div className={`elig elig-${elig.level}`}>
+            <b>{ELIG_LABEL[elig.level]}</b>
+            <span>{elig.reasons[0]}</span>
+          </div>
+        )}
+
+        <div className="jd-acts">
+          <button type="button" className="btn sm" onClick={onSave} disabled={saved}>{saved ? "Saved" : "Save"}</button>
+          <button type="button" className="btn sm primary" onClick={() => openExternal(o.url)}>Open &amp; apply</button>
+        </div>
+
+        <div className="jd-body">
+          {descLoading ? (
+            <p className="mnote">Loading description from the posting…</p>
+          ) : desc ? (
+            <>
+              {lead && <p className="jd-lead">{lead}</p>}
+              {desc.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)}
+              {truncated && <p className="mnote">Truncated — <button type="button" className="jd-link" onClick={() => openExternal(o.url)}>read the rest on the posting</button></p>}
+              {duties.length >= 3 && (
+                <>
+                  <h4>What you'll do</h4>
+                  <ul className="jd-duties">{duties.map((d, i) => <li key={i}>{d}</li>)}</ul>
+                </>
+              )}
+              {match && match.matched.length + match.missing.length > 0 && (
+                <>
+                  <h4>Skills</h4>
+                  <div className="skills">
+                    {match.matched.map((m) => <span className="skill" key={m}>✓ {m}</span>)}
+                    {match.missing.map((m) => <span className="skill miss" key={m}>− {m}</span>)}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <p className="mnote">{descErr ?? "Couldn't fetch this posting's description."}</p>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
