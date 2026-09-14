@@ -212,7 +212,7 @@ export default function MilestoneCelebration({
 
   const note = m.notes[noteIdx % m.notes.length];
   const noteGlow = m.tone.c === "var(--muted-2)" ? "rgba(150,170,195,.18)" : "rgba(91,155,246,.20)";
-  const primaryBg = m.tone.c === "var(--muted-2)" ? "var(--ink)" : m.tone.c;
+  const primaryBg = m.tone.c === "var(--muted-2)" ? "var(--nav)" : m.tone.c;
 
   return (
     <div className="ms-scrim" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
