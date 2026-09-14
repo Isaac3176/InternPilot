@@ -9,6 +9,7 @@ export default function ConfirmAction({
   className,
   confirmClassName = "danger small",
   disabled = false,
+  ariaLabel,
   onConfirm,
 }: {
   children: ReactNode;
@@ -18,6 +19,7 @@ export default function ConfirmAction({
   className?: string;
   confirmClassName?: string;
   disabled?: boolean;
+  ariaLabel?: string;
   onConfirm: () => void | Promise<void>;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -53,7 +55,7 @@ export default function ConfirmAction({
   }
 
   return (
-    <button type="button" className={className} onClick={() => setConfirming(true)} disabled={disabled}>
+    <button type="button" className={className} aria-label={ariaLabel} onClick={() => setConfirming(true)} disabled={disabled}>
       {children}
     </button>
   );

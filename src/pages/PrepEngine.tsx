@@ -271,7 +271,7 @@ function HistoryTab({ problems, oas, onDelete }: { problems: CodingProblem[]; oa
                 <td><span className={`prep-res ${p.result}`}>{p.result ?? "—"}</span></td>
                 <td className="mono">{p.time_minutes != null ? `${p.time_minutes}m` : "—"}</td>
                 <td>
-                  <ConfirmAction className="prep-del" message="Delete this problem?" confirmLabel="Delete" onConfirm={() => onDelete(p.id)}>
+                  <ConfirmAction className="prep-del" ariaLabel="Delete this problem" message="Delete this problem?" confirmLabel="Delete" onConfirm={() => onDelete(p.id)}>
                     ✕
                   </ConfirmAction>
                 </td>

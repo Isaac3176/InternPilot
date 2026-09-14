@@ -380,10 +380,10 @@ export default function Applications() {
                       <td className={`age ${age.cls}`}><b>{age.big}</b><span>{age.small}</span></td>
                       <td>
                         <span className="rowacts">
-                          <button className="ibtn" title="Edit" onClick={() => openEdit(r)}>
+                          <button className="ibtn" title="Edit" aria-label={`Edit ${r.role_title}`} onClick={() => openEdit(r)}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
                           </button>
-                          <ConfirmAction className="ibtn danger" message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => handleDelete(r)}>
+                          <ConfirmAction className="ibtn danger" ariaLabel={`Delete ${r.role_title}`} message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => handleDelete(r)}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
                           </ConfirmAction>
                         </span>

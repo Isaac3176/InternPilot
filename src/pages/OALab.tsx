@@ -145,7 +145,7 @@ function AttemptCard({ a, onDelete }: { a: OAAttempt; onDelete: () => void }) {
           <span>{a.taken_on ?? "—"} · {a.duration_min ? `${a.duration_min} min` : "duration —"} · {a.num_questions ?? a.questions.length} questions</span>
         </div>
         <span className="oa-score">{solved}/{a.questions.length} solved</span>
-        <ConfirmAction className="oa-del" message="Delete this debrief?" confirmLabel="Delete" onConfirm={onDelete}>
+        <ConfirmAction className="oa-del" ariaLabel="Delete this debrief" message="Delete this debrief?" confirmLabel="Delete" onConfirm={onDelete}>
           ✕
         </ConfirmAction>
       </div>
