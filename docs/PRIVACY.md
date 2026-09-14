@@ -1,7 +1,8 @@
 # Privacy & data flows
 
-InternPilot is **local-first, and cloud-synced when you sign in**. Here is exactly what data
-lives where and what leaves your device.
+InternPilot is **cloud-synced when you sign in**, with a desktop local-storage path for
+offline and desktop-only workflows. Here is exactly what data lives where and what leaves
+your device.
 
 ## Where your data lives
 

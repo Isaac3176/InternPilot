@@ -45,10 +45,12 @@ the web/phone app browses, queues, and tracks._
 
 > _Add PNGs to `docs/screenshots/` with those names — see the folder's README._
 
-Built with **Tauri 2 + React 19 + TypeScript** on the desktop and **Supabase** (Postgres +
-auth) in the cloud, with **OpenAI** powering the AI features (each has an offline fallback).
+Built with **React 19 + TypeScript + Vite**, shipped as both a **Vercel-hosted PWA** and a
+**Tauri 2 desktop app**. Production data lives in **Supabase** (Auth + Postgres + RLS), while
+the desktop app also keeps a SQLite/local bridge path for offline and extension workflows.
+**OpenAI** powers optional AI features, and each major workflow has a non-AI fallback.
 
-- **Deeper docs:** [Features guide](docs/FEATURES.md) · [Architecture](docs/ARCHITECTURE.md) · [Development](docs/DEVELOPMENT.md) · [Browser extension](docs/EXTENSION.md) · [Cloud setup](cloud/SETUP.md) · [Privacy](docs/PRIVACY.md) · [Changelog](CHANGELOG.md)
+- **Deeper docs:** [Architecture diagrams](docs/ARCHITECTURE.md) · [Features guide](docs/FEATURES.md) · [Development](docs/DEVELOPMENT.md) · [Browser extension](docs/EXTENSION.md) · [Cloud setup](cloud/SETUP.md) · [Privacy](docs/PRIVACY.md) · [Changelog](CHANGELOG.md)
 - **Shipping to users:** [Production checklist](docs/PRODUCTION.md) · [Privacy Policy (draft)](docs/PRIVACY-POLICY.md) · [Terms of Service (draft)](docs/TERMS.md)
 
 ## Features
@@ -165,10 +167,11 @@ Tests (Vitest) and a type-check/build run in CI on every push and PR
 
 ## Privacy
 
-Local-first: your applications, résumés, contacts, emails, and profile live in a local SQLite
-database. Text is sent to OpenAI only when you invoke an AI feature (with a key set), and to
-Google only for read-only Gmail sync if you connect it. Full data-flow breakdown:
-[docs/PRIVACY.md](docs/PRIVACY.md).
+Cloud-synced by default: signed-in users store applications, resumes, contacts, emails, and
+profile data in Supabase rows protected by Row-Level Security. The desktop app also supports a
+local SQLite path for offline/desktop-only workflows. Text is sent to OpenAI only when you
+invoke an AI feature (with a key set), and to Google only for read-only Gmail sync if you
+connect it. Full data-flow breakdown: [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Roadmap
 

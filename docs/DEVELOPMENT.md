@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) **20+** (CI and the release workflow use 20).
+- [Node.js](https://nodejs.org/) **22+** (CI and the release workflow use 22).
 - [Rust](https://www.rust-lang.org/tools/install) (stable; MSVC toolchain on Windows) — desktop only.
 - Tauri prerequisites for your OS — https://tauri.app/start/prerequisites/
   (Windows: WebView2 + the MSVC C++ build tools).
@@ -47,9 +47,9 @@ set the public site key in your hosting environment:
 VITE_TURNSTILE_SITE_KEY=<your-cloudflare-turnstile-site-key>
 ```
 
-When this env var is present, the login and signup screens require the security check and
-send its token to Supabase. Leave it unset for local development unless you are testing the
-production auth flow.
+When this env var is present, the sign-in, sign-up, and forgot-password screens require the
+security check and send its token to Supabase. Leave it unset for local development unless you
+are testing the production auth flow.
 
 The **anon** key is safe to ship (Row-Level Security protects the data). Never commit the
 `service_role` key or the database password. Full cloud setup: [../cloud/SETUP.md](../cloud/SETUP.md).
