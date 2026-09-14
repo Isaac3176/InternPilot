@@ -256,6 +256,20 @@ export default function Internships() {
     return () => { cancelled = true; };
   }, [selectedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Drop the cached description and re-fetch it — for a JD that looks stale or mis-parsed.
+  async function redescribe(url: string) {
+    setDescByUrl((m) => { const n = new Map(m); n.delete(url); return n; });
+    setDescLoading(true);
+    try {
+      const txt = await fetchJobDescription(url);
+      setDescByUrl((m) => new Map(m).set(url, txt));
+    } catch (e) {
+      console.error("description re-fetch failed", e);
+    } finally {
+      setDescLoading(false);
+    }
+  }
+
   function toggleType(t: JobType) {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }
@@ -628,7 +642,9 @@ export default function Internships() {
                         <span className="r">{IC_DOC}Source <b>{selected.source}</b></span>
                         {age ? <span className="r">{IC_CLOCK}Posted <b>{age}</b></span> : null}
                         <span className="spacer" />
-                        <button type="button" className="rep" onClick={() => openExternal(selected.url)}>Something look wrong?</button>
+                        <button type="button" className="rep" onClick={() => redescribe(selected.url)} disabled={descLoading}>
+                          {descLoading ? "Re-checking…" : "Doesn't look right? Re-check"}
+                        </button>
                       </div>
                     </div>
                   );
