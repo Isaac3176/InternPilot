@@ -48,7 +48,16 @@ async function fetchText(url: string): Promise<string> {
   const timer = setTimeout(() => ctrl.abort(), 12000);
   try {
     const res = await httpFetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0", Accept: "text/html,application/json" },
+      // A generic "Mozilla/5.0" UA is a trivial bot signature and tends to trip the
+      // same cookie-consent/bot-check walls looksLikeJunk() exists to catch. A full,
+      // current desktop-Chrome UA (with matching Accept-Language) passes as a normal
+      // browser more often. Browsers ignore a custom User-Agent header on `fetch`, so
+      // this only takes effect on the Tauri desktop path (native request from Rust).
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,*/*;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
