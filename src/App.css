@@ -612,6 +612,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .mb-md { margin-bottom: 14px; }
 .ml-xs { margin-left: 6px; }
 .notes-sm { min-height: 60px; }
+.notes-inline { min-height: 70px; font-size: 13px; }
 
 /* ---------- Tag multi-select (Simplify-style) ---------- */
 .tag-select { position: relative; }

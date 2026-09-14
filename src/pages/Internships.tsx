@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { openExternal } from "../lib/open";
-import { createApplication, listApplications } from "../db/applications";
+import { createApplication, listApplications, updateApplication } from "../db/applications";
 import { listContacts } from "../db/contacts";
 import { listReferrals } from "../db/referrals";
 import { listAllEmployment, type ContactEmployment } from "../db/contactHistory";
@@ -255,13 +255,31 @@ export default function Internships() {
   const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0) + (hideIneligible ? 1 : 0);
   const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew || matchesMyRoles || hideIneligible);
 
-  async function addToTracker(l: RankedListing): Promise<number | null> {
+  async function addToTracker(l: RankedListing, notes?: string): Promise<number | null> {
     const existing = appByUrl.get(l.url);
-    if (existing) return existing.id;
+    if (existing) {
+      if (notes !== undefined && notes !== (existing.notes ?? "")) {
+        await updateApplication(existing.id, {
+          company_name: existing.company_name ?? l.company,
+          role_title: existing.role_title,
+          job_link: existing.job_link,
+          location: existing.location,
+          status: existing.status,
+          date_applied: existing.date_applied,
+          resume_version_id: existing.resume_version_id,
+          job_description: existing.job_description,
+          referral: existing.referral,
+          notes,
+        });
+        await refreshApps();
+      }
+      return existing.id;
+    }
     const id = await createApplication({
       company_name: l.company, role_title: l.title, job_link: l.url,
       location: l.locations.join(", "), status: "interested",
       resume_version_id: resumeIdForCompany(l.company) ?? preferredResumeId,
+      notes: notes ?? null,
       // Diagnostics signals captured at the moment you engage the listing.
       match_score: l.score,
       eligibility: assessEligibility(profile, l).level,
@@ -286,6 +304,23 @@ export default function Internships() {
 
   const selApp = selected ? appByUrl.get(selected.url) : undefined;
   const selStage = selApp ? STATUS_STAGE[selApp.status] : -1;
+
+  // Notes on the selected listing — reset the draft only when the listing itself
+  // changes, not on every appByUrl refresh, so an in-progress edit isn't clobbered.
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  useEffect(() => { setNoteDraft(selApp?.notes ?? ""); }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function saveNote() {
+    if (!selected || noteSaving) return;
+    setNoteSaving(true);
+    try {
+      await addToTracker(selected, noteDraft);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setNoteSaving(false);
+    }
+  }
   const employmentByContact = useMemo(() => {
     const m = new Map<number, ContactEmployment[]>();
     for (const e of employment) { const a = m.get(e.contact_id) ?? []; a.push(e); m.set(e.contact_id, a); }
@@ -654,6 +689,18 @@ export default function Internships() {
                     ? `${effMatch.matched.length} of ${effMatch.matched.length + effMatch.missing.length} listed skills found on your résumé`
                     : "Match on your target roles, skills, and locations"}
                 </p>
+              </div>
+
+              <div className="panel">
+                <div className="panel-head"><span className="lbl">Notes</span>{noteSaving && <span className="muted-note">Saving…</span>}</div>
+                <textarea
+                  className="notes-inline"
+                  aria-label="Notes on this posting"
+                  placeholder="Recruiter name, deadline, anything you don't want to forget…"
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  onBlur={() => { if (noteDraft !== (selApp?.notes ?? "")) saveNote(); }}
+                />
               </div>
 
               <div className="panel">
