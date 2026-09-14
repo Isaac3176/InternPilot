@@ -12,7 +12,7 @@ import { resumeIdForCompany } from "../ranking/resumeTracks";
 import { getPrefs } from "../ranking/prefs";
 import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
-import { fetchJobDescription } from "../listings/description";
+import { fetchJobDescription, MAX_DESCRIPTION_CHARS } from "../listings/description";
 import { jdSkillMatch } from "../listings/match";
 import { assessEligibility } from "../listings/eligibility";
 import { getResumeVersion, listResumeVersions } from "../db/resumes";
@@ -573,6 +573,7 @@ export default function Internships() {
                 ) : (() => {
                   const desc = selDesc;
                   const long = !!desc && desc.length > 600; // only long JDs get the clamp + read-more
+                  const truncated = !!desc && desc.length >= MAX_DESCRIPTION_CHARS;
                   const lead = desc ? leadSentence(desc) : "";
                   const duties = desc ? parseDuties(desc) : [];
                   const req = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch : null;
@@ -641,6 +642,7 @@ export default function Internships() {
                       <div className="rb-prov">
                         <span className="r">{IC_DOC}Source <b>{selected.source}</b></span>
                         {age ? <span className="r">{IC_CLOCK}Posted <b>{age}</b></span> : null}
+                        {truncated && <span className="r">{IC_INFO}Truncated — <button type="button" className="rep" onClick={() => openExternal(selected.url)}>read the rest on the posting</button></span>}
                         <span className="spacer" />
                         <button type="button" className="rep" onClick={() => redescribe(selected.url)} disabled={descLoading}>
                           {descLoading ? "Re-checking…" : "Doesn't look right? Re-check"}

@@ -1,6 +1,9 @@
 import { httpFetch } from "../lib/http";
 import { E2E_SMOKE } from "../lib/e2e";
 
+/** Generic HTML extraction is capped this long; callers can detect truncation via this. */
+export const MAX_DESCRIPTION_CHARS = 8000;
+
 /** Decode common HTML entities and strip tags into readable, line-broken text. */
 function toText(input: string): string {
   let s = input;
@@ -161,5 +164,5 @@ export async function fetchJobDescription(url: string): Promise<string> {
   if (txt.length < 220 || looksLikeJunk(txt)) {
     throw new Error("This posting doesn't expose its description to us — open it on the company site to read the details.");
   }
-  return txt.slice(0, 8000);
+  return txt.slice(0, MAX_DESCRIPTION_CHARS);
 }
