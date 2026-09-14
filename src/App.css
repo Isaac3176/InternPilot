@@ -57,6 +57,58 @@
   --shadow-lg: 0 12px 32px rgba(15, 27, 45, 0.16);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    /* surfaces */
+    --card: #121a24;
+    --surface: #121a24;
+    --surface-2: #182330;
+    --line: #263445;
+    --line-2: #202c3a;
+
+    /* text */
+    --ink: #eef3f8;
+    --ink-2: #cfdae5;
+    --slate: #9fb0c2;
+    --slate-2: #708297;
+
+    /* primary (blue) */
+    --accent-hover: #6ba4f7;
+    --accent-line: #285388;
+    --accent-ink: #9ec8ff;
+
+    /* semantic */
+    --beacon: #4fcea0;
+    --beacon-soft: #12352c;
+    --warn: #f0b24e;
+    --warn-soft: #332719;
+    --alert: #ff8c78;
+    --alert-soft: #3b201d;
+
+    /* Back-compat aliases used across existing components */
+    --bg: #0b111a;
+    --bg-elev: #121a24;
+    --bg-elev-2: #182330;
+    --border: #263445;
+    --text: #eef3f8;
+    --text-dim: #9fb0c2;
+    --text-faint: #708297;
+    --accent: #5b9bf6;
+    --accent-soft: #122a4d;
+    --accent-dim: #182f50;
+    --green: #4fcea0;
+    --amber: #f0b24e;
+    --amber-ink: #ffd38b;
+    --amber-soft: #332719;
+    --red: #ff8c78;
+    --purple: #a594ff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 18px 38px -22px rgba(0, 0, 0, 0.85);
+    --shadow-lg: 0 18px 52px rgba(0, 0, 0, 0.45);
+  }
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {
@@ -2841,3 +2893,129 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .sim-sum-row.solved { border-left-color: var(--beacon, #157f5f); }
 .sim-sum-row.seen { border-left-color: var(--warn); }
 .sim-sum-row span:nth-child(2) { color: var(--ink-2); }
+
+@media (prefers-color-scheme: dark) {
+  input, textarea, select {
+    background-color: var(--bg-elev);
+    border-color: var(--line);
+    color: var(--ink);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--slate-2);
+  }
+
+  .row-menu-pop,
+  .mc-card,
+  .prep-log,
+  .sim,
+  .ms-modal,
+  .ms-scrim .journey,
+  .apps .tablewrap,
+  .apps .search,
+  .apps .fchip,
+  .apps .pop {
+    background: var(--card);
+    border-color: var(--line);
+    color: var(--ink);
+  }
+
+  button.secondary,
+  .legal-link-btn,
+  .focus .btn,
+  .prep-mini,
+  .prep-chip,
+  .prep-seg button,
+  .prep-conf button,
+  .sim-acts .sim-next,
+  .sim-keep,
+  .emp-type,
+  .opt-chip {
+    background: var(--card);
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
+
+  button.secondary:hover,
+  .legal-link-btn:hover,
+  .focus .btn:hover,
+  .prep-mini:hover,
+  .prep-chip:hover,
+  .sim-keep:hover,
+  .emp-type:hover,
+  .opt-chip:hover {
+    background: var(--surface-2);
+    border-color: var(--accent-line);
+  }
+
+  .badge.interested,
+  .apps .status.interested,
+  .fact,
+  .pf-chip.ghost,
+  .pf-pri.lo,
+  .ats .badge.offline,
+  .focus-pill,
+  .target-chip {
+    background: var(--surface-2);
+    color: var(--slate);
+  }
+
+  .badge.oa,
+  .badge.interview {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .badge.offer {
+    background: var(--beacon-soft);
+    color: var(--beacon);
+  }
+
+  .badge.rejected {
+    background: var(--alert-soft);
+    color: var(--alert);
+  }
+
+  .results,
+  .seg,
+  .list-views {
+    background: #111924;
+  }
+
+  .seg button.on,
+  .list-views button.on,
+  .job.on,
+  .nm-co.target {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+
+  .job:hover,
+  .os-item,
+  .rail,
+  .panel.tierA,
+  .target-openings,
+  .opening-soon,
+  .prep-card,
+  .oa-card,
+  .oa-form,
+  .diag-card,
+  .promo-card,
+  .errb-card {
+    background: var(--card);
+    border-color: var(--line);
+  }
+
+  .logo.img,
+  .phone-connect .qr {
+    background: #fff;
+  }
+
+  .tag.miss,
+  .sim-nudge,
+  .diag-note,
+  .qa-standing {
+    color: var(--warn);
+  }
+}

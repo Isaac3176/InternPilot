@@ -10,6 +10,18 @@
   --tk-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   color: var(--tk-ink);
 }
+
+@media (prefers-color-scheme: dark) {
+  .tk {
+    color-scheme: dark;
+    --tk-surface: #121A24; --tk-surface-2: #182330;
+    --tk-line: #263445; --tk-line-soft: #202C3A;
+    --tk-ink: #EEF3F8; --tk-ink-2: #CFDAE5; --tk-muted: #9FB0C2; --tk-muted-2: #708297;
+    --tk-accent: #5B9BF6; --tk-accent-soft: #122A4D; --tk-accent-line: #285388; --tk-accent-ink: #9EC8FF;
+    --tk-good: #4FCEA0; --tk-good-soft: #12352C; --tk-good-line: #23624F;
+    --tk-warn: #F0B24E; --tk-warn-soft: #332719; --tk-warn-line: #6A5028;
+  }
+}
 .tk-head h1 { margin: 0 0 3px; font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
 .tk-head p { margin: 0 0 16px; color: var(--tk-muted); font-size: 13.5px; }
 
@@ -87,3 +99,18 @@
 .tk-trackrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .tk-trackrow span { flex: none; width: 96px; font-size: 12.5px; font-weight: 500; color: var(--tk-ink-2); }
 .tk-trackrow select { flex: 1; min-width: 0; height: 32px; border: 1px solid var(--tk-line); border-radius: 8px; padding: 0 9px; font-size: 12.5px; background: var(--tk-surface); color: var(--tk-ink); }
+
+@media (prefers-color-scheme: dark) {
+  .tk-track,
+  .tk-gapchip {
+    background: var(--tk-surface-2);
+  }
+
+  .tk-import {
+    background: linear-gradient(180deg, var(--tk-accent-soft), var(--tk-surface));
+  }
+
+  .tk-btn:hover {
+    border-color: var(--tk-accent-line);
+  }
+}
