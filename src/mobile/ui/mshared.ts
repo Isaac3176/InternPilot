@@ -1,4 +1,5 @@
 /** Small formatting/helpers shared across the mobile-web screens. */
+import { scoreTier } from "../../listings/scoreTier";
 
 export function initials(name: string): string {
   const parts = (name || "").trim().split(/\s+/).slice(0, 2);
@@ -24,5 +25,5 @@ export function postedShort(datePosted?: number): string {
 }
 
 export function bandColor(v: number): string {
-  return v >= 80 ? "var(--good)" : v >= 65 ? "var(--accent)" : "var(--warn)";
+  return `var(--${scoreTier(v)})`;
 }

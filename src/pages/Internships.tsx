@@ -15,6 +15,7 @@ import { getFeed } from "../listings/service";
 import { fetchJobDescription, MAX_DESCRIPTION_CHARS } from "../listings/description";
 import { jdSkillMatch } from "../listings/match";
 import { assessEligibility } from "../listings/eligibility";
+import { scoreTier } from "../listings/scoreTier";
 import { getResumeVersion, listResumeVersions } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Profile, ReferralRow, ResumeVersion, Status } from "../db/types";
@@ -59,7 +60,8 @@ function initials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 function bandColor(v: number): string {
-  return v >= 80 ? "var(--beacon)" : v >= 65 ? "var(--accent)" : "var(--warn)";
+  const t = scoreTier(v);
+  return t === "good" ? "var(--beacon)" : t === "accent" ? "var(--accent)" : "var(--warn)";
 }
 // A score is an estimate when the posting never gave us its required skills.
 function isEstimate(l: RankedListing): boolean {
