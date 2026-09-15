@@ -2,7 +2,7 @@ import type { Session } from "@supabase/supabase-js";
 import { setCloudSessionUserId, supabase } from "./supabase";
 import { E2E_SMOKE, e2eKey } from "../lib/e2e";
 
-export type SignUpResult = "created" | "confirm_email" | "already_exists";
+export type SignUpResult = "created" | "confirm_email" | "check_email";
 interface AuthChallenge {
   captchaToken?: string;
 }
@@ -28,11 +28,8 @@ function e2eSession(): Session {
 }
 
 /**
- * Create an account. Supabase hides duplicate emails to prevent enumeration — a
- * signup for an existing account returns a user with no identities (or, with
- * confirmation off, an "already registered" error). We surface that as
- * "already_exists" so the UI can steer the user to sign in / reset instead of
- * silently pretending to create a second account.
+ * Create an account. Keep duplicate-email handling generic so sign-up cannot be
+ * used to confirm whether a mailbox already has an InternPilot account.
  */
 export async function cloudSignUp(email: string, password: string, challenge: AuthChallenge = {}): Promise<SignUpResult> {
   if (E2E_SMOKE) {
@@ -47,10 +44,10 @@ export async function cloudSignUp(email: string, password: string, challenge: Au
     options: challenge.captchaToken ? { captchaToken: challenge.captchaToken } : undefined,
   });
   if (error) {
-    if (/already|registered|exists/i.test(error.message)) return "already_exists";
+    if (/already|registered|exists/i.test(error.message)) return "check_email";
     throw error;
   }
-  if (data.user && (data.user.identities?.length ?? 0) === 0) return "already_exists";
+  if (data.user && (data.user.identities?.length ?? 0) === 0) return "check_email";
   if (!data.session) return "confirm_email"; // email confirmation required
   setCloudSessionUserId(data.session.user.id);
   return "created";

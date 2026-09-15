@@ -6,11 +6,18 @@ import { createClient } from "@supabase/supabase-js";
  * data. Values can be overridden via .env. Prefer VITE_SUPABASE_ANON_KEY;
  * VITE_SUPABASE_KEY remains supported for existing deployments.
  */
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://sdminkbpouqdjgqawdqc.supabase.co";
-const SUPABASE_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-  || import.meta.env.VITE_SUPABASE_KEY
-  || "sb_publishable_MHwlEX21gJ019Fus0mB9JQ_8zvHGUTX";
+const FALLBACK_SUPABASE_URL = "https://sdminkbpouqdjgqawdqc.supabase.co";
+const FALLBACK_SUPABASE_KEY = "sb_publishable_MHwlEX21gJ019Fus0mB9JQ_8zvHGUTX";
+
+const configuredSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const configuredSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY;
+
+if (import.meta.env.PROD && (!configuredSupabaseUrl || !configuredSupabaseKey)) {
+  throw new Error("Production builds require VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+}
+
+const SUPABASE_URL = configuredSupabaseUrl || FALLBACK_SUPABASE_URL;
+const SUPABASE_KEY = configuredSupabaseKey || FALLBACK_SUPABASE_KEY;
 
 // "Remember this device": when on, the session lives in localStorage and
 // survives restarts (stay logged in). When off, it lives in sessionStorage and

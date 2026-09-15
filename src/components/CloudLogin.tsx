@@ -63,9 +63,9 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
     setRemember(remember);
     try {
       const result = await cloudSignUp(email, password, { captchaToken });
-      if (result === "already_exists") {
+      if (result === "check_email") {
         go("login"); // go() clears msg, so set it after
-        showError("That email already has an account. Sign in, or use Forgot password.");
+        setNotice("If that email can create an account, you'll receive next steps shortly. You can also sign in or reset your password.");
         return;
       }
       if (result === "confirm_email") {

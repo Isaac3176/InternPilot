@@ -9,9 +9,8 @@ already sets the build command, output dir, and SPA routing.
 3. Vercel auto-detects **Vite**. Leave the defaults (they match `vercel.json`):
    - Build command: `npm run build`
    - Output directory: `dist`
-4. (Optional) Project → Settings → **Environment Variables** — only needed if you
-   ever rotate keys; the app already has your project URL + publishable key baked
-   in as defaults:
+4. Project → Settings → **Environment Variables**. Production builds fail closed
+   unless the Supabase project URL and publishable key are explicitly configured:
    - `VITE_SUPABASE_URL` = `https://sdminkbpouqdjgqawdqc.supabase.co`
    - `VITE_SUPABASE_ANON_KEY` = your `sb_publishable_...` key
    - `VITE_SUPABASE_KEY` is still accepted as a legacy fallback
