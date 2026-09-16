@@ -70,7 +70,7 @@ const CONTENT: Record<Kind, Content> = {
       { q: "You will send far more applications than you get replies. Build the habit so that sending one costs you almost nothing.", src: "InternPilot · field note" },
       { q: "Speed is one of the few variables in this process you fully control. Applying early beats applying polished, most of the time.", src: "InternPilot · field note" },
     ],
-    cta: "Build the prep list", alt: "Later", tone: TONE.applied,
+    cta: "Build the prep list", alt: "Later", confetti: true, tone: TONE.applied,
   },
   oa: {
     eyebrow: "Assessment unlocked", title: (c) => `${c} sent an OA`,

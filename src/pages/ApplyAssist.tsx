@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { openExternal } from "../lib/open";
-import { listApplications } from "../db/applications";
+import { listApplications, setApplicationStatus } from "../db/applications";
 import { listResumeVersions } from "../db/resumes";
 import type { ApplicationRow, ResumeVersion } from "../db/types";
 import { generateApplyAssist, recommendResume, type ApplyAssist as Assist } from "../ai/apply";
 import { hasApiKey } from "../ai/settings";
+import MilestoneCelebration from "../components/MilestoneCelebration";
 
 export default function ApplyAssist() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
@@ -19,6 +21,8 @@ export default function ApplyAssist() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [marking, setMarking] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
     listApplications().then(setApps).catch(console.error);
@@ -68,6 +72,21 @@ export default function ApplyAssist() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function markApplied() {
+    if (!app) return;
+    setMarking(true);
+    setError("");
+    try {
+      await setApplicationStatus(app.id, "applied");
+      setApps((prev) => prev.map((a) => (a.id === app.id ? { ...a, status: "applied" } : a)));
+      setCelebrate(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMarking(false);
     }
   }
 
@@ -182,7 +201,35 @@ export default function ApplyAssist() {
               {assist.source === "openai" ? "OpenAI" : "Offline placeholder"}
             </span>
           </div>
+
+          {app && app.status === "interested" && (
+            <div className="card">
+              <h2>Submitted it?</h2>
+              <p className="hint">Once you've submitted the application on the company's site, mark it applied to start tracking replies.</p>
+              <div className="actions">
+                <button type="button" onClick={markApplied} disabled={marking}>
+                  {marking ? "Marking…" : "✅ I applied"}
+                </button>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {celebrate && app && (
+        <MilestoneCelebration
+          kind="applied"
+          company={app.company_name ?? "This company"}
+          role={app.role_title}
+          stats={[
+            [String(apps.length), "applications"],
+            [String(apps.filter((a) => a.status !== "rejected" && a.status !== "offer").length), "still live"],
+            [versions.find((v) => v.id === resumeId)?.name ?? "—", "résumé attached"],
+          ]}
+          reach={1}
+          onClose={() => setCelebrate(false)}
+          onPrimary={() => { setCelebrate(false); navigate("/toolkit"); }}
+        />
       )}
     </>
   );
