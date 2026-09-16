@@ -81,6 +81,9 @@ const IC_INFO = <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stro
 const IC_EXT = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>;
 const IC_DOC = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M6 3h9l5 5v13H6z" /><path d="M14 3v6h6" /></svg>;
 const IC_CLOCK = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>;
+const IC_BOLT = <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10.5H12z" /></svg>;
+const IC_X = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>;
+const IC_ARROW_UR = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7" /><path d="M9 7h8v8" /></svg>;
 
 const TIER_STEPS = [
   { id: "read", label: "Read the JD — pull its 4-6 strongest signals" },
@@ -105,7 +108,7 @@ function TierPlaybook({ company, onFindPeople, onApply }: { company: string; onF
       </div>
       <div className="tierA-acts">
         <button type="button" className="secondary small" onClick={onFindPeople}>Find people</button>
-        <button type="button" className="small" onClick={onApply}>⚡ Apply</button>
+        <button type="button" className="small" onClick={onApply}>{IC_BOLT} Apply</button>
       </div>
     </>
   );
@@ -436,7 +439,7 @@ export default function Internships() {
           <div className="to-head">
             <b>🎯 Your targets just opened</b>
             <span>{targetOpenings.length} watchlist {targetOpenings.length === 1 ? "company" : "companies"} posted a new role — apply fast</span>
-            <button type="button" className="to-x" onClick={() => setOpeningsDismissed(true)} aria-label="Dismiss">✕</button>
+            <button type="button" className="to-x" onClick={() => setOpeningsDismissed(true)} aria-label="Dismiss">{IC_X}</button>
           </div>
           <div className="to-list">
             {targetOpenings.map(({ l, tc }) => (
@@ -447,7 +450,7 @@ export default function Internships() {
                   <span>{l.title}</span>
                 </span>
                 <span className="to-track" title={`Lead with your ${TRACK_LABEL[trackFor(l.company)]} résumé`}>Use {resumeNameForCompany(l.company) ?? TRACK_LABEL[trackFor(l.company)]}</span>
-                <span className="to-go" aria-hidden>↗</span>
+                <span className="to-go" aria-hidden>{IC_ARROW_UR}</span>
               </button>
             ))}
           </div>
@@ -520,9 +523,11 @@ export default function Internships() {
               <div className="detail-head">
                 <div className="tabs"><button type="button" className="on">Overview</button></div>
                 <div className="actions">
-                  <button type="button" className="secondary" onClick={() => addToTracker(selected)} disabled={appByUrl.has(selected.url)}>{appByUrl.has(selected.url) ? "Saved" : "Save"}</button>
+                  <button type="button" className={"secondary" + (appByUrl.has(selected.url) ? " is-on" : "")} onClick={() => addToTracker(selected)}>
+                    {appByUrl.has(selected.url) && IC_CHECK} {appByUrl.has(selected.url) ? "Saved" : "Save"}
+                  </button>
                   <button type="button" className="secondary" onClick={() => navigate(`/packet?job=${encodeURIComponent(selected.id)}`)}>Prepare</button>
-                  <button type="button" onClick={() => apply(selected)}>⚡ Apply with autofill</button>
+                  <button type="button" onClick={() => apply(selected)}>{IC_BOLT} Apply with autofill</button>
                 </div>
               </div>
               <div className="detail-body">

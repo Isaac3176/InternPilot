@@ -440,6 +440,8 @@ button:hover { background: var(--accent-hover); border-color: var(--accent-hover
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.secondary { background: var(--card); color: var(--ink-2); border: 1px solid var(--line); box-shadow: none; }
 button.secondary:hover { background: var(--surface-2); border-color: var(--accent-line); }
+button.secondary.is-on { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent-line); }
+button.secondary.is-on:hover { background: var(--accent-soft); border-color: var(--accent-ink); }
 button.danger { background: transparent; color: var(--red); border: 1px solid var(--line); box-shadow: none; }
 button.danger:hover { background: var(--alert-soft); border-color: var(--alert); }
 button.small { padding: 5px 10px; font-size: 12.5px; }
@@ -1194,7 +1196,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .to-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .to-head b { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
 .to-head span { font-size: 12.5px; color: var(--slate); }
-.to-x { margin-left: auto; flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--slate); font-size: 11px; cursor: pointer; }
+.to-x { margin-left: auto; flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface-2); color: var(--slate); display: grid; place-items: center; cursor: pointer; }
+.to-x:hover { background: var(--alert-soft); border-color: var(--alert); color: var(--alert); }
 .to-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
 .to-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px 9px 12px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 10px; background: var(--card); cursor: pointer; text-align: left; min-width: 0; overflow: hidden; }
 .to-item:hover { border-color: var(--accent-line); box-shadow: none; }
@@ -1205,7 +1208,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .to-tx b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .to-tx > span { display: block; font-size: 11.5px; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .to-track { flex: none; max-width: 108px; font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 3px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.to-go { flex: none; font-size: 13px; font-weight: 700; color: var(--slate); transition: color .12s, transform .12s; }
+.to-go { flex: none; display: grid; place-items: center; color: var(--slate); transition: color .12s, transform .12s; }
 .to-item:hover .to-go { color: var(--accent); transform: translate(1px, -1px); }
 /* tier text badge, used by the Tier-A playbook panel (kept separate from the banner) */
 .to-tier { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; }
@@ -1333,6 +1336,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 .detail { display: flex; flex-direction: column; min-width: 0; background: var(--card); min-height: 0; }
 .detail-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; border-bottom: 1px solid var(--line-2); flex-wrap: wrap; }
+.detail-head .actions { flex-wrap: wrap; justify-content: flex-end; }
+.detail-head .actions button { white-space: nowrap; flex: none; }
 .tabs { display: flex; }
 .tabs button { background: none; border: none; padding: 15px 4px 12px; font-size: 14px; font-weight: 600; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: -1px; }
 .tabs button:hover { background: none; }
