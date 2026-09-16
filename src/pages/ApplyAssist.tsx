@@ -94,14 +94,20 @@ export default function ApplyAssist() {
 
   useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); }, []);
 
-  // Preselect an application when arriving from the Internships feed (?app=<id>).
+  // Preselect an application when arriving from the Internships feed (?app=<id>) —
+  // only if it's still unapplied; an already-applied one has nothing to show here.
+  const [skippedPreselect, setSkippedPreselect] = useState(false);
   useEffect(() => {
     const appParam = searchParams.get("app");
-    if (appParam && apps.some((a) => a.id === Number(appParam))) {
-      setAppId(Number(appParam));
-    }
+    if (!appParam) return;
+    const match = apps.find((a) => a.id === Number(appParam));
+    if (!match) return;
+    if (match.status === "interested") setAppId(match.id);
+    else setSkippedPreselect(true);
   }, [apps, searchParams]);
 
+  // Already-applied roles have nothing left to prepare — don't offer them here.
+  const selectableApps = useMemo(() => apps.filter((a) => a.status === "interested"), [apps]);
   const app = apps.find((a) => a.id === appId);
 
   // Switching applications resets the commit UI so a leftover "done" state
@@ -246,12 +252,18 @@ export default function ApplyAssist() {
           <label htmlFor="aa-app">Application</label>
           <select id="aa-app" value={appId} onChange={(e) => setAppId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">— select —</option>
-            {apps.map((a) => (
+            {selectableApps.map((a) => (
               <option key={a.id} value={a.id}>
                 {(a.company_name ?? "Unknown") + " — " + a.role_title}
               </option>
             ))}
           </select>
+          {selectableApps.length === 0 && (
+            <p className="hint">Nothing left to prepare — every tracked role has already been applied to. Save a role from Browse to see it here.</p>
+          )}
+          {skippedPreselect && !appId && (
+            <p className="hint">That role's already applied — pick another above, or check it in your Tracker.</p>
+          )}
         </div>
 
         {app && mode === "assist" && (
