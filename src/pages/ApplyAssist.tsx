@@ -27,6 +27,8 @@ const IC_DASH = <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stro
 const IC_APPLIED = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>;
 const IC_TICK_BIG = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>;
 const IC_EXT = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>;
+const IC_WAND = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20 15 9" /><path d="M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" /><path d="M19.5 13.5l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z" /></svg>;
+const IC_BACK = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 4 12l7 7" /><path d="M4 12h16" /></svg>;
 
 const BURST_COLORS = ["#4BC59A", "#5B9BF6", "#E0A94A", "#A98CF7", "#EB7A64"];
 interface Particle { dx: number; dy: number; rot: number; color: string; delay: number }
@@ -71,6 +73,7 @@ export default function ApplyAssist() {
   const [appId, setAppId] = useState<number | "">("");
   const [resumeId, setResumeId] = useState<number | "">("");
   const [customQuestion, setCustomQuestion] = useState("");
+  const [mode, setMode] = useState<"overview" | "assist">("overview");
 
   const [assist, setAssist] = useState<Assist | null>(null);
   const [checked, setChecked] = useState<Set<number>>(new Set());
@@ -102,10 +105,12 @@ export default function ApplyAssist() {
   const app = apps.find((a) => a.id === appId);
 
   // Switching applications resets the commit UI so a leftover "done" state
-  // from a previous application doesn't bleed into a new one.
+  // from a previous application doesn't bleed into a new one, and drops back
+  // to the overview — Apply Assist is a deliberate detour, not the default.
   useEffect(() => {
     setAppliedState("idle");
     setUndoAvailable(false);
+    setMode("overview");
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }, [appId]);
 
@@ -249,8 +254,10 @@ export default function ApplyAssist() {
           </select>
         </div>
 
-        {app && (
+        {app && mode === "assist" && (
           <>
+            <button type="button" className="secondary small mb-sm btn-ic" onClick={() => setMode("overview")}>{IC_BACK} Back to overview</button>
+
             {recommendations.length > 0 && (
               <div className="field">
                 <label>Recommended resume (by keyword match)</label>
@@ -296,7 +303,7 @@ export default function ApplyAssist() {
         )}
       </div>
 
-      {assist && app && (
+      {app && mode === "assist" && assist && (
         <>
           <div className="card">
             <h2>Preparation checklist</h2>
@@ -320,60 +327,64 @@ export default function ApplyAssist() {
             <span className={`badge ${assist.source === "openai" ? "offer" : "interested"}`}>
               {assist.source === "openai" ? "OpenAI" : "Offline placeholder"}
             </span>
+            <div className="mt-sm">
+              <button type="button" className="secondary small btn-ic" onClick={() => setMode("overview")}>{IC_BACK} Back to overview</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {app && mode === "overview" && (app.status === "interested" || undoAvailable) && (
+        <div className="rs-card">
+          <div className="rs-top">
+            <CompanyLogo company={app.company_name ?? "?"} />
+            <span className="tx">
+              <b>{app.role_title}</b>
+              <span>{app.company_name ?? "Unknown"}{app.location ? ` · ${app.location}` : ""}</span>
+            </span>
+            {app.job_link && (
+              <button type="button" className="rs-open" title="Open the posting" aria-label="Open the posting" onClick={() => openExternal(app.job_link as string)}>{IC_EXT}</button>
+            )}
+            {target && <span className="rs-tag">{PRIORITY_LABEL[target.priority]}</span>}
           </div>
 
-          {(app.status === "interested" || undoAvailable) && (
-            <div className="rs-card">
-              <div className="rs-top">
-                <CompanyLogo company={app.company_name ?? "?"} />
-                <span className="tx">
-                  <b>{app.role_title}</b>
-                  <span>{app.company_name ?? "Unknown"}{app.location ? ` · ${app.location}` : ""}</span>
-                </span>
-                {target && <span className="rs-tag">{PRIORITY_LABEL[target.priority]}</span>}
-              </div>
-
-              <div className="rs-prepped">
-                <span className="eyebrow">Prepared for you</span>
-                <div className="rs-prow">
-                  <span className="tick">{IC_CHECK}</span>
-                  Résumé selected
-                  <span className="val">{versions.find((v) => v.id === resumeId)?.name ?? "none chosen"}</span>
-                </div>
-                <div className="rs-prow">
-                  <span className="tick">{IC_CHECK}</span>
-                  Answers drafted
-                  <span className="val">{assist.shortAnswers.length} question{assist.shortAnswers.length === 1 ? "" : "s"}</span>
-                </div>
-                <div className="rs-prow">
-                  <span className={"tick" + (elig && ELIG_ROW[elig.level].ok ? "" : " open")}>{elig && ELIG_ROW[elig.level].ok ? IC_CHECK : IC_DASH}</span>
-                  Work authorization
-                  <span className="val">{elig ? ELIG_ROW[elig.level].label : "Not checked yet"}</span>
-                </div>
-                <div className="rs-prow">
-                  <span className="tick open">{IC_DASH}</span>
-                  Submitted on their site
-                  <span className="val">waiting on you</span>
-                </div>
-              </div>
-
-              <div className="rs-commit">
-                <p className="hint">InternPilot never submits for you. Finish the form on {app.company_name ?? "their"} site, then press the button so the tracker starts.</p>
-                <div className="rs-crow">
-                  {app.job_link && (
-                    <button type="button" className="secondary wide" onClick={() => openExternal(app.job_link as string)}>
-                      {IC_EXT} Open the posting
-                    </button>
-                  )}
-                  <AppliedButton state={appliedState} onClick={markApplied} />
-                </div>
-                {undoAvailable && (
-                  <p className="rs-undonote">Pressed by mistake? <button type="button" className="rs-undo" onClick={undoApplied}>Undo</button></p>
-                )}
-              </div>
+          <div className="rs-prepped">
+            <span className="eyebrow">Prepared for you</span>
+            <div className="rs-prow">
+              <span className="tick">{IC_CHECK}</span>
+              Résumé selected
+              <span className="val">{versions.find((v) => v.id === resumeId)?.name ?? "none chosen"}</span>
             </div>
-          )}
-        </>
+            <div className="rs-prow">
+              <span className={"tick" + (assist ? "" : " open")}>{assist ? IC_CHECK : IC_DASH}</span>
+              Answers drafted
+              <span className="val">{assist ? `${assist.shortAnswers.length} question${assist.shortAnswers.length === 1 ? "" : "s"}` : "not drafted yet"}</span>
+            </div>
+            <div className="rs-prow">
+              <span className={"tick" + (elig && ELIG_ROW[elig.level].ok ? "" : " open")}>{elig && ELIG_ROW[elig.level].ok ? IC_CHECK : IC_DASH}</span>
+              Work authorization
+              <span className="val">{elig ? ELIG_ROW[elig.level].label : "Not checked yet"}</span>
+            </div>
+            <div className="rs-prow">
+              <span className="tick open">{IC_DASH}</span>
+              Submitted on their site
+              <span className="val">waiting on you</span>
+            </div>
+          </div>
+
+          <div className="rs-commit">
+            <p className="hint">InternPilot never submits for you. Want help with your résumé or answers? Use Apply Assist. Already submitted on {app.company_name ?? "their"} site? Mark it applied.</p>
+            <div className="rs-crow">
+              <button type="button" className="secondary wide" onClick={() => setMode("assist")}>
+                {IC_WAND} Apply Assist
+              </button>
+              <AppliedButton state={appliedState} onClick={markApplied} />
+            </div>
+            {undoAvailable && (
+              <p className="rs-undonote">Pressed by mistake? <button type="button" className="rs-undo" onClick={undoApplied}>Undo</button></p>
+            )}
+          </div>
+        </div>
       )}
 
       {celebrate && app && (

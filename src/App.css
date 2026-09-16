@@ -605,6 +605,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .text-sm { font-size: 13px; }
 .mt-xs { margin-top: 6px; }
 .mt-sm { margin-top: 10px; }
+.mb-sm { margin-bottom: 10px; }
+.btn-ic { display: inline-flex; align-items: center; gap: 6px; }
 .mt-md { margin-top: 16px; }
 .mt-lg { margin-top: 20px; }
 .mb-xs { margin-bottom: 4px; }
@@ -1555,6 +1557,8 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .rs-top .tx b { display: block; font-size: 15.5px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3; }
 .rs-top .tx span { display: block; font-size: 12.5px; color: var(--slate); margin-top: 2px; }
 .rs-tag { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); flex: none; white-space: nowrap; }
+.rs-open { width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); cursor: pointer; }
+.rs-open:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
 
 .rs-prepped { padding: 4px 19px 12px; }
 .rs-prepped .eyebrow { display: block; padding: 11px 0 6px; }
@@ -1570,18 +1574,18 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .rs-crow .secondary { height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .rs-crow .secondary.wide { flex: 1; }
 
-/* the applied button — ripple + confetti burst + tick morph */
+/* the applied button — ripple + confetti burst + tick morph, in the app's own accent color */
 .rs-applied { position: relative; overflow: hidden; flex: 1.4; height: 46px; border-radius: 12px; border: none;
-  background: linear-gradient(140deg, #2fb07f, #12805c); color: #fff; font-size: 14.5px; font-weight: 600;
+  background: linear-gradient(140deg, var(--accent), var(--accent-hover)); color: #fff; font-size: 14.5px; font-weight: 600;
   display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  box-shadow: 0 4px 16px -6px rgba(18,128,92,.5);
+  box-shadow: 0 4px 16px -6px color-mix(in srgb, var(--accent) 55%, transparent);
   transition: box-shadow .2s ease, transform .12s ease, background .3s ease; }
-.rs-applied:hover:not(:disabled) { box-shadow: 0 6px 22px -6px rgba(18,128,92,.65); }
+.rs-applied:hover:not(:disabled) { box-shadow: 0 6px 22px -6px color-mix(in srgb, var(--accent) 70%, transparent); }
 .rs-applied:active:not(:disabled) { transform: scale(.985); }
 .rs-applied .lbl { display: inline-flex; align-items: center; gap: 9px; transition: opacity .16s, transform .22s; }
 .rs-applied .tickwrap { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.6);
   transition: opacity .2s ease .06s, transform .34s cubic-bezier(.2,1.5,.4,1) .06s; }
-.rs-applied.done { background: linear-gradient(140deg, #12805c, #0b5f45); cursor: default; }
+.rs-applied.done { background: linear-gradient(140deg, var(--accent-hover), color-mix(in srgb, var(--accent) 55%, #000)); cursor: default; }
 .rs-applied.done .lbl { opacity: 0; transform: translateY(-8px); }
 .rs-applied.done .tickwrap { opacity: 1; transform: scale(1); }
 .rs-applied .tickwrap svg path { stroke-dasharray: 32; stroke-dashoffset: 32; }
