@@ -56,7 +56,7 @@ function AppliedButton({ state, onClick, disabled }: { state: "idle" | "done"; o
           <i key={i} style={{ background: p.color, ["--dx" as string]: `${p.dx}px`, ["--dy" as string]: `${p.dy}px`, ["--rot" as string]: `${p.rot}deg`, animationDelay: `${p.delay.toFixed(2)}s` }} />
         ))}
       </span>
-      <span className="lbl">{IC_APPLIED} I applied</span>
+      <span className="rs-applied-lbl">{IC_APPLIED} I applied</span>
       <span className="tickwrap">{IC_TICK_BIG}</span>
     </button>
   );

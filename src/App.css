@@ -1582,11 +1582,11 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
   transition: box-shadow .2s ease, transform .12s ease, background .3s ease; }
 .rs-applied:hover:not(:disabled) { box-shadow: 0 6px 22px -6px color-mix(in srgb, var(--accent) 70%, transparent); }
 .rs-applied:active:not(:disabled) { transform: scale(.985); }
-.rs-applied .lbl { display: inline-flex; align-items: center; gap: 9px; transition: opacity .16s, transform .22s; }
+.rs-applied .rs-applied-lbl { display: inline-flex; align-items: center; gap: 9px; color: #fff; transition: opacity .16s, transform .22s; }
 .rs-applied .tickwrap { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.6);
   transition: opacity .2s ease .06s, transform .34s cubic-bezier(.2,1.5,.4,1) .06s; }
 .rs-applied.done { background: linear-gradient(140deg, var(--accent-hover), color-mix(in srgb, var(--accent) 55%, #000)); cursor: default; }
-.rs-applied.done .lbl { opacity: 0; transform: translateY(-8px); }
+.rs-applied.done .rs-applied-lbl { opacity: 0; transform: translateY(-8px); }
 .rs-applied.done .tickwrap { opacity: 1; transform: scale(1); }
 .rs-applied .tickwrap svg path { stroke-dasharray: 32; stroke-dashoffset: 32; }
 .rs-applied.done .tickwrap svg path { animation: rs-draw .42s cubic-bezier(.4,0,.2,1) .14s forwards; }
