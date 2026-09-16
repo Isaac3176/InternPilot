@@ -1483,6 +1483,7 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .readout b { font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: -.04em; line-height: 1; }
 .readout small { font-family: var(--mono); font-size: 12px; color: var(--slate-2); }
 .verdict { margin-top: 9px; font-size: 13.5px; font-weight: 600; text-align: center; }
+.gauge-est-pill { display: inline-flex; align-items: center; margin-top: 8px; font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--slate); border: 1px dashed var(--line); border-radius: 20px; padding: 3px 10px; }
 .check { list-style: none; padding: 0; margin: 0; }
 .check li { display: flex; gap: 9px; align-items: flex-start; padding: 6px 0; font-size: 13px; color: var(--ink-2); }
 .check li + li { border-top: 1px solid var(--line-2); }
@@ -1607,6 +1608,14 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 
 .rs-undonote { margin: 12px 0 0; font-size: 12.5px; color: var(--slate-2); text-align: center; }
 .rs-undo { display: inline; background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; font-size: inherit; cursor: pointer; box-shadow: none; text-decoration: underline; }
+
+/* logged state — replaces the "ready to submit" card once it's actually applied */
+.rs-logged { display: flex; align-items: center; gap: 14px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 14px; padding: 15px 17px; margin-bottom: 16px; }
+.rs-logged .ic { width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; background: var(--card); color: var(--accent-ink); }
+.rs-logged .tx { flex: 1; min-width: 0; }
+.rs-logged .tx b { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.02em; color: var(--accent-ink); }
+.rs-logged .tx span { display: block; font-size: 12.5px; color: var(--slate); margin-top: 2px; }
+.rs-logged .acts { flex: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .rs-applied, .rs-applied *, .rs-applied .burst i, .rs-applied .ripple, .rs-applied .tickwrap svg path { animation: none !important; transition: none !important; }

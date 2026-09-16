@@ -6,7 +6,7 @@ function verdictOf(v: number): string {
 }
 
 /** Analog readiness gauge (SVG) showing a 0-100 profile match. */
-export default function ReadinessGauge({ value }: { value: number }) {
+export default function ReadinessGauge({ value, estimate }: { value: number; estimate?: boolean }) {
   const v = Math.max(0, Math.min(100, value));
   const arc = Math.PI * 61;
   const dash = ((arc * v) / 100).toFixed(1);
@@ -44,6 +44,7 @@ export default function ReadinessGauge({ value }: { value: number }) {
           strokeWidth="9"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${arc.toFixed(1)}`}
+          opacity={estimate ? 0.55 : 1}
         />
         <g style={{ transformBox: "fill-box", transformOrigin: "50% 100%", transform: `rotate(${angle}deg)`, transition: "transform .9s cubic-bezier(.2,.9,.25,1)" }}>
           <path d="M89 46 L91 46 L90.6 90 L89.4 90 Z" fill="var(--ink)" />
@@ -53,6 +54,7 @@ export default function ReadinessGauge({ value }: { value: number }) {
       </svg>
       <div className="readout"><b>{v}</b><small>/100</small></div>
       <div className="verdict" style={{ color }}>{verdictOf(v)}</div>
+      {estimate && <span className="gauge-est-pill">Estimate</span>}
     </div>
   );
 }

@@ -29,6 +29,7 @@ const IC_TICK_BIG = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" 
 const IC_EXT = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>;
 const IC_WAND = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20 15 9" /><path d="M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" /><path d="M19.5 13.5l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z" /></svg>;
 const IC_BACK = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 4 12l7 7" /><path d="M4 12h16" /></svg>;
+const IC_CHECK_MD = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>;
 
 const BURST_COLORS = ["#4BC59A", "#5B9BF6", "#E0A94A", "#A98CF7", "#EB7A64"];
 interface Particle { dx: number; dy: number; rot: number; color: string; delay: number }
@@ -395,6 +396,19 @@ export default function ApplyAssist() {
             {undoAvailable && (
               <p className="rs-undonote">Pressed by mistake? <button type="button" className="rs-undo" onClick={undoApplied}>Undo</button></p>
             )}
+          </div>
+        </div>
+      )}
+
+      {app && mode === "overview" && app.status !== "interested" && !undoAvailable && (
+        <div className="rs-logged">
+          <span className="ic">{IC_CHECK_MD}</span>
+          <span className="tx">
+            <b>Applied to {app.company_name ?? "this company"}</b>
+            <span>Tracked in your pipeline — check your Tracker for updates.</span>
+          </span>
+          <div className="acts">
+            <button type="button" className="secondary small" onClick={() => navigate("/applications")}>View in Tracker</button>
           </div>
         </div>
       )}

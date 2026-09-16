@@ -360,7 +360,8 @@ export default function Internships() {
       })()
     : null;
   const effMatch = jdMatch ?? srcMatch;
-  const gaugeValue = effMatch && effMatch.matched.length + effMatch.missing.length > 0 ? effMatch.score : selected?.score ?? 0;
+  const hasRealMatch = effMatch != null && effMatch.matched.length + effMatch.missing.length > 0;
+  const gaugeValue = effMatch && hasRealMatch ? effMatch.score : selected?.score ?? 0;
   const selElig = selected ? assessEligibility(profile, selected, selDesc) : null;
   const selReferrals = selected ? referrals.filter((r) => (r.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
   const selTeam = selected ? extractTeam(selected.title, selDesc) : { areas: [], keywords: [] };
@@ -683,11 +684,11 @@ export default function Internships() {
 
               <div className="panel">
                 <div className="panel-head"><span className="lbl">Readiness</span></div>
-                <ReadinessGauge value={gaugeValue} />
+                <ReadinessGauge value={gaugeValue} estimate={!hasRealMatch} />
                 <p className="gauge-note">
-                  {effMatch
+                  {hasRealMatch && effMatch
                     ? `${effMatch.matched.length} of ${effMatch.matched.length + effMatch.missing.length} listed skills found on your résumé`
-                    : "Match on your target roles, skills, and locations"}
+                    : "No listed requirements yet — estimated from the title and your target roles"}
                 </p>
               </div>
 
