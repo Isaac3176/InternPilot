@@ -41,6 +41,8 @@ const ICON: Record<string, string> = {
   cal: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v3M16 3v3"/><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17"/></svg>`,
   mail: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>`,
   pen: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`,
+  shield: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>`,
+  target: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>`,
 };
 
 const ART: Record<Kind, string> = {
@@ -189,8 +191,10 @@ function Journey({ reach, terminal, tone }: { reach: number; terminal: Terminal;
   );
 }
 
+export interface Intel { icon: string; title: string; body: string }
+
 export default function MilestoneCelebration({
-  kind, company, role, stats, reach, terminal = null, onClose, onPrimary, onSecondary,
+  kind, company, role, stats, reach, terminal = null, sitTight, intel, onClose, onPrimary, onSecondary,
 }: {
   kind: Kind;
   company: string;
@@ -198,6 +202,10 @@ export default function MilestoneCelebration({
   stats: [string, string][];
   reach: number;
   terminal?: Terminal;
+  /** Optional honest "what happens now" banner — only pass this when there's a real fact to show. */
+  sitTight?: { title: string; body: string };
+  /** Optional real, per-application signals (eligibility, contacts, target tier) — never filler. */
+  intel?: Intel[];
   onClose: () => void;
   onPrimary: () => void;
   onSecondary?: () => void;
@@ -248,6 +256,27 @@ export default function MilestoneCelebration({
         </div>
 
         <div className="body">
+          {sitTight && (
+            <div className="sit">
+              <span className="ic" dangerouslySetInnerHTML={{ __html: ICON.clock }} />
+              <span className="tx"><b>{sitTight.title}</b><p>{sitTight.body}</p></span>
+            </div>
+          )}
+
+          {intel && intel.length > 0 && (
+            <>
+              <h3>What we know</h3>
+              <ul className="intel">
+                {intel.map((it, i) => (
+                  <li key={i}>
+                    <span className="ic" dangerouslySetInnerHTML={{ __html: ICON[it.icon] }} />
+                    <span className="tx"><b>{it.title}</b><span>{it.body}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           <h3>{m.h3}</h3>
           <ul className="steps">
             {m.steps.map((s, i) => (

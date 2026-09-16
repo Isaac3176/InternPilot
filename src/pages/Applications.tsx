@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { deleteApplication, listApplications, setApplicationStatus } from "../db/applications";
+import { deleteApplication, GHOST_DAYS, listApplications, setApplicationStatus } from "../db/applications";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import { matchCompany } from "../ranking/companies";
 import { APP_RECORDED_EVENT } from "../bridge/shared";
@@ -14,7 +14,6 @@ import { EmptyState, ErrorState, LoadingState, PageNotice } from "../components/
 const JOURNEY_LABELS = ["Saved", "Applied", "OA", "Interview", "Offer"];
 const journeyIndex = (s: Status): number =>
   s === "interested" ? 0 : s === "applied" ? 1 : s === "oa" ? 2 : s === "interview" ? 3 : s === "offer" ? 4 : 1;
-const GHOST_DAYS = 21;
 const GHOST_ACK_KEY = "internpilot.ghosted.ack.v1";
 interface Celebrate { kind: Kind; row: ApplicationRow; reach: number; terminal: Terminal; }
 

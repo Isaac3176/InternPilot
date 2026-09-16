@@ -1548,6 +1548,66 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .check-row input { width: auto; margin-top: 2px; cursor: pointer; }
 .checked-text { color: var(--text-faint); text-decoration: line-through; }
 
+/* ---------- Apply Assist: "ready to submit" commit card ---------- */
+.rs-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-bottom: 16px; }
+.rs-top { display: flex; align-items: center; gap: 13px; padding: 17px 19px; border-bottom: 1px solid var(--line-2); }
+.rs-top .tx { flex: 1; min-width: 0; }
+.rs-top .tx b { display: block; font-size: 15.5px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3; }
+.rs-top .tx span { display: block; font-size: 12.5px; color: var(--slate); margin-top: 2px; }
+.rs-tag { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); flex: none; white-space: nowrap; }
+
+.rs-prepped { padding: 4px 19px 12px; }
+.rs-prepped .eyebrow { display: block; padding: 11px 0 6px; }
+.rs-prow { display: flex; align-items: center; gap: 11px; padding: 9px 0; font-size: 13.5px; color: var(--ink-2); }
+.rs-prow + .rs-prow { border-top: 1px solid var(--line-2); }
+.rs-prow .tick { width: 19px; height: 19px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--good-soft); color: var(--good); }
+.rs-prow .tick.open { background: var(--surface-2); color: var(--slate-2); }
+.rs-prow .val { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--slate); flex: none; text-align: right; }
+
+.rs-commit { padding: 14px 19px 18px; border-top: 1px solid var(--line-2); background: var(--surface-2); }
+.rs-commit .hint { font-size: 12.5px; color: var(--slate); margin: 0 0 13px; line-height: 1.5; }
+.rs-crow { display: flex; gap: 10px; }
+.rs-crow .secondary { height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.rs-crow .secondary.wide { flex: 1; }
+
+/* the applied button — ripple + confetti burst + tick morph */
+.rs-applied { position: relative; overflow: hidden; flex: 1.4; height: 46px; border-radius: 12px; border: none;
+  background: linear-gradient(140deg, #2fb07f, #12805c); color: #fff; font-size: 14.5px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  box-shadow: 0 4px 16px -6px rgba(18,128,92,.5);
+  transition: box-shadow .2s ease, transform .12s ease, background .3s ease; }
+.rs-applied:hover:not(:disabled) { box-shadow: 0 6px 22px -6px rgba(18,128,92,.65); }
+.rs-applied:active:not(:disabled) { transform: scale(.985); }
+.rs-applied .lbl { display: inline-flex; align-items: center; gap: 9px; transition: opacity .16s, transform .22s; }
+.rs-applied .tickwrap { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.6);
+  transition: opacity .2s ease .06s, transform .34s cubic-bezier(.2,1.5,.4,1) .06s; }
+.rs-applied.done { background: linear-gradient(140deg, #12805c, #0b5f45); cursor: default; }
+.rs-applied.done .lbl { opacity: 0; transform: translateY(-8px); }
+.rs-applied.done .tickwrap { opacity: 1; transform: scale(1); }
+.rs-applied .tickwrap svg path { stroke-dasharray: 32; stroke-dashoffset: 32; }
+.rs-applied.done .tickwrap svg path { animation: rs-draw .42s cubic-bezier(.4,0,.2,1) .14s forwards; }
+@keyframes rs-draw { to { stroke-dashoffset: 0; } }
+.rs-applied .ripple { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(255,255,255,.4); transform: translate(-50%,-50%) scale(0); pointer-events: none; }
+.rs-applied.done .ripple { animation: rs-ripple .7s ease-out forwards; }
+@keyframes rs-ripple { to { transform: translate(-50%,-50%) scale(34); opacity: 0; } }
+
+.rs-applied .burst { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.rs-applied .burst i { position: absolute; left: 50%; top: 50%; width: 7px; height: 11px; border-radius: 1.5px; opacity: 0; }
+.rs-applied .burst.go i { animation: rs-pop .95s cubic-bezier(.16,.8,.3,1) forwards; }
+@keyframes rs-pop {
+  0% { opacity: 0; transform: translate(-50%,-50%) rotate(0) scale(.4); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1); }
+}
+
+.rs-undonote { margin: 12px 0 0; font-size: 12.5px; color: var(--slate-2); text-align: center; }
+.rs-undo { display: inline; background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; font-size: inherit; cursor: pointer; box-shadow: none; text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-applied, .rs-applied *, .rs-applied .burst i, .rs-applied .ripple, .rs-applied .tickwrap svg path { animation: none !important; transition: none !important; }
+}
+
 .email-body {
   max-height: 84px;
   overflow-y: auto;
@@ -2566,6 +2626,21 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .ms-scrim .steps .tx span { display: block; font-size: 12px; color: var(--muted); line-height: 1.42; margin-top: 1px; }
 .ms-scrim .steps .go { flex: none; color: var(--muted-2); }
 .ms-scrim .steps li.tap:hover .go { color: var(--accent); }
+
+/* sit-tight banner + intel list — real per-application signals only, never filler */
+.ms-scrim .sit { display: flex; gap: 12px; align-items: flex-start; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 13px; padding: 13px 15px; margin-bottom: 16px; }
+.ms-scrim .sit .ic { width: 32px; height: 32px; border-radius: 10px; flex: none; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); }
+.ms-scrim .sit .tx { flex: 1; min-width: 0; }
+.ms-scrim .sit .tx b { display: block; font-size: 13.5px; font-weight: 600; color: var(--accent-ink); letter-spacing: -.015em; }
+.ms-scrim .sit .tx p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+
+.ms-scrim .intel { list-style: none; margin: 0 0 4px; padding: 0; }
+.ms-scrim .intel li { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; }
+.ms-scrim .intel li + li { border-top: 1px solid var(--line-soft); }
+.ms-scrim .intel .ic { width: 30px; height: 30px; border-radius: 9px; flex: none; display: grid; place-items: center; margin-top: 1px; background: var(--surface-2); color: var(--ink-2); }
+.ms-scrim .intel .tx { flex: 1; min-width: 0; }
+.ms-scrim .intel .tx b { display: block; font-size: 13.5px; font-weight: 600; letter-spacing: -.015em; }
+.ms-scrim .intel .tx span { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 2px; }
 
 /* field note (dark card) */
 .ms-scrim .note { margin: 16px 22px 0; background: var(--nav); border-radius: 15px; padding: 16px 18px 14px; position: relative; overflow: hidden; flex: none; }

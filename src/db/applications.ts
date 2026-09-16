@@ -28,6 +28,9 @@ export interface ApplicationInput {
 const FUNNEL_RANK: Record<string, number> = { interested: 0, applied: 1, oa: 2, interview: 3, offer: 4 };
 const nowIso = () => new Date().toISOString();
 
+/** Days of silence after applying before we treat a role as likely gone quiet. */
+export const GHOST_DAYS = 21;
+
 export async function listApplications(opts?: {
   search?: string;
   status?: Status | "all";
