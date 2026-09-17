@@ -140,6 +140,14 @@ export default function Applications() {
     });
   }, [all, filter]);
 
+  // One pass over `view` instead of a `.filter()` per row inside the render loop
+  // (that was O(n²) on the number of tracked applications).
+  const groupCounts = useMemo(() => {
+    const counts: Partial<Record<Group, number>> = {};
+    for (const r of view) { const g = GROUP_OF[r.status]; counts[g] = (counts[g] ?? 0) + 1; }
+    return counts;
+  }, [view]);
+
   function openNew() { setEditing(null); setModalOpen(true); }
   function openEdit(row: ApplicationRow) { setEditing(row); setModalOpen(true); }
 
@@ -317,7 +325,7 @@ export default function Applications() {
                 const g = GROUP_OF[r.status];
                 const showGroup = i === 0 || GROUP_OF[view[i - 1].status] !== g;
                 const gm = GROUP_META[g];
-                const groupCount = view.filter((x) => GROUP_OF[x.status] === g).length;
+                const groupCount = groupCounts[g] ?? 0;
                 const nx = NEXT[r.status];
                 const tier = tierOf(r.company_name);
                 const age = ageInfo(r);
