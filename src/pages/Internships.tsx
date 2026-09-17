@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { openExternal } from "../lib/open";
 import { createApplication, listApplications, updateApplication } from "../db/applications";
@@ -113,6 +113,39 @@ function TierPlaybook({ company, onFindPeople, onApply }: { company: string; onF
     </>
   );
 }
+
+/** One row in the job list. Memoized so typing in the notes box or search field
+ * (unrelated state elsewhere on the page) doesn't force every visible listing —
+ * up to MAX_SHOWN of them — to re-render along with it. */
+const JobListItem = memo(function JobListItem({ l, isSelected, isSaved, onSelect }: {
+  l: RankedListing; isSelected: boolean; isSaved: boolean; onSelect: (id: string) => void;
+}) {
+  return (
+    <button type="button" className={"job" + (isSelected ? " on" : "")} onClick={() => onSelect(l.id)}>
+      <div className="job-top">
+        <CompanyLogo company={l.company} />
+        <div className="job-org">
+          <div className="nm">{l.company}</div>
+          <div className="lbl">{jobTypeOf(l.title)}{l.isNew ? " · New" : ""}</div>
+        </div>
+        {isSaved && <span className="bookmark saved">★</span>}
+      </div>
+      <h3>{l.title}</h3>
+      <div className="facts">
+        {l.salary && <span className="fact pay">{l.salary}</span>}
+        {l.locations[0] && <span className="fact">{l.locations[0]}</span>}
+        {l.remote && <span className="fact">Remote</span>}
+        {!l.sponsorshipOk && <span className="fact neg">No sponsorship</span>}
+      </div>
+      <div className="job-foot">
+        <span className="closes">{postedAgo(l.datePosted).toUpperCase()}</span>
+        <span className={"matchpip" + (isEstimate(l) ? " est" : "")} title={isEstimate(l) ? "Estimated — this posting didn't list its requirements" : undefined}>
+          <i style={{ ["--c" as string]: isEstimate(l) ? "var(--slate-2)" : bandColor(l.score) }} />{isEstimate(l) ? "~" : ""}{l.score}
+        </span>
+      </div>
+    </button>
+  );
+});
 
 export default function Internships() {
   const navigate = useNavigate();
@@ -490,29 +523,7 @@ export default function Internships() {
                 )}
               </div>
             ) : shown.map((l) => (
-              <button type="button" key={l.id} className={"job" + (selected?.id === l.id ? " on" : "")} onClick={() => setSelectedId(l.id)}>
-                <div className="job-top">
-                  <CompanyLogo company={l.company} />
-                  <div className="job-org">
-                    <div className="nm">{l.company}</div>
-                    <div className="lbl">{jobTypeOf(l.title)}{l.isNew ? " · New" : ""}</div>
-                  </div>
-                  {appByUrl.has(l.url) && <span className="bookmark saved">★</span>}
-                </div>
-                <h3>{l.title}</h3>
-                <div className="facts">
-                  {l.salary && <span className="fact pay">{l.salary}</span>}
-                  {l.locations[0] && <span className="fact">{l.locations[0]}</span>}
-                  {l.remote && <span className="fact">Remote</span>}
-                  {!l.sponsorshipOk && <span className="fact neg">No sponsorship</span>}
-                </div>
-                <div className="job-foot">
-                  <span className="closes">{postedAgo(l.datePosted).toUpperCase()}</span>
-                  <span className={"matchpip" + (isEstimate(l) ? " est" : "")} title={isEstimate(l) ? "Estimated — this posting didn't list its requirements" : undefined}>
-                    <i style={{ ["--c" as string]: isEstimate(l) ? "var(--slate-2)" : bandColor(l.score) }} />{isEstimate(l) ? "~" : ""}{l.score}
-                  </span>
-                </div>
-              </button>
+              <JobListItem key={l.id} l={l} isSelected={selected?.id === l.id} isSaved={appByUrl.has(l.url)} onSelect={setSelectedId} />
             ))}
           </div>
         </aside>

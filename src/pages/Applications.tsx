@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteApplication, GHOST_DAYS, listApplications, setApplicationStatus } from "../db/applications";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
@@ -60,6 +60,107 @@ function ageInfo(r: ApplicationRow): { big: string; small: string; cls: string }
 const Chevron = () => (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><path d="M6 9l6 6 6-6" /></svg>
 );
+
+interface RowData {
+  row: ApplicationRow;
+  showGroup: boolean;
+  groupLabel: string;
+  groupCls: string;
+  groupCount: number;
+  tier: string | null;
+  age: { big: string; small: string; cls: string };
+  dupe: boolean;
+  suspect: boolean;
+  nx: Status | null;
+}
+
+/** One tracker row. Memoized so a change to one row (e.g. opening its status
+ * popover) doesn't re-render every other row — all its derived data (tier, age,
+ * dupe/suspect flags, group counts) is precomputed once by the parent instead of
+ * recalculated here on every render. */
+const AppRow = memo(function AppRow({
+  data, isPopOpen, onTogglePop, onClosePop, onChangeStatus, onAdvance, onEdit, onDelete,
+}: {
+  data: RowData;
+  isPopOpen: boolean;
+  onTogglePop: (id: number) => void;
+  onClosePop: () => void;
+  onChangeStatus: (row: ApplicationRow, next: Status) => void;
+  onAdvance: (row: ApplicationRow) => void;
+  onEdit: (row: ApplicationRow) => void;
+  onDelete: (row: ApplicationRow) => void;
+}) {
+  const { row: r, showGroup, groupLabel, groupCls, groupCount, tier, age, dupe, suspect, nx } = data;
+  return (
+    <Fragment>
+      {showGroup && (
+        <tr className="grouprow">
+          <td colSpan={6}>
+            <span className={`grouplab ${groupCls}`}>
+              <span className="eyebrow">{groupLabel}</span>
+              <span className="rule" />
+              <span className="n">{groupCount}</span>
+            </span>
+          </td>
+        </tr>
+      )}
+      <tr>
+        <td>
+          <span className="co">
+            <CompanyLogo company={r.company_name ?? "—"} />
+            <span className="tx">
+              <b>{r.company_name ?? "—"}{tier && <span className="tierbadge">TIER {tier}</span>}</b>
+              <span>{r.location || "—"}</span>
+            </span>
+          </span>
+        </td>
+        <td>
+          <span className={`role ${suspect ? "suspect" : ""}`} title={r.role_title}>{r.role_title}</span>
+          {suspect && <span className="flag" title="Looks like a page title, not a role — re-check the source.">Check title</span>}
+          {dupe && <span className="flag" title="A near-identical row exists. Merge?">Possible dupe</span>}
+        </td>
+        <td className="statuscell">
+          <button className={`status ${r.status}`} onClick={(e) => { e.stopPropagation(); onTogglePop(r.id); }}>
+            <i />{STATUS_LABELS[r.status]}<Chevron />
+          </button>
+          {nx && <button className="quick" onClick={() => onAdvance(r)}>→ {STATUS_LABELS[nx]}</button>}
+          {isPopOpen && (
+            <div className="pop" onClick={(e) => e.stopPropagation()}>
+              <span className="eyebrow lab">Move to</span>
+              {STATUSES.map((s, k) => (
+                <button key={s} className={`popitem ${s === r.status ? "cur" : ""}`} onClick={() => onChangeStatus(r, s)}>
+                  <i style={{ background: `var(${STAGE_VAR[s]})` }} />
+                  <span className="lbl">{STATUS_LABELS[s]}</span>
+                  <span className="k">{k + 1}</span>
+                </button>
+              ))}
+              <div className="popsep" />
+              <button className="popitem" onClick={() => { onClosePop(); onEdit(r); }}>
+                <span className="lbl" style={{ color: "var(--muted)" }}>Add a note instead</span>
+              </button>
+            </div>
+          )}
+        </td>
+        <td className="hidesm">
+          {r.resume_version_name
+            ? <span className="rchip">{r.resume_version_name}</span>
+            : <span className="rchip none">None attached</span>}
+        </td>
+        <td className={`age ${age.cls}`}><b>{age.big}</b><span>{age.small}</span></td>
+        <td>
+          <span className="rowacts">
+            <button className="ibtn" title="Edit" aria-label={`Edit ${r.role_title}`} onClick={() => onEdit(r)}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+            </button>
+            <ConfirmAction className="ibtn danger" ariaLabel={`Delete ${r.role_title}`} message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => onDelete(r)}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
+            </ConfirmAction>
+          </span>
+        </td>
+      </tr>
+    </Fragment>
+  );
+});
 
 export default function Applications() {
   const navigate = useNavigate();
@@ -127,9 +228,12 @@ export default function Applications() {
     }
     return seen;
   }, [all]);
-  const isDupe = (r: ApplicationRow) =>
-    (dupeKeys.get(`${(r.company_name ?? "").toLowerCase()}|${r.role_title.toLowerCase()}|${r.date_applied ?? ""}`) ?? 0) > 1;
-  const isSuspect = (r: ApplicationRow) => /\b(careers?|experience site|lateral)\b/i.test(r.role_title) && r.role_title.split(/\s+/).length <= 4;
+  function isDupe(r: ApplicationRow): boolean {
+    return (dupeKeys.get(`${(r.company_name ?? "").toLowerCase()}|${r.role_title.toLowerCase()}|${r.date_applied ?? ""}`) ?? 0) > 1;
+  }
+  function isSuspect(r: ApplicationRow): boolean {
+    return /\b(careers?|experience site|lateral)\b/i.test(r.role_title) && r.role_title.split(/\s+/).length <= 4;
+  }
 
   const view = useMemo(() => {
     const rows = filter === "all" ? all : all.filter((r) => r.status === filter);
@@ -148,10 +252,33 @@ export default function Applications() {
     return counts;
   }, [view]);
 
-  function openNew() { setEditing(null); setModalOpen(true); }
-  function openEdit(row: ApplicationRow) { setEditing(row); setModalOpen(true); }
+  // All per-row derived data computed once here (not per-row on every render),
+  // and handed to a memoized <AppRow> so changing one row (e.g. its popover)
+  // doesn't force every other row to re-render.
+  const rowsData: RowData[] = useMemo(() => view.map((r, i) => {
+    const g = GROUP_OF[r.status];
+    const gm = GROUP_META[g];
+    return {
+      row: r,
+      showGroup: i === 0 || GROUP_OF[view[i - 1].status] !== g,
+      groupLabel: gm.label,
+      groupCls: gm.cls,
+      groupCount: groupCounts[g] ?? 0,
+      tier: tierOf(r.company_name),
+      age: ageInfo(r),
+      dupe: isDupe(r),
+      suspect: isSuspect(r),
+      nx: NEXT[r.status],
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [view, groupCounts, dupeKeys]);
 
-  async function handleDelete(row: ApplicationRow) {
+  const openNew = useCallback(() => { setEditing(null); setModalOpen(true); }, []);
+  const openEdit = useCallback((row: ApplicationRow) => { setEditing(row); setModalOpen(true); }, []);
+  const onTogglePop = useCallback((id: number) => setOpenPop((p) => (p === id ? null : id)), []);
+  const onClosePop = useCallback(() => setOpenPop(null), []);
+
+  const handleDelete = useCallback(async (row: ApplicationRow) => {
     setError("");
     try {
       await deleteApplication(row.id);
@@ -160,9 +287,9 @@ export default function Applications() {
     } catch (e) {
       setError(userErrorMessage(e, "Couldn't delete this application."));
     }
-  }
+  }, [load]);
 
-  async function changeStatus(row: ApplicationRow, next: Status) {
+  const changeStatus = useCallback(async (row: ApplicationRow, next: Status) => {
     setOpenPop(null);
     if (next === row.status) return;
     setAll((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
@@ -178,8 +305,8 @@ export default function Applications() {
       setError(userErrorMessage(e, "Couldn't update application status."));
       load(false);
     }
-  }
-  function advance(row: ApplicationRow) { const n = NEXT[row.status]; if (n) changeStatus(row, n); }
+  }, [load]);
+  const advance = useCallback((row: ApplicationRow) => { const n = NEXT[row.status]; if (n) changeStatus(row, n); }, [changeStatus]);
 
   // Ghosting fires on its own — no one marks an application as ignored. Once per
   // session, surface the oldest applied role past the quiet line that we haven't
@@ -321,84 +448,19 @@ export default function Applications() {
               </tr>
             </thead>
             <tbody>
-              {view.map((r, i) => {
-                const g = GROUP_OF[r.status];
-                const showGroup = i === 0 || GROUP_OF[view[i - 1].status] !== g;
-                const gm = GROUP_META[g];
-                const groupCount = groupCounts[g] ?? 0;
-                const nx = NEXT[r.status];
-                const tier = tierOf(r.company_name);
-                const age = ageInfo(r);
-                return (
-                  <Fragment key={r.id}>
-                    {showGroup && (
-                      <tr className="grouprow">
-                        <td colSpan={6}>
-                          <span className={`grouplab ${gm.cls}`}>
-                            <span className="eyebrow">{gm.label}</span>
-                            <span className="rule" />
-                            <span className="n">{groupCount}</span>
-                          </span>
-                        </td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td>
-                        <span className="co">
-                          <CompanyLogo company={r.company_name ?? "—"} />
-                          <span className="tx">
-                            <b>{r.company_name ?? "—"}{tier && <span className="tierbadge">TIER {tier}</span>}</b>
-                            <span>{r.location || "—"}</span>
-                          </span>
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`role ${isSuspect(r) ? "suspect" : ""}`} title={r.role_title}>{r.role_title}</span>
-                        {isSuspect(r) && <span className="flag" title="Looks like a page title, not a role — re-check the source.">Check title</span>}
-                        {isDupe(r) && <span className="flag" title="A near-identical row exists. Merge?">Possible dupe</span>}
-                      </td>
-                      <td className="statuscell">
-                        <button className={`status ${r.status}`} onClick={(e) => { e.stopPropagation(); setOpenPop(openPop === r.id ? null : r.id); }}>
-                          <i />{STATUS_LABELS[r.status]}<Chevron />
-                        </button>
-                        {nx && <button className="quick" onClick={() => advance(r)}>→ {STATUS_LABELS[nx]}</button>}
-                        {openPop === r.id && (
-                          <div className="pop" onClick={(e) => e.stopPropagation()}>
-                            <span className="eyebrow lab">Move to</span>
-                            {STATUSES.map((s, k) => (
-                              <button key={s} className={`popitem ${s === r.status ? "cur" : ""}`} onClick={() => changeStatus(r, s)}>
-                                <i style={{ background: `var(${STAGE_VAR[s]})` }} />
-                                <span className="lbl">{STATUS_LABELS[s]}</span>
-                                <span className="k">{k + 1}</span>
-                              </button>
-                            ))}
-                            <div className="popsep" />
-                            <button className="popitem" onClick={() => { setOpenPop(null); openEdit(r); }}>
-                              <span className="lbl" style={{ color: "var(--muted)" }}>Add a note instead</span>
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="hidesm">
-                        {r.resume_version_name
-                          ? <span className="rchip">{r.resume_version_name}</span>
-                          : <span className="rchip none">None attached</span>}
-                      </td>
-                      <td className={`age ${age.cls}`}><b>{age.big}</b><span>{age.small}</span></td>
-                      <td>
-                        <span className="rowacts">
-                          <button className="ibtn" title="Edit" aria-label={`Edit ${r.role_title}`} onClick={() => openEdit(r)}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
-                          </button>
-                          <ConfirmAction className="ibtn danger" ariaLabel={`Delete ${r.role_title}`} message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => handleDelete(r)}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
-                          </ConfirmAction>
-                        </span>
-                      </td>
-                    </tr>
-                  </Fragment>
-                );
-              })}
+              {rowsData.map((data) => (
+                <AppRow
+                  key={data.row.id}
+                  data={data}
+                  isPopOpen={openPop === data.row.id}
+                  onTogglePop={onTogglePop}
+                  onClosePop={onClosePop}
+                  onChangeStatus={changeStatus}
+                  onAdvance={advance}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
             </tbody>
           </table>
         </div>
