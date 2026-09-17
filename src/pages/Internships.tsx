@@ -147,6 +147,51 @@ const JobListItem = memo(function JobListItem({ l, isSelected, isSaved, onSelect
   );
 });
 
+/** Search box with its own local state — types every keystroke without touching
+ * the parent, and only reports the value (debounced) up so the feed doesn't
+ * re-filter and re-render the whole job list on every keypress. */
+const SearchBox = memo(function SearchBox({ onChange }: { onChange: (v: string) => void }) {
+  const [value, setValue] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => onChange(value), 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <div className="filter-search">
+      <span className="search-ico">🔎</span>
+      <input placeholder="Search company or role…" value={value} onChange={(e) => setValue(e.target.value)} />
+    </div>
+  );
+});
+
+/** Notes textarea with its own local state — typing never touches the parent
+ * (which also holds the 200-item job list), only the blur-time save does.
+ * Remounted (via `key`) when the selected listing changes, which resets the
+ * draft to that listing's saved notes. */
+const NotesPanel = memo(function NotesPanel({ initialValue, onSave }: { initialValue: string; onSave: (text: string) => Promise<void> }) {
+  const [value, setValue] = useState(initialValue);
+  const [saving, setSaving] = useState(false);
+  async function commit() {
+    if (value === initialValue || saving) return;
+    setSaving(true);
+    try { await onSave(value); } finally { setSaving(false); }
+  }
+  return (
+    <div className="panel">
+      <div className="panel-head"><span className="lbl">Notes</span>{saving && <span className="muted-note">Saving…</span>}</div>
+      <textarea
+        className="notes-inline"
+        aria-label="Notes on this posting"
+        placeholder="Recruiter name, deadline, anything you don't want to forget…"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+      />
+    </div>
+  );
+});
+
 export default function Internships() {
   const navigate = useNavigate();
   const [listings, setListings] = useState<RankedListing[]>([]);
@@ -163,6 +208,7 @@ export default function Internships() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
+  const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedTypes, setSelectedTypes] = useState<JobType[]>(() => {
     const types = getPrefs().employmentTypes.map(jobTypeFromPref).filter((x): x is JobType => !!x);
     return [...new Set(types)];
@@ -286,7 +332,7 @@ export default function Internships() {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }
   function clearAll() {
-    setSearch(""); setSelectedTypes([]); setLocation(""); setOnlyNew(false); setMatchesMyRoles(false); setHideIneligible(false);
+    setSearch(""); setSearchResetKey((k) => k + 1); setSelectedTypes([]); setLocation(""); setOnlyNew(false); setMatchesMyRoles(false); setHideIneligible(false);
   }
   const moreCount = (onlyNew ? 1 : 0) + (hasRoles && matchesMyRoles ? 1 : 0) + (hideIneligible ? 1 : 0);
   const anyActive = !!(search.trim() || selectedTypes.length || location.trim() || onlyNew || matchesMyRoles || hideIneligible);
@@ -341,20 +387,12 @@ export default function Internships() {
   const selApp = selected ? appByUrl.get(selected.url) : undefined;
   const selStage = selApp ? STATUS_STAGE[selApp.status] : -1;
 
-  // Notes on the selected listing — reset the draft only when the listing itself
-  // changes, not on every appByUrl refresh, so an in-progress edit isn't clobbered.
-  const [noteDraft, setNoteDraft] = useState("");
-  const [noteSaving, setNoteSaving] = useState(false);
-  useEffect(() => { setNoteDraft(selApp?.notes ?? ""); }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  async function saveNote() {
-    if (!selected || noteSaving) return;
-    setNoteSaving(true);
+  async function saveNote(text: string) {
+    if (!selected) return;
     try {
-      await addToTracker(selected, noteDraft);
+      await addToTracker(selected, text);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setNoteSaving(false);
     }
   }
   const employmentByContact = useMemo(() => {
@@ -365,7 +403,10 @@ export default function Internships() {
   const companyLc = selected?.company.toLowerCase() ?? "";
   const histContactIds = useMemo(() => new Set(employment.filter((e) => e.company.toLowerCase() === companyLc).map((e) => e.contact_id)), [employment, companyLc]);
   // Warm contacts here = current company matches OR they've worked here before (history).
-  const selContacts = selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === companyLc || histContactIds.has(c.id)) : [];
+  const selContacts = useMemo(
+    () => selected ? contacts.filter((c) => (c.company_name ?? "").toLowerCase() === companyLc || histContactIds.has(c.id)) : [],
+    [selected, contacts, companyLc, histContactIds],
+  );
   const selTarget = selected ? matchCompany(selected.company) : null;
   const resumeNameForCompany = (company: string) => resumeVersions.find((v) => v.id === resumeIdForCompany(company))?.name ?? null;
 
@@ -383,25 +424,33 @@ export default function Internships() {
     }
     return out;
   }, [listings, appByUrl]);
-  const matchedSkills = selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [];
+  const matchedSkills = useMemo(
+    () => selected ? mySkills.filter((s) => selected.title.toLowerCase().includes(s.toLowerCase())) : [],
+    [selected, mySkills],
+  );
 
   // Skill match: prefer the fetched JD; else use source-extracted skills; else title-based score.
+  // Memoized so typing elsewhere on the page (search, notes) doesn't re-run this
+  // regex/vocabulary scan on every keystroke — only a change to the actual inputs does.
   const selDesc = selectedUrl ? descByUrl.get(selectedUrl) : undefined;
-  const jdMatch = selDesc && resumeHay.trim() ? jdSkillMatch(selDesc, resumeHay) : null;
-  const srcMatch = !jdMatch && selected?.skills?.length && resumeHay.trim()
-    ? (() => {
-        const matched = selected.skills!.filter((s) => resumeHay.includes(s.toLowerCase()));
-        const missing = selected.skills!.filter((s) => !resumeHay.includes(s.toLowerCase()));
-        return { matched, missing, score: Math.round((matched.length / selected.skills!.length) * 100) };
-      })()
-    : null;
-  const effMatch = jdMatch ?? srcMatch;
+  const effMatch = useMemo(() => {
+    if (selDesc && resumeHay.trim()) return jdSkillMatch(selDesc, resumeHay);
+    if (selected?.skills?.length && resumeHay.trim()) {
+      const matched = selected.skills.filter((s) => resumeHay.includes(s.toLowerCase()));
+      const missing = selected.skills.filter((s) => !resumeHay.includes(s.toLowerCase()));
+      return { matched, missing, score: Math.round((matched.length / selected.skills.length) * 100) };
+    }
+    return null;
+  }, [selDesc, resumeHay, selected]);
   const hasRealMatch = effMatch != null && effMatch.matched.length + effMatch.missing.length > 0;
   const gaugeValue = effMatch && hasRealMatch ? effMatch.score : selected?.score ?? 0;
-  const selElig = selected ? assessEligibility(profile, selected, selDesc) : null;
+  const selElig = useMemo(() => selected ? assessEligibility(profile, selected, selDesc) : null, [profile, selected, selDesc]);
   const selReferrals = selected ? referrals.filter((r) => (r.company_name ?? "").toLowerCase() === selected.company.toLowerCase()) : [];
-  const selTeam = selected ? extractTeam(selected.title, selDesc) : { areas: [], keywords: [] };
-  const bestPath = bestConnection(selContacts, selTeam, profile);
+  const selTeam = useMemo(
+    () => selected ? extractTeam(selected.title, selDesc) : { areas: [], keywords: [] },
+    [selected, selDesc],
+  );
+  const bestPath = useMemo(() => bestConnection(selContacts, selTeam, profile), [selContacts, selTeam, profile]);
   const prefs = getPrefs();
   const targetRoles = (profile?.target_roles ?? prefs.targetRoles.join(", ")).split(",").map((r) => r.trim()).filter(Boolean);
   const targetLocations = (profile?.locations ?? "").split(",").map((r) => r.trim()).filter(Boolean);
@@ -415,10 +464,7 @@ export default function Internships() {
   return (
     <>
       <div className="filter-bar">
-        <div className="filter-search">
-          <span className="search-ico">🔎</span>
-          <input placeholder="Search company or role…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
+        <SearchBox key={searchResetKey} onChange={setSearch} />
         <FilterPill label="Job Type" count={selectedTypes.length}>
           <div className="popover-title">Job Type</div>
           <div className="popover-sub">Filter by job type</div>
@@ -708,17 +754,7 @@ export default function Internships() {
                 </p>
               </div>
 
-              <div className="panel">
-                <div className="panel-head"><span className="lbl">Notes</span>{noteSaving && <span className="muted-note">Saving…</span>}</div>
-                <textarea
-                  className="notes-inline"
-                  aria-label="Notes on this posting"
-                  placeholder="Recruiter name, deadline, anything you don't want to forget…"
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  onBlur={() => { if (noteDraft !== (selApp?.notes ?? "")) saveNote(); }}
-                />
-              </div>
+              <NotesPanel key={selected.id} initialValue={selApp?.notes ?? ""} onSave={saveNote} />
 
               <div className="panel">
                 <div className="panel-head">
