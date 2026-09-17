@@ -632,6 +632,16 @@ pub fn run() {
                   CREATE INDEX IF NOT EXISTS idx_cp_review ON coding_problems(next_review_at);",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 14,
+            description: "index_applications_dates",
+            // listApplications() always sorts by date_saved desc; date_applied
+            // backs several diagnostics/age queries. Neither was indexed, so
+            // both did a full table scan that only gets slower as rows grow.
+            sql: "CREATE INDEX IF NOT EXISTS idx_applications_date_saved   ON applications(date_saved DESC);
+                  CREATE INDEX IF NOT EXISTS idx_applications_date_applied ON applications(date_applied);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let bridge: SharedBridge = Arc::new(Mutex::new(BridgeState::default()));

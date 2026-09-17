@@ -34,6 +34,9 @@ export const GHOST_DAYS = 21;
 export async function listApplications(opts?: {
   search?: string;
   status?: Status | "all";
+  /** Page size — omit for the full (unpaginated) list every existing caller relies on. */
+  limit?: number;
+  offset?: number;
 }): Promise<ApplicationRow[]> {
   if (E2E_SMOKE) {
     let rows = e2eRead<ApplicationRow[]>("applications", []);
@@ -45,11 +48,20 @@ export async function listApplications(opts?: {
         (a.company_name ?? "").toLowerCase().includes(term) ||
         (a.location ?? "").toLowerCase().includes(term));
     }
+    if (opts?.limit != null) rows = rows.slice(opts.offset ?? 0, (opts.offset ?? 0) + opts.limit);
     return rows;
   }
   if (cloudMode()) {
     let q = supabase.from("applications").select("*, companies(name), resume_versions(name)").order("date_saved", { ascending: false });
     if (opts?.status && opts.status !== "all") q = q.eq("status", opts.status);
+    // Search is matched client-side below (across the joined company name, which
+    // Postgres can't filter on directly here) — a limit/offset would then apply to
+    // the pre-search set and could return fewer than `limit` matches, so paging is
+    // only pushed down to the query when there's no search term to post-filter by.
+    if (opts?.limit != null && !opts?.search?.trim()) {
+      const from = opts.offset ?? 0;
+      q = q.range(from, from + opts.limit - 1);
+    }
     const { data, error } = await q;
     throwIfSupabaseError(error);
     let rows = (data ?? []).map((r) => {
@@ -65,6 +77,7 @@ export async function listApplications(opts?: {
         a.role_title.toLowerCase().includes(term) ||
         (a.company_name ?? "").toLowerCase().includes(term) ||
         (a.location ?? "").toLowerCase().includes(term));
+      if (opts?.limit != null) rows = rows.slice(opts.offset ?? 0, (opts.offset ?? 0) + opts.limit);
     }
     return rows;
   }
@@ -79,13 +92,16 @@ export async function listApplications(opts?: {
     params.push(t, t, t);
   }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const limitClause = opts?.limit != null ? "LIMIT ? OFFSET ?" : "";
+  if (opts?.limit != null) params.push(opts.limit, opts.offset ?? 0);
   return db.select<ApplicationRow[]>(
     `SELECT a.*, c.name AS company_name, r.name AS resume_version_name
      FROM applications a
      LEFT JOIN companies c ON c.id = a.company_id
      LEFT JOIN resume_versions r ON r.id = a.resume_version_id
      ${clause}
-     ORDER BY a.date_saved DESC, a.id DESC`,
+     ORDER BY a.date_saved DESC, a.id DESC
+     ${limitClause}`,
     params,
   );
 }

@@ -254,6 +254,8 @@ create table if not exists user_settings (
 
 create index if not exists idx_applications_user   on applications(user_id);
 create index if not exists idx_applications_status on applications(user_id, status);
+-- listApplications() always orders by date_saved desc within a user's rows.
+create index if not exists idx_applications_date    on applications(user_id, date_saved desc);
 create index if not exists idx_companies_user      on companies(user_id);
 create index if not exists idx_contacts_user       on contacts(user_id);
 create index if not exists idx_referrals_user      on referrals(user_id);
