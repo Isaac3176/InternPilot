@@ -1160,7 +1160,10 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .list-views button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(13, 22, 33, .08); }
 .list-views .vn { font-family: var(--mono); font-size: 10px; opacity: .7; }
 
-.list { overflow-y: auto; padding: 12px 13px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+/* Virtualized: rows are absolutely positioned within an inner sizer div (see
+   Internships.tsx), so this is no longer a flex column — the gap between
+   cards is baked into each row's own paddingBottom instead. */
+.list { overflow-y: auto; overflow-anchor: none; padding: 12px 13px 16px; min-height: 0; }
 .job {
   position: relative; text-align: left; width: 100%;
   background: var(--card); border: 1px solid var(--line-2); border-radius: 12px;

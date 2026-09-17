@@ -1,5 +1,6 @@
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { deleteApplication, GHOST_DAYS, listApplications, setApplicationStatus } from "../db/applications";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import { matchCompany } from "../ranking/companies";
@@ -74,93 +75,100 @@ interface RowData {
   nx: Status | null;
 }
 
+/** A group-header separator row (e.g. "Needs action · 2"), rendered as its own
+ * virtual item so the row list can be windowed without disturbing table layout. */
+const GroupHeaderRow = forwardRef<HTMLTableRowElement, { label: string; cls: string; count: number; "data-index": number }>(
+  function GroupHeaderRow({ label, cls, count, "data-index": dataIndex }, ref) {
+    return (
+      <tr className="grouprow" ref={ref} data-index={dataIndex}>
+        <td colSpan={6}>
+          <span className={`grouplab ${cls}`}>
+            <span className="eyebrow">{label}</span>
+            <span className="rule" />
+            <span className="n">{count}</span>
+          </span>
+        </td>
+      </tr>
+    );
+  },
+);
+
 /** One tracker row. Memoized so a change to one row (e.g. opening its status
  * popover) doesn't re-render every other row — all its derived data (tier, age,
  * dupe/suspect flags, group counts) is precomputed once by the parent instead of
- * recalculated here on every render. */
-const AppRow = memo(function AppRow({
-  data, isPopOpen, onTogglePop, onClosePop, onChangeStatus, onAdvance, onEdit, onDelete,
-}: {
+ * recalculated here on every render. Forwards its ref/`tr` node so the row
+ * virtualizer can measure it (rows aren't uniform height). */
+const AppRow = memo(forwardRef<HTMLTableRowElement, {
   data: RowData;
   isPopOpen: boolean;
+  "data-index": number;
   onTogglePop: (id: number) => void;
   onClosePop: () => void;
   onChangeStatus: (row: ApplicationRow, next: Status) => void;
   onAdvance: (row: ApplicationRow) => void;
   onEdit: (row: ApplicationRow) => void;
   onDelete: (row: ApplicationRow) => void;
-}) {
-  const { row: r, showGroup, groupLabel, groupCls, groupCount, tier, age, dupe, suspect, nx } = data;
+}>(function AppRow({
+  data, isPopOpen, "data-index": dataIndex, onTogglePop, onClosePop, onChangeStatus, onAdvance, onEdit, onDelete,
+}, ref) {
+  const { row: r, tier, age, dupe, suspect, nx } = data;
   return (
-    <Fragment>
-      {showGroup && (
-        <tr className="grouprow">
-          <td colSpan={6}>
-            <span className={`grouplab ${groupCls}`}>
-              <span className="eyebrow">{groupLabel}</span>
-              <span className="rule" />
-              <span className="n">{groupCount}</span>
-            </span>
-          </td>
-        </tr>
-      )}
-      <tr>
-        <td>
-          <span className="co">
-            <CompanyLogo company={r.company_name ?? "—"} />
-            <span className="tx">
-              <b>{r.company_name ?? "—"}{tier && <span className="tierbadge">TIER {tier}</span>}</b>
-              <span>{r.location || "—"}</span>
-            </span>
+    <tr ref={ref} data-index={dataIndex}>
+      <td>
+        <span className="co">
+          <CompanyLogo company={r.company_name ?? "—"} />
+          <span className="tx">
+            <b>{r.company_name ?? "—"}{tier && <span className="tierbadge">TIER {tier}</span>}</b>
+            <span>{r.location || "—"}</span>
           </span>
-        </td>
-        <td>
-          <span className={`role ${suspect ? "suspect" : ""}`} title={r.role_title}>{r.role_title}</span>
-          {suspect && <span className="flag" title="Looks like a page title, not a role — re-check the source.">Check title</span>}
-          {dupe && <span className="flag" title="A near-identical row exists. Merge?">Possible dupe</span>}
-        </td>
-        <td className="statuscell">
-          <button className={`status ${r.status}`} onClick={(e) => { e.stopPropagation(); onTogglePop(r.id); }}>
-            <i />{STATUS_LABELS[r.status]}<Chevron />
-          </button>
-          {nx && <button className="quick" onClick={() => onAdvance(r)}>→ {STATUS_LABELS[nx]}</button>}
-          {isPopOpen && (
-            <div className="pop" onClick={(e) => e.stopPropagation()}>
-              <span className="eyebrow lab">Move to</span>
-              {STATUSES.map((s, k) => (
-                <button key={s} className={`popitem ${s === r.status ? "cur" : ""}`} onClick={() => onChangeStatus(r, s)}>
-                  <i style={{ background: `var(${STAGE_VAR[s]})` }} />
-                  <span className="lbl">{STATUS_LABELS[s]}</span>
-                  <span className="k">{k + 1}</span>
-                </button>
-              ))}
-              <div className="popsep" />
-              <button className="popitem" onClick={() => { onClosePop(); onEdit(r); }}>
-                <span className="lbl" style={{ color: "var(--muted)" }}>Add a note instead</span>
+        </span>
+      </td>
+      <td>
+        <span className={`role ${suspect ? "suspect" : ""}`} title={r.role_title}>{r.role_title}</span>
+        {suspect && <span className="flag" title="Looks like a page title, not a role — re-check the source.">Check title</span>}
+        {dupe && <span className="flag" title="A near-identical row exists. Merge?">Possible dupe</span>}
+      </td>
+      <td className="statuscell">
+        <button className={`status ${r.status}`} onClick={(e) => { e.stopPropagation(); onTogglePop(r.id); }}>
+          <i />{STATUS_LABELS[r.status]}<Chevron />
+        </button>
+        {nx && <button className="quick" onClick={() => onAdvance(r)}>→ {STATUS_LABELS[nx]}</button>}
+        {isPopOpen && (
+          <div className="pop" onClick={(e) => e.stopPropagation()}>
+            <span className="eyebrow lab">Move to</span>
+            {STATUSES.map((s, k) => (
+              <button key={s} className={`popitem ${s === r.status ? "cur" : ""}`} onClick={() => onChangeStatus(r, s)}>
+                <i style={{ background: `var(${STAGE_VAR[s]})` }} />
+                <span className="lbl">{STATUS_LABELS[s]}</span>
+                <span className="k">{k + 1}</span>
               </button>
-            </div>
-          )}
-        </td>
-        <td className="hidesm">
-          {r.resume_version_name
-            ? <span className="rchip">{r.resume_version_name}</span>
-            : <span className="rchip none">None attached</span>}
-        </td>
-        <td className={`age ${age.cls}`}><b>{age.big}</b><span>{age.small}</span></td>
-        <td>
-          <span className="rowacts">
-            <button className="ibtn" title="Edit" aria-label={`Edit ${r.role_title}`} onClick={() => onEdit(r)}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+            ))}
+            <div className="popsep" />
+            <button className="popitem" onClick={() => { onClosePop(); onEdit(r); }}>
+              <span className="lbl" style={{ color: "var(--muted)" }}>Add a note instead</span>
             </button>
-            <ConfirmAction className="ibtn danger" ariaLabel={`Delete ${r.role_title}`} message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => onDelete(r)}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
-            </ConfirmAction>
-          </span>
-        </td>
-      </tr>
-    </Fragment>
+          </div>
+        )}
+      </td>
+      <td className="hidesm">
+        {r.resume_version_name
+          ? <span className="rchip">{r.resume_version_name}</span>
+          : <span className="rchip none">None attached</span>}
+      </td>
+      <td className={`age ${age.cls}`}><b>{age.big}</b><span>{age.small}</span></td>
+      <td>
+        <span className="rowacts">
+          <button className="ibtn" title="Edit" aria-label={`Edit ${r.role_title}`} onClick={() => onEdit(r)}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+          </button>
+          <ConfirmAction className="ibtn danger" ariaLabel={`Delete ${r.role_title}`} message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => onDelete(r)}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
+          </ConfirmAction>
+        </span>
+      </td>
+    </tr>
   );
-});
+}));
 
 export default function Applications() {
   const navigate = useNavigate();
@@ -272,6 +280,32 @@ export default function Applications() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [view, groupCounts, dupeKeys]);
+
+  // Flattened so the group-header separators are their own virtual items —
+  // each entry maps 1:1 to exactly one rendered <tr>, which the row
+  // virtualizer below needs to window the table without breaking its layout.
+  type FlatRow = { kind: "group"; label: string; cls: string; count: number } | { kind: "row"; data: RowData };
+  const flatRows: FlatRow[] = useMemo(() => {
+    const out: FlatRow[] = [];
+    for (const d of rowsData) {
+      if (d.showGroup) out.push({ kind: "group", label: d.groupLabel, cls: d.groupCls, count: d.groupCount });
+      out.push({ kind: "row", data: d });
+    }
+    return out;
+  }, [rowsData]);
+
+  // Only the rows scrolled into view (plus overscan) are mounted; two spacer
+  // <tr>s stand in for the scrolled-past space above/below so the table stays
+  // real <tr>/<td> markup (column alignment intact) instead of absolutely
+  // positioned rows, which HTML tables don't lay out correctly.
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+  useEffect(() => { mainScrollRef.current = document.querySelector(".main"); }, []);
+  const rowVirtualizer = useVirtualizer({
+    count: flatRows.length,
+    getScrollElement: () => mainScrollRef.current,
+    estimateSize: (i) => (flatRows[i]?.kind === "group" ? 44 : 64),
+    overscan: 10,
+  });
 
   const openNew = useCallback(() => { setEditing(null); setModalOpen(true); }, []);
   const openEdit = useCallback((row: ApplicationRow) => { setEditing(row); setModalOpen(true); }, []);
@@ -448,19 +482,39 @@ export default function Applications() {
               </tr>
             </thead>
             <tbody>
-              {rowsData.map((data) => (
-                <AppRow
-                  key={data.row.id}
-                  data={data}
-                  isPopOpen={openPop === data.row.id}
-                  onTogglePop={onTogglePop}
-                  onClosePop={onClosePop}
-                  onChangeStatus={changeStatus}
-                  onAdvance={advance}
-                  onEdit={openEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
+              {(() => {
+                const items = rowVirtualizer.getVirtualItems();
+                const paddingTop = items.length ? items[0].start : 0;
+                const paddingBottom = items.length ? rowVirtualizer.getTotalSize() - items[items.length - 1].end : 0;
+                return (
+                  <>
+                    {paddingTop > 0 && <tr><td colSpan={6} style={{ height: paddingTop, padding: 0, border: "none" }} /></tr>}
+                    {items.map((vi) => {
+                      const item = flatRows[vi.index];
+                      if (!item) return null;
+                      if (item.kind === "group") {
+                        return <GroupHeaderRow key={`g-${vi.index}`} ref={rowVirtualizer.measureElement} data-index={vi.index} label={item.label} cls={item.cls} count={item.count} />;
+                      }
+                      return (
+                        <AppRow
+                          key={item.data.row.id}
+                          ref={rowVirtualizer.measureElement}
+                          data-index={vi.index}
+                          data={item.data}
+                          isPopOpen={openPop === item.data.row.id}
+                          onTogglePop={onTogglePop}
+                          onClosePop={onClosePop}
+                          onChangeStatus={changeStatus}
+                          onAdvance={advance}
+                          onEdit={openEdit}
+                          onDelete={handleDelete}
+                        />
+                      );
+                    })}
+                    {paddingBottom > 0 && <tr><td colSpan={6} style={{ height: paddingBottom, padding: 0, border: "none" }} /></tr>}
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>

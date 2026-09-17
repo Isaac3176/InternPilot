@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useNavigate } from "react-router-dom";
 import { openExternal } from "../lib/open";
 import { createApplication, listApplications, updateApplication } from "../db/applications";
@@ -296,6 +297,17 @@ export default function Internships() {
   const queueList = useMemo(() => filtered.filter((l) => !appByUrl.has(l.url) && l.score >= 70).sort((a, b) => b.score - a.score), [filtered, appByUrl]);
   const shown = listView === "saved" ? savedList : listView === "queue" ? queueList : filtered;
 
+  // Only the job cards scrolled into view (plus a small overscan) are ever
+  // mounted, so scrolling stays smooth regardless of how many roles are in
+  // the feed — instead of all up to MAX_SHOWN rendering their full DOM at once.
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: shown.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 178,
+    overscan: 8,
+  });
+
   const selected = filtered.find((l) => l.id === selectedId) ?? filtered[0] ?? null;
   const selectedUrl = selected?.url ?? null;
 
@@ -550,7 +562,7 @@ export default function Internships() {
             <button type="button" className={listView === "saved" ? "on" : ""} onClick={() => setListView("saved")}>Saved{savedList.length ? <span className="vn">{savedList.length}</span> : null}</button>
             <button type="button" className={listView === "queue" ? "on" : ""} onClick={() => setListView("queue")}>Queue{queueList.length ? <span className="vn">{queueList.length}</span> : null}</button>
           </div>
-          <div className="list">
+          <div className="list" ref={listScrollRef}>
             {loading && listings.length === 0 ? (
               <LoadingState title="Loading jobs" detail="Fetching and tailoring the internship feed." />
             ) : error && listings.length === 0 ? (
@@ -568,9 +580,23 @@ export default function Internships() {
                   <div className="mt-sm"><button type="button" className="secondary small" onClick={clearAll}>Clear filters</button></div>
                 )}
               </div>
-            ) : shown.map((l) => (
-              <JobListItem key={l.id} l={l} isSelected={selected?.id === l.id} isSaved={appByUrl.has(l.url)} onSelect={setSelectedId} />
-            ))}
+            ) : (
+              <div style={{ position: "relative", width: "100%", height: rowVirtualizer.getTotalSize() }}>
+                {rowVirtualizer.getVirtualItems().map((vi) => {
+                  const l = shown[vi.index];
+                  return (
+                    <div
+                      key={l.id}
+                      data-index={vi.index}
+                      ref={rowVirtualizer.measureElement}
+                      style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${vi.start}px)`, paddingBottom: 10 }}
+                    >
+                      <JobListItem l={l} isSelected={selected?.id === l.id} isSaved={appByUrl.has(l.url)} onSelect={setSelectedId} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </aside>
 
