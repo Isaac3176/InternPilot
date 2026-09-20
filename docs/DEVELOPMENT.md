@@ -25,7 +25,8 @@ npm test               # run the Vitest unit suite once
 npm run test:watch     # watch mode while developing
 npm run test:coverage  # unit tests + a coverage report
 npm run typecheck      # tsc --noEmit (type-check without building)
-npm run check          # tests + build — the one-shot gate before you push
+npm run check:bundle   # inspect dist/assets against bundle budgets
+npm run check          # tests + build + bundle budget, the gate before you push
 ```
 
 Run **`npm run check`** before pushing; CI runs the same things and will fail the PR otherwise.
@@ -55,7 +56,7 @@ The **anon** key is safe to ship (Row-Level Security protects the data). Never c
 `service_role` key or the database password. Full cloud setup: [../cloud/SETUP.md](../cloud/SETUP.md).
 Without these, the app still builds and runs in the desktop/SQLite path.
 
-## Testing
+## Testing and performance budgets
 
 Unit tests live next to the code they cover as `src/**/*.test.ts` and run under **Vitest**
 (`vitest.config.ts`, node environment). They target the **pure logic** — the calculations the
@@ -77,6 +78,19 @@ Guidelines:
 Coverage is scoped to those pure modules in `vitest.config.ts`, so the percentage is a real
 signal rather than diluted by untestable UI.
 
+Playwright smoke tests live in [`tests/e2e`](../tests/e2e). They run in E2E smoke mode, so
+they do not need real Supabase accounts or email delivery. Current flows cover:
+
+- Forgot password, legal pages, and the Settings production health panel.
+- Demo workspace entry/exit.
+- Fresh-user onboarding into tailored jobs.
+- Saving a job, refreshing, and finding it in Applications.
+- Fast Apply queue -> Discover -> save.
+
+The bundle budget lives in [`scripts/check-bundle-size.mjs`](../scripts/check-bundle-size.mjs).
+It reads `dist/assets` after `npm run build`, checks total JS/CSS gzip size, and catches new
+oversized chunks. If it fails, prefer lazy-loading or code splitting before raising a budget.
+
 ## Database migrations
 
 The SQLite schema is a **versioned migration list** in
@@ -97,9 +111,10 @@ data on that platform.
 ## CI
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every push to `main` and every
-PR: **frontend** job (`npm ci` → `npm test` → `npm run build`) and a **Rust** job (`cargo check`
-with the Linux Tauri deps). [`release.yml`](../.github/workflows/release.yml) is separate and
-fires on `v*` tags — see [Releases](#releases).
+PR: **frontend** job (`npm ci` -> `npm test` -> `npm run build` -> `npm run check:bundle`
+-> Playwright E2E) and a **Rust** job (`cargo check` with the Linux Tauri deps).
+[`release.yml`](../.github/workflows/release.yml) is separate and fires on `v*` tags - see
+[Releases](#releases).
 
 ## Networking behind a TLS-intercepting proxy
 

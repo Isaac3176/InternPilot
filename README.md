@@ -159,10 +159,12 @@ npm install
 npm run tauri dev      # run the desktop app in dev mode
 npm run tauri build    # produce an installer bundle
 npm test               # run the unit suite
-npm run check          # tests + build — the gate CI enforces
+npm run check          # tests + build + bundle budget, the gate CI enforces
+npm run test:e2e       # browser smoke tests for release-critical flows
 ```
 
-Tests (Vitest) and a type-check/build run in CI on every push and PR
+Tests (Vitest), build, bundle budget, Playwright smoke tests, and Rust compile
+checks run in CI on every push and PR
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Privacy

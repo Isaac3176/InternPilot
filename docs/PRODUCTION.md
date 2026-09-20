@@ -4,6 +4,62 @@ Going from "works for me" to "safe for real users." Grouped by priority; each it
 is tagged **[code]** (in the app), **[ops]** (accounts / billing / config), or
 **[legal]**. Check items as they land.
 
+## Release smoke runbook
+
+Use this every time you are about to send the app to a new group of users.
+
+### 1. Local release gate
+
+Run these from the repo root:
+
+```bash
+npm run typecheck
+npm run check
+npm run test:e2e
+```
+
+What this covers:
+
+- `npm run typecheck`: TypeScript correctness without rebuilding.
+- `npm run check`: unit tests, production build, and the frontend bundle budget.
+- `npm run test:e2e`: browser smoke tests for auth, onboarding, legal pages,
+  demo mode, saving jobs, tracker visibility, and the Settings production health
+  panel.
+
+If `npm run check:bundle` fails, inspect the printed largest assets before
+raising a budget. The PDF worker has its own explicit allowance because resume
+PDF parsing needs it; new oversized chunks should usually be lazy-loaded or
+split before the budget is increased.
+
+### 2. Deploy and verify the hosted app
+
+After Vercel deploys `main`, open `https://internpilotapp.live` and verify:
+
+- Create account / sign in works.
+- Onboarding completes and lands on tailored jobs.
+- Forgot password sends the generic reset notice.
+- `/privacy.html` and `/terms.html` load.
+- Settings -> Production health -> Run check reports the expected statuses.
+
+For production, expected health results are:
+
+- Cloud auth: **Ready** while signed in.
+- CAPTCHA: **Ready** after `VITE_TURNSTILE_SITE_KEY` is deployed and Supabase
+  CAPTCHA is enabled.
+- Legal pages: **Ready**.
+- Secure origin: **Ready**.
+- Gmail web surface: **Ready** unless you intentionally enabled Gmail sync on web.
+
+### 3. Rollback
+
+If a release breaks auth, onboarding, or job browsing:
+
+1. In Vercel, promote the last known-good deployment.
+2. In Supabase, keep auth settings unchanged unless the failure is clearly SMTP
+   or CAPTCHA configuration.
+3. Open a GitHub issue with the failed flow, browser, URL, and console error.
+4. Add or update an E2E test before shipping the fix.
+
 ## 🔴 Blockers — before a single external user
 
 - [ ] **[ops] Turn ON email confirmation** in Supabase → Auth → Providers → Email.
@@ -46,6 +102,12 @@ is tagged **[code]** (in the app), **[ops]** (accounts / billing / config), or
       single integration points. You are currently blind to bugs real users hit.
 - [x] **[code] Stop swallowing errors** on primary data loads — routed through
       `reportError` so failures are observable (was silent `.catch(() => {})`).
+- [x] **[code] Fresh-user E2E smoke tests** for auth-adjacent flows, onboarding,
+      demo mode, Browse, saving jobs, and tracker visibility.
+- [x] **[code] Production health panel** in Settings for auth/schema, CAPTCHA,
+      legal pages, secure origin, and Gmail web-surface checks.
+- [x] **[code] Frontend bundle budget** in `npm run check` and CI, so accidental
+      heavy imports do not silently ship.
 - [ ] **[code] Distinguish "empty" from "failed"** on the core screens — a failed
       load currently can look like "no data." Add retry affordances.
 - [ ] **[ops] Code-sign the installers** — Windows Authenticode (~$100–300/yr) +

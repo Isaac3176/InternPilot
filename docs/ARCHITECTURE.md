@@ -315,7 +315,7 @@ Password reset redirect behavior:
 ```mermaid
 flowchart LR
   dev[Developer pushes to GitHub] --> ci[CI workflow]
-  ci --> tests[npm test<br/>npm run build<br/>Playwright e2e]
+  ci --> tests[npm test<br/>npm run build<br/>bundle budget<br/>Playwright e2e]
   ci --> rust[cargo check]
 
   dev --> vercel[Vercel production deploy<br/>Vite dist/]
@@ -329,9 +329,11 @@ flowchart LR
 Important files:
 
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml): tests, build, e2e,
-  Rust compile check. Uses Node 22.
+  bundle budget, and Rust compile check. Uses Node 22.
 - [.github/workflows/release.yml](../.github/workflows/release.yml): Tauri
   installer builds from `v*` tags.
+- [scripts/check-bundle-size.mjs](../scripts/check-bundle-size.mjs): enforces
+  frontend JS/CSS gzip budgets after `npm run build`.
 - [vercel.json](../vercel.json): Vite build command, `dist` output directory,
   and SPA rewrite to `index.html`.
 - [vite.config.ts](../vite.config.ts): fixed dev port `1420`, Tauri-friendly
@@ -376,6 +378,8 @@ Production-sensitive areas:
 - Supabase RLS is mandatory because the anon key is public.
 - Auth email confirmation, CAPTCHA, SMTP, and rate limits are ops requirements
   before broad public release.
+- Settings includes a Production health panel for quick checks of cloud auth,
+  CAPTCHA config, legal pages, secure origin, and Gmail web exposure.
 - Gmail sync is restricted-scope OAuth and should stay gated until verification.
 - OpenAI calls should eventually move behind a server-side proxy.
 - Desktop installers are currently unsigned unless code signing/notarization is
@@ -395,6 +399,8 @@ Production-sensitive areas:
 npm run typecheck
 npm test
 npm run build
+npm run check:bundle
+npm run test:e2e
 ```
 
 For desktop-affecting changes, also run:
