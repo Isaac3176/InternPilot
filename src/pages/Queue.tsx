@@ -13,7 +13,7 @@ import type { ResumeVersion, Status } from "../db/types";
 import { APP_RECORDED_EVENT } from "../bridge/shared";
 import CompanyLogo from "../components/CompanyLogo";
 import OpeningSoonBanner from "../components/OpeningSoonBanner";
-import { EmptyState, PageNotice } from "../components/PageState";
+import { EmptyState, ErrorState, LoadingState, PageNotice } from "../components/PageState";
 import { userErrorMessage } from "../lib/errors";
 
 function scoreColor(v: number): string {
@@ -98,7 +98,29 @@ export default function Queue() {
     return (
       <div className="queue">
         <div className="page-header"><div><h1>Fast Apply</h1><p>Ranking your opportunities…</p></div></div>
-        <p className="hint">Scoring the feed against your watchlist…</p>
+        <LoadingState title="Loading Fast Apply" detail="Scoring the feed against your watchlist and profile." />
+      </div>
+    );
+  }
+
+  if (error && !queue) {
+    return (
+      <div className="queue">
+        <div className="page-header">
+          <div>
+            <h1>Fast Apply</h1>
+            <p>We couldn't rank your opportunities yet.</p>
+          </div>
+          <div className="header-actions">
+            <button type="button" className="btn" onClick={() => load(true)}>Retry</button>
+            <button type="button" className="btn" onClick={() => navigate("/internships")}>Browse all</button>
+          </div>
+        </div>
+        <ErrorState
+          title="Couldn't load Fast Apply"
+          detail={error}
+          action={<button type="button" onClick={() => load(true)}>Retry</button>}
+        />
       </div>
     );
   }

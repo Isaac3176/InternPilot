@@ -28,7 +28,7 @@ import { getLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../rel
 import { openExternal } from "../lib/open";
 import { reportError } from "../lib/report";
 import CompanyLogo from "../components/CompanyLogo";
-import { ErrorState, PageNotice } from "../components/PageState";
+import { ErrorState, LoadingState, PageNotice } from "../components/PageState";
 import type { ApplicationRow, Status } from "../db/types";
 
 const WEEKLY_GOAL = 5;
@@ -67,6 +67,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState("");
   const [metricsError, setMetricsError] = useState("");
   const [actionsError, setActionsError] = useState("");
+  const [metricsLoading, setMetricsLoading] = useState(true);
 
   const loadMetrics = useCallback(async () => {
     setCounts(await getStatusCounts());
@@ -81,6 +82,7 @@ export default function Dashboard() {
   }, []);
 
   const refreshMetrics = useCallback(async () => {
+    setMetricsLoading(true);
     try {
       await loadMetrics();
       setMetricsError("");
@@ -88,6 +90,8 @@ export default function Dashboard() {
       const msg = e instanceof Error ? e.message : String(e);
       setMetricsError(msg);
       reportError("dashboard: metrics", e);
+    } finally {
+      setMetricsLoading(false);
     }
   }, [loadMetrics]);
 
@@ -150,29 +154,48 @@ export default function Dashboard() {
     }
   }
 
-  return (
-    <div className="dash">
-      <div className="page-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Your internship search at a glance.</p>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="btn" onClick={() => navigate("/internships")}>Import from feed</button>
-          <button type="button" className="btn primary" onClick={() => navigate("/applications")}>
-            <PlusIcon /> Add application
-          </button>
-        </div>
+  const header = (
+    <div className="page-header">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Your internship search at a glance.</p>
       </div>
-      {message && <PageNotice kind="error">{message}</PageNotice>}
-      {metricsError && counts !== null && <PageNotice kind="error">Couldn't refresh dashboard: {metricsError}</PageNotice>}
-      {metricsError && counts === null && (
+      <div className="header-actions">
+        <button type="button" className="btn" onClick={() => navigate("/internships")}>Import from feed</button>
+        <button type="button" className="btn primary" onClick={() => navigate("/applications")}>
+          <PlusIcon /> Add application
+        </button>
+      </div>
+    </div>
+  );
+
+  if (metricsLoading && counts === null) {
+    return (
+      <div className="dash">
+        {header}
+        <LoadingState title="Loading dashboard" detail="Pulling your tracker, reminders, and funnel metrics into view." />
+      </div>
+    );
+  }
+
+  if (metricsError && counts === null) {
+    return (
+      <div className="dash">
+        {header}
         <ErrorState
           title="Couldn't load dashboard"
           detail={metricsError}
           action={<button type="button" onClick={refreshMetrics}>Retry</button>}
         />
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="dash">
+      {header}
+      {message && <PageNotice kind="error">{message}</PageNotice>}
+      {metricsError && counts !== null && <PageNotice kind="error">Couldn't refresh dashboard: {metricsError}</PageNotice>}
 
       {reminders.length > 0 && (
         <div className="reminders">

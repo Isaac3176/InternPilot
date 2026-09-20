@@ -108,7 +108,7 @@ If a release breaks auth, onboarding, or job browsing:
       legal pages, secure origin, and Gmail web-surface checks.
 - [x] **[code] Frontend bundle budget** in `npm run check` and CI, so accidental
       heavy imports do not silently ship.
-- [ ] **[code] Distinguish "empty" from "failed"** on the core screens — a failed
+- [x] **[code] Distinguish "empty" from "failed"** on the core screens — a failed
       load currently can look like "no data." Add retry affordances.
 - [ ] **[ops] Code-sign the installers** — Windows Authenticode (~$100–300/yr) +
       Apple notarization ($99/yr). Unsigned builds trigger SmartScreen / Gatekeeper
