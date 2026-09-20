@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "check": "npm run test && npm run build",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
+    "check": "npm run test && npm run build && npm run check:bundle",
     "tauri": "tauri"
   },
   "dependencies": {

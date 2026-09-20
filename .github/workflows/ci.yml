@@ -26,6 +26,8 @@ jobs:
         run: npm test
       - name: Type-check + build
         run: npm run build
+      - name: Bundle budget
+        run: npm run check:bundle
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: Fresh-user smoke test
