@@ -39,7 +39,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
 import { isTauri } from "../lib/env";
 import { authErrorMessage } from "../lib/errors";
-import { GMAIL_SYNC_ENABLED } from "../lib/features";
+import { AUTH_CAPTCHA_ENABLED, GMAIL_SYNC_ENABLED } from "../lib/features";
 import ConfirmAction from "../components/ConfirmAction";
 
 const APP_DATA_TABLES = [
@@ -62,6 +62,14 @@ const APP_DATA_TABLES = [
 ] as const;
 
 const LOCAL_DATA_TABLES = APP_DATA_TABLES.filter((t) => t !== "profiles" && t !== "user_settings");
+
+type HealthState = "ok" | "warn" | "fail";
+type HealthCheckItem = { label: string; detail: string; state: HealthState };
+
+function HealthBadge({ state }: { state: HealthState }) {
+  const label = state === "ok" ? "Ready" : state === "warn" ? "Check" : "Fix";
+  return <span className={`prod-health-badge ${state}`}>{label}</span>;
+}
 
 export default function Settings() {
   const [apiKey, setApiKeyState] = useState(getApiKey());
@@ -128,6 +136,8 @@ export default function Settings() {
   const [cPass, setCPass] = useState("");
   const [cMsg, setCMsg] = useState("");
   const [cBusy, setCBusy] = useState(false);
+  const [healthChecks, setHealthChecks] = useState<HealthCheckItem[]>([]);
+  const [healthBusy, setHealthBusy] = useState(false);
   useEffect(() => {
     cloudSession().then(setCloud).catch(() => {});
     return onCloudAuth(setCloud);
@@ -175,6 +185,71 @@ export default function Settings() {
     if (!p) return "";
     if (p.error) return `Error: ${p.error}`;
     return `${p.count} listing${p.count === 1 ? "" : "s"}`;
+  }
+
+  async function pageReachable(path: string): Promise<boolean> {
+    try {
+      const res = await fetch(path, { cache: "no-store" });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function runHealthCheck() {
+    setHealthBusy(true);
+    try {
+      const [privacyOk, termsOk, cloudOk] = await Promise.all([
+        pageReachable("/privacy.html"),
+        pageReachable("/terms.html"),
+        cloud ? cloudTestConnection().then(() => true).catch(() => false) : Promise.resolve(false),
+      ]);
+      const isHosted = typeof window !== "undefined" && window.location.protocol === "https:";
+      const isLocal = typeof window !== "undefined" && /^localhost$|^127\./.test(window.location.hostname);
+      setHealthChecks([
+        {
+          label: "Cloud auth",
+          state: cloudOk ? "ok" : cloud ? "fail" : "warn",
+          detail: cloudOk
+            ? "Signed-in Supabase session can read the RLS-scoped schema."
+            : cloud
+              ? "Signed in, but the schema/RLS connection test failed."
+              : "Sign in with a cloud account to verify schema and RLS from this device.",
+        },
+        {
+          label: "CAPTCHA",
+          state: AUTH_CAPTCHA_ENABLED ? "ok" : "warn",
+          detail: AUTH_CAPTCHA_ENABLED
+            ? "Turnstile site key is present, so auth challenges can render."
+            : "Turnstile is not configured in this build. Keep Supabase CAPTCHA off until it is.",
+        },
+        {
+          label: "Legal pages",
+          state: privacyOk && termsOk ? "ok" : "fail",
+          detail: privacyOk && termsOk
+            ? "Privacy Policy and Terms pages are reachable."
+            : "One or both public legal pages failed to load.",
+        },
+        {
+          label: "Secure origin",
+          state: isHosted || isLocal ? "ok" : "warn",
+          detail: isHosted
+            ? "Running on HTTPS, which is required for a trustworthy public web app."
+            : isLocal
+              ? "Running locally. Production should be HTTPS."
+              : "This origin is not HTTPS. Deploy behind TLS before public release.",
+        },
+        {
+          label: "Gmail web surface",
+          state: GMAIL_SYNC_ENABLED && !isTauri() && import.meta.env.PROD ? "warn" : "ok",
+          detail: GMAIL_SYNC_ENABLED && !isTauri() && import.meta.env.PROD
+            ? "Gmail sync is enabled on web production. Confirm OAuth verification before release."
+            : "Gmail sync is limited to approved runtimes for this build.",
+        },
+      ]);
+    } finally {
+      setHealthBusy(false);
+    }
   }
 
   async function signOut() {
@@ -297,6 +372,35 @@ export default function Settings() {
           <a className="legal-link-btn" href="/privacy.html" target="_blank" rel="noreferrer">Privacy Policy</a>
           <a className="legal-link-btn" href="/terms.html" target="_blank" rel="noreferrer">Terms of Service</a>
         </div>
+      </div>
+
+      <div className="card prod-health">
+        <div className="prod-health-head">
+          <div>
+            <h2>Production health</h2>
+            <p className="hint mb-0">
+              Run this before release or after deployment changes to catch auth, security, and public-page wiring issues.
+            </p>
+          </div>
+          <button type="button" className="secondary" onClick={runHealthCheck} disabled={healthBusy}>
+            {healthBusy ? "Checking..." : "Run check"}
+          </button>
+        </div>
+        {healthChecks.length === 0 ? (
+          <p className="muted-note">No check has run in this session.</p>
+        ) : (
+          <div className="prod-health-list">
+            {healthChecks.map((item) => (
+              <div className="prod-health-row" key={item.label}>
+                <div>
+                  <b>{item.label}</b>
+                  <span>{item.detail}</span>
+                </div>
+                <HealthBadge state={item.state} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card">

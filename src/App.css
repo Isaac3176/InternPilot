@@ -2798,6 +2798,69 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .diag-empty { margin: 12px 0 2px; font-size: 12.5px; color: var(--slate-2); }
 .diag-caveat { font-size: 11.5px; color: var(--slate); line-height: 1.5; max-width: 80ch; margin: 4px 2px 0; }
 
+/* Production health */
+.prod-health-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.prod-health-list {
+  display: grid;
+  gap: 8px;
+}
+.prod-health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 12px;
+  border: 1px solid var(--line-soft, var(--line));
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.prod-health-row b {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.prod-health-row span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--slate);
+}
+.prod-health-badge {
+  flex: none;
+  min-width: 58px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border: 1px solid transparent;
+}
+.prod-health-badge.ok {
+  background: var(--good-soft);
+  border-color: var(--good-line, transparent);
+  color: var(--good);
+}
+.prod-health-badge.warn {
+  background: var(--warn-soft);
+  border-color: var(--warn-line, transparent);
+  color: var(--warn);
+}
+.prod-health-badge.fail {
+  background: var(--risk-soft);
+  border-color: var(--risk-line, transparent);
+  color: var(--risk);
+}
+
 /* Funnel */
 .funnel { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin: 16px 0 10px; padding-bottom: 2px; }
 .funnel-stage { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 6px; }

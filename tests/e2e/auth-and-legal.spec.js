@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { onboardFreshUser } from "./helpers.js";
 
 test("forgot password returns a generic reset notice", async ({ page }) => {
   await page.goto("/");
@@ -21,4 +22,20 @@ test("public legal pages are reachable", async ({ page }) => {
   await page.goto("/terms.html");
   await expect(page.getByRole("heading", { name: "Terms of Service" })).toBeVisible();
   await expect(page.getByText("AI Output And Job Data")).toBeVisible();
+});
+
+test("production health check reports release-critical surfaces", async ({ page }) => {
+  await onboardFreshUser(page, "health-smoke@example.com");
+  await page.goto("/settings");
+
+  await page.getByRole("button", { name: "Run check" }).click();
+
+  const health = page.locator(".prod-health");
+  await expect(health.getByText("Cloud auth", { exact: true })).toBeVisible();
+  await expect(health.getByText("CAPTCHA", { exact: true })).toBeVisible();
+  await expect(health.getByText("Legal pages", { exact: true })).toBeVisible();
+  await expect(health.getByText("Secure origin", { exact: true })).toBeVisible();
+  await expect(health.getByText("Gmail web surface", { exact: true })).toBeVisible();
+  await expect(health.locator(".prod-health-badge.ok")).toHaveCount(4);
+  await expect(health.locator(".prod-health-badge.warn")).toHaveCount(1);
 });
