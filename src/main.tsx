@@ -4,7 +4,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import AuthGate from "./components/AuthGate";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { initSentry } from "./lib/sentry";
 import "./App.css";
+
+initSentry();
 
 // Pages are code-split so the initial boot only loads what the first route needs.
 const Queue = lazy(() => import("./pages/Queue"));

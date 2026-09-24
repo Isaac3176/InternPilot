@@ -23,7 +23,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    reportError(`UI crash (${this.props.level ?? "app"})`, error);
+    reportError(`UI crash (${this.props.level ?? "app"})`, error, {
+      componentStack: info.componentStack,
+    });
     console.error(info.componentStack);
   }
 

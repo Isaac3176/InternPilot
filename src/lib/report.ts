@@ -1,10 +1,11 @@
+import { captureError } from "./sentry";
+
 /**
- * Single place errors are reported. Right now it logs to the console; when a crash
- * reporter (e.g. Sentry) is added, wire it here and every call site is covered.
- * Use for failures that were previously swallowed silently — a caught data-load
- * error the user can't see should still be observable to us.
+ * Single place errors are reported. Console logging keeps local debugging easy;
+ * Sentry capture makes production failures visible without sprinkling SDK calls
+ * through the app.
  */
-export function reportError(context: string, err: unknown): void {
+export function reportError(context: string, err: unknown, extra?: Record<string, unknown>): void {
   console.error(`[InternPilot] ${context}:`, err);
-  // e.g. Sentry.captureException(err, { tags: { context } });
+  captureError(context, err, extra);
 }

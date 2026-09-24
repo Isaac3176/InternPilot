@@ -56,6 +56,20 @@ The **anon** key is safe to ship (Row-Level Security protects the data). Never c
 `service_role` key or the database password. Full cloud setup: [../cloud/SETUP.md](../cloud/SETUP.md).
 Without these, the app still builds and runs in the desktop/SQLite path.
 
+## Error reporting
+
+Production Sentry reporting is opt-in through Vite env vars:
+
+```ini
+VITE_SENTRY_DSN=<your-public-sentry-dsn>
+VITE_SENTRY_ENVIRONMENT=production
+VITE_SENTRY_TRACES_SAMPLE_RATE=0.05
+```
+
+The DSN is public client config, but keep source-map upload tokens out of Vite env vars.
+Use `SENTRY_AUTH_TOKEN` only in CI/Vercel build settings if source-map upload is added later.
+Set `VITE_SENTRY_DISABLED=1` as an emergency client-side kill switch.
+
 ## Testing and performance budgets
 
 Unit tests live next to the code they cover as `src/**/*.test.ts` and run under **Vitest**

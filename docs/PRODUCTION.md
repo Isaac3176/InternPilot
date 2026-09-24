@@ -50,6 +50,22 @@ For production, expected health results are:
 - Secure origin: **Ready**.
 - Gmail web surface: **Ready** unless you intentionally enabled Gmail sync on web.
 
+Sentry error reporting is enabled only when Vercel has:
+
+```ini
+VITE_SENTRY_DSN=https://b4a21414b105b69843443fa0e78b496c@o4512143481438208.ingest.us.sentry.io/4512143494283264
+VITE_SENTRY_ENVIRONMENT=production
+```
+
+Optional tuning:
+
+```ini
+VITE_SENTRY_TRACES_SAMPLE_RATE=0.05
+VITE_SENTRY_DISABLED=1
+```
+
+Use `VITE_SENTRY_DISABLED=1` only as an emergency off switch.
+
 ### 3. Rollback
 
 If a release breaks auth, onboarding, or job browsing:
@@ -97,9 +113,9 @@ If a release breaks auth, onboarding, or job browsing:
 
 ## 🟠 Reliability — before you'd trust it with strangers
 
-- [ ] **[ops+code] Crash/error reporting** (e.g. Sentry). Hook it into
-      `lib/report.ts` (`reportError`) and `ErrorBoundary` — both are already the
-      single integration points. You are currently blind to bugs real users hit.
+- [ ] **[ops+code] Crash/error reporting** (Sentry). Code is wired through
+      `lib/report.ts` and `ErrorBoundary`; finish by deploying `VITE_SENTRY_DSN`
+      in Vercel and confirming a test event arrives.
 - [x] **[code] Stop swallowing errors** on primary data loads — routed through
       `reportError` so failures are observable (was silent `.catch(() => {})`).
 - [x] **[code] Fresh-user E2E smoke tests** for auth-adjacent flows, onboarding,
