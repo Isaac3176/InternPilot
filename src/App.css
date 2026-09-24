@@ -2363,13 +2363,46 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
     font-size: 24px;
     text-align: left;
     margin-bottom: 22px;
+    color: var(--text);
   }
   .onboarding-sub {
     text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .onboarding-step label {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .onboarding-step .tag-select-control,
+  .onboarding-step input,
+  .onboarding-step select,
+  .onboarding-step textarea {
+    background: var(--card);
+    border-color: var(--line);
+    color: var(--text);
+  }
+  .onboarding-step input::placeholder,
+  .onboarding-step textarea::placeholder {
+    color: var(--text-faint);
   }
   .onboarding-step .opt-chips,
   .onboarding-step.narrow .opt-chips {
     grid-template-columns: 1fr;
+  }
+  .onboarding-step .opt-chip {
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+  .onboarding-step .opt-label,
+  .quick-picks button {
+    font-weight: 650;
+  }
+  .quick-picks button {
+    color: var(--text-dim);
+  }
+  .quick-picks button.on {
+    color: var(--accent-ink);
   }
   .onboarding-panel .wizard-actions {
     gap: 10px;
