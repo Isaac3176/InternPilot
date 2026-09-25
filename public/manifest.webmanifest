@@ -1,7 +1,7 @@
 {
   "name": "InternPilot",
   "short_name": "InternPilot",
-  "description": "Your internship search — ranked, tracked, and applied.",
+  "description": "Your internship search, ranked, tracked, and applied.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0E1621",
