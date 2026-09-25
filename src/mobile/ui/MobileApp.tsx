@@ -92,7 +92,13 @@ export default function MobileApp() {
 
       <nav className="tabbar">
         {([["home", "Home", I.home], ["jobs", "Jobs", I.jobs], ["tracker", "Tracker", I.tracker], ["toolkit", "Toolkit", I.toolkit], ["coach", "Coach", I.coach]] as const).map(([k, label, icon]) => (
-          <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>
+          <button
+            key={k}
+            type="button"
+            className={"tab" + (tab === k ? " on" : "")}
+            aria-current={tab === k ? "page" : undefined}
+            onClick={() => setTab(k)}
+          >
             {icon}<span>{label}</span>
             {k === "tracker" && badge > 0 && <em className="badge">{badge}</em>}
           </button>
@@ -130,7 +136,7 @@ function Home({ avatar, onSheet, go }: TabProps) {
     <div className="m-scroll">
       <header className="apphead"><div className="row">
         <div><h2>{dayName}</h2><div className="sub">{sent7} application{sent7 === 1 ? "" : "s"} out this week</div></div>
-        <button className="avatar" onClick={onSheet}>{avatar}</button>
+        <button type="button" className="avatar" aria-label="Open account menu" onClick={onSheet}>{avatar}</button>
       </div></header>
 
       <div className="pad">
@@ -168,14 +174,14 @@ function Home({ avatar, onSheet, go }: TabProps) {
 
       {today.length > 0 && (
         <>
-          <div className="sechead"><h3>New today</h3><button className="more" onClick={() => go("jobs")}>See {today.length} →</button></div>
+          <div className="sechead"><h3>New today</h3><button type="button" className="more" onClick={() => go("jobs")}>See {today.length} →</button></div>
           <div className="jobs">{today.slice(0, 2).map((o) => <JobCard key={o.id} o={o} />)}</div>
         </>
       )}
 
       {counts && (
         <>
-          <div className="sechead"><h3>Pipeline</h3><button className="more" onClick={() => go("tracker")}>Tracker →</button></div>
+          <div className="sechead"><h3>Pipeline</h3><button type="button" className="more" onClick={() => go("tracker")}>Tracker →</button></div>
           <div className="pad"><div className="card"><div className="pipe">
             {pipe.map(([k, label]) => (
               <div className="st" key={k} style={{ ["--c" as string]: `var(${STATUS_C[k]})` }}><i /><b>{counts[k]}</b><span>{label}</span></div>
@@ -242,13 +248,13 @@ function Jobs({ avatar, onSheet }: TabProps) {
     <div className="m-scroll">
       <header className="apphead"><div className="row">
         <div><h2>Jobs</h2><div className="sub">{feedLoading ? "Loading feed…" : `${feed.length.toLocaleString()} in your feed`}</div></div>
-        <button className="avatar" onClick={onSheet}>{avatar}</button>
+        <button type="button" className="avatar" aria-label="Open account menu" onClick={onSheet}>{avatar}</button>
       </div></header>
 
       <div className="seg">
-        <button className={seg === "browse" ? "on" : ""} onClick={() => setSeg("browse")}>Browse</button>
-        <button className={seg === "saved" ? "on" : ""} onClick={() => setSeg("saved")}>Saved <span className="n">{savedApps.length}</span></button>
-        <button className={seg === "queue" ? "on" : ""} onClick={() => setSeg("queue")}>Queue <span className="n">{queue.length}</span></button>
+        <button type="button" className={seg === "browse" ? "on" : ""} aria-pressed={seg === "browse"} onClick={() => setSeg("browse")}>Browse</button>
+        <button type="button" className={seg === "saved" ? "on" : ""} aria-pressed={seg === "saved"} onClick={() => setSeg("saved")}>Saved <span className="n">{savedApps.length}</span></button>
+        <button type="button" className={seg === "queue" ? "on" : ""} aria-pressed={seg === "queue"} onClick={() => setSeg("queue")}>Queue <span className="n">{queue.length}</span></button>
       </div>
 
       <div className="jobs" style={{ paddingBottom: 24 }}>
@@ -285,6 +291,7 @@ function JobCard({ o, saved, onSave, onOpen }: { o: RankedListing; saved?: boole
   return (
     <div
       className="job" role="button" tabIndex={0}
+      aria-label={`Open ${o.title} at ${o.company}`}
       onClick={open}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
     >
@@ -360,15 +367,15 @@ function JobDetail({ o, saved, onSave, onClose }: { o: RankedListing; saved: boo
 
   return (
     <>
-      <div className="scrim" onClick={onClose} />
-      <div className="msheet jobsheet">
+      <div className="scrim" aria-hidden="true" onClick={onClose} />
+      <div className="msheet jobsheet" role="dialog" aria-modal="true" aria-labelledby="mobile-job-title">
         <div className="grabber" />
         <div className="jd-head">
           <CompanyLogo company={o.company} />
           <span className="tx"><b>{o.company}</b><span>{o.locations[0] ?? "—"}{ago ? ` · ${ago}` : ""}</span></span>
           <button type="button" className="jd-close" aria-label="Close" onClick={onClose}>✕</button>
         </div>
-        <h2 className="jd-title">{o.title}</h2>
+        <h2 className="jd-title" id="mobile-job-title">{o.title}</h2>
         <div className="facts">
           {o.salary ? <span className="fact pay">{o.salary}</span> : <span className="fact na">Pay not listed</span>}
           {o.season && <span className="fact">{o.season}</span>}
@@ -424,7 +431,7 @@ function JobDetail({ o, saved, onSave, onClose }: { o: RankedListing; saved: boo
 
 function SavedCard({ a }: { a: ApplicationRow }) {
   return (
-    <button type="button" className="job" onClick={() => a.job_link && openExternal(a.job_link)}>
+    <button type="button" className="job" aria-label={`Open saved role ${a.role_title} at ${a.company_name ?? "unknown company"}`} onClick={() => a.job_link && openExternal(a.job_link)}>
       <div className="job-top">
         <CompanyLogo company={a.company_name ?? "?"} />
         <span className="org"><b>{a.company_name ?? "—"}</b><span>{a.location || "Saved"}</span></span>
@@ -456,13 +463,13 @@ function Tracker({ avatar, onSheet }: TabProps) {
     <div className="m-scroll">
       <header className="apphead"><div className="row">
         <div><h2>Tracker</h2><div className="sub">{apps.length} role{apps.length === 1 ? "" : "s"} · {offers} offer{offers === 1 ? "" : "s"}</div></div>
-        <button className="avatar" onClick={onSheet}>{avatar}</button>
+        <button type="button" className="avatar" aria-label="Open account menu" onClick={onSheet}>{avatar}</button>
       </div></header>
 
       <div className="seg">
-        <button className={seg === "active" ? "on" : ""} onClick={() => setSeg("active")}>Active <span className="n">{active.length}</span></button>
-        <button className={seg === "replies" ? "on" : ""} onClick={() => setSeg("replies")}>Replies <span className="n">{replies.length}</span></button>
-        <button className={seg === "closed" ? "on" : ""} onClick={() => setSeg("closed")}>Closed <span className="n">{closed.length}</span></button>
+        <button type="button" className={seg === "active" ? "on" : ""} aria-pressed={seg === "active"} onClick={() => setSeg("active")}>Active <span className="n">{active.length}</span></button>
+        <button type="button" className={seg === "replies" ? "on" : ""} aria-pressed={seg === "replies"} onClick={() => setSeg("replies")}>Replies <span className="n">{replies.length}</span></button>
+        <button type="button" className={seg === "closed" ? "on" : ""} aria-pressed={seg === "closed"} onClick={() => setSeg("closed")}>Closed <span className="n">{closed.length}</span></button>
       </div>
 
       {!loaded ? <Empty label="Loading your applications…" /> : seg === "active" ? (
@@ -523,7 +530,7 @@ function Toolkit({ avatar, onSheet }: TabProps) {
     <div className="m-scroll">
       <header className="apphead"><div className="row">
         <div><h2>Toolkit</h2><div className="sub">What you reuse across applications</div></div>
-        <button className="avatar" onClick={onSheet}>{avatar}</button>
+        <button type="button" className="avatar" aria-label="Open account menu" onClick={onSheet}>{avatar}</button>
       </div></header>
 
       <div className="sechead" style={{ marginTop: 6 }}><h3>Résumés</h3></div>
@@ -606,7 +613,7 @@ function Coach({ avatar, onSheet }: TabProps) {
       <div className="m-scroll">
         <header className="apphead"><div className="row">
           <div><h2>Coach</h2><div className="sub">Reads your funnel, not the internet</div></div>
-          <button className="avatar" onClick={onSheet}>{avatar}</button>
+          <button type="button" className="avatar" aria-label="Open account menu" onClick={onSheet}>{avatar}</button>
         </div></header>
 
         <div className="pad">
@@ -648,7 +655,7 @@ function Coach({ avatar, onSheet }: TabProps) {
         <input className="fld" placeholder="Ask about your search…" value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
-        <button className="send" onClick={() => send()} disabled={busy || !input.trim()}>{I.send}</button>
+        <button type="button" className="send" aria-label="Send message" onClick={() => send()} disabled={busy || !input.trim()}>{I.send}</button>
       </div>
     </>
   );
@@ -660,15 +667,15 @@ function AvatarSheet({ profile, onClose }: { profile: Profile | null; onClose: (
   const sub = profile?.grad_year ? `Class of ${profile.grad_year}` : profile?.target_date ? "Job search in progress" : "Finish setting up your profile";
   return (
     <>
-      <div className="scrim" onClick={onClose} />
-      <div className="msheet">
+      <div className="scrim" aria-hidden="true" onClick={onClose} />
+      <div className="msheet" role="dialog" aria-modal="true" aria-labelledby="mobile-account-title">
         <div className="grabber" />
         <div className="mprofile">
           <span className="av">{initials(name)}</span>
-          <span className="tx"><b>{name}</b><span>{sub}</span></span>
+          <span className="tx"><b id="mobile-account-title">{name}</b><span>{sub}</span></span>
         </div>
         <p className="mnote">Profile, settings, and feed sources are best edited in the desktop app — this phone view is for browsing, tracking, and quick coaching.</p>
-        <button className="mrow danger" onClick={() => { cloudSignOut().catch(console.error); onClose(); }}>
+        <button type="button" className="mrow danger" onClick={() => { cloudSignOut().catch(console.error); onClose(); }}>
           <span className="ic">{I.signout}</span>
           <span className="tx"><b>Sign out</b><span>{profile?.email ?? ""}</span></span>
         </button>

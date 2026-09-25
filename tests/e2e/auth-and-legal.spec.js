@@ -11,7 +11,7 @@ test("forgot password returns a generic reset notice", async ({ page }) => {
   await page.getByRole("button", { name: "Send reset link" }).click();
 
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByText("If that email has an account, a password-reset link is on its way.")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("If that email has an account, a password-reset link is on its way.");
 });
 
 test("public legal pages are reachable", async ({ page }) => {

@@ -104,7 +104,7 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
       <div className="auth-card">
         <div className="brand-lg"><AscentIcon size={30} /> InternPilot AI</div>
 
-        {notice && view === "login" && <p className="auth-notice">{notice}</p>}
+        {notice && view === "login" && <p className="auth-notice" role="status" aria-live="polite">{notice}</p>}
 
         {view === "login" && (
           <>
@@ -165,7 +165,16 @@ export default function CloudLogin({ onDone }: { onDone: () => void }) {
           </>
         )}
 
-        {msg && <p className={`hint ${msgKind === "error" ? "text-red" : ""}`} style={{ marginTop: 12 }}>{msg}</p>}
+        {msg && (
+          <p
+            className={`hint ${msgKind === "error" ? "text-red" : ""}`}
+            role={msgKind === "error" ? "alert" : "status"}
+            aria-live={msgKind === "error" ? "assertive" : "polite"}
+            style={{ marginTop: 12 }}
+          >
+            {msg}
+          </p>
+        )}
         <p className="auth-legal">
           By using InternPilot, you agree to the <a href="/terms.html" target="_blank" rel="noreferrer">Terms</a>{" "}
           and acknowledge the <a href="/privacy.html" target="_blank" rel="noreferrer">Privacy Policy</a>.
