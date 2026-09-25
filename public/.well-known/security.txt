@@ -1,0 +1,5 @@
+Contact: mailto:isaactesfalidet6@gmail.com
+Expires: 2027-09-25T23:59:00Z
+Preferred-Languages: en
+Canonical: https://internpilotapp.live/.well-known/security.txt
+Policy: https://internpilotapp.live/privacy.html

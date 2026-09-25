@@ -39,6 +39,8 @@ After Vercel deploys `main`, open `https://internpilotapp.live` and verify:
 - Onboarding completes and lands on tailored jobs.
 - Forgot password sends the generic reset notice.
 - `/privacy.html` and `/terms.html` load.
+- `/.well-known/security.txt` loads and points security reports to the current
+  contact address.
 - Settings -> Production health -> Run check reports the expected statuses.
 
 For production, expected health results are:
