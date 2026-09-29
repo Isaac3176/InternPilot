@@ -32,6 +32,7 @@ const IC_BACK = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stro
 const IC_CHECK_MD = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>;
 
 const BURST_COLORS = ["#4BC59A", "#5B9BF6", "#E0A94A", "#A98CF7", "#EB7A64"];
+const APPLIED_CELEBRATION_DELAY_MS = 260;
 interface Particle { dx: number; dy: number; rot: number; color: string; delay: number }
 
 function AppliedButton({ state, onClick, disabled }: { state: "idle" | "done"; onClick: () => void; disabled?: boolean }) {
@@ -84,6 +85,7 @@ export default function ApplyAssist() {
   const [celebrate, setCelebrate] = useState(false);
   const [undoAvailable, setUndoAvailable] = useState(false);
   const undoTimerRef = useRef<number | null>(null);
+  const celebrateTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     listApplications().then(setApps).catch(console.error);
@@ -93,7 +95,10 @@ export default function ApplyAssist() {
     listAllEmployment().then(setEmployment).catch(console.error);
   }, []);
 
-  useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); }, []);
+  useEffect(() => () => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    if (celebrateTimerRef.current) clearTimeout(celebrateTimerRef.current);
+  }, []);
 
   // Preselect an application when arriving from the Internships feed (?app=<id>) —
   // only if it's still unapplied; an already-applied one has nothing to show here.
@@ -116,9 +121,11 @@ export default function ApplyAssist() {
   // to the overview — Apply Assist is a deliberate detour, not the default.
   useEffect(() => {
     setAppliedState("idle");
+    setCelebrate(false);
     setUndoAvailable(false);
     setMode("overview");
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    if (celebrateTimerRef.current) clearTimeout(celebrateTimerRef.current);
   }, [appId]);
 
   const recommendations = useMemo(
@@ -175,7 +182,8 @@ export default function ApplyAssist() {
   async function markApplied() {
     if (!app) return;
     setError("");
-    const started = Date.now();
+    if (celebrateTimerRef.current) clearTimeout(celebrateTimerRef.current);
+    celebrateTimerRef.current = window.setTimeout(() => setCelebrate(true), APPLIED_CELEBRATION_DELAY_MS);
     setAppliedState("done"); // optimistic — the burst plays immediately
     try {
       await setApplicationStatus(app.id, "applied");
@@ -183,9 +191,9 @@ export default function ApplyAssist() {
       setUndoAvailable(true);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       undoTimerRef.current = window.setTimeout(() => setUndoAvailable(false), 10_000);
-      // Let the button's burst finish its moment before the modal arrives.
-      setTimeout(() => setCelebrate(true), Math.max(0, 720 - (Date.now() - started)));
     } catch (e) {
+      if (celebrateTimerRef.current) clearTimeout(celebrateTimerRef.current);
+      setCelebrate(false);
       setAppliedState("idle");
       setError(e instanceof Error ? e.message : String(e));
     }

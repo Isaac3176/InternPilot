@@ -1593,21 +1593,21 @@ button.small { padding: 5px 10px; font-size: 12.5px; }
 .rs-applied:active:not(:disabled) { transform: scale(.985); }
 .rs-applied .rs-applied-lbl { display: inline-flex; align-items: center; gap: 9px; color: #fff; transition: opacity .16s, transform .22s; }
 .rs-applied .tickwrap { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.6);
-  transition: opacity .2s ease .06s, transform .34s cubic-bezier(.2,1.5,.4,1) .06s; }
+  transition: opacity .14s ease .03s, transform .24s cubic-bezier(.2,1.5,.4,1) .03s; }
 .rs-applied.done { background: linear-gradient(140deg, var(--accent-hover), color-mix(in srgb, var(--accent) 55%, #000)); cursor: default; }
 .rs-applied.done .rs-applied-lbl { opacity: 0; transform: translateY(-8px); }
 .rs-applied.done .tickwrap { opacity: 1; transform: scale(1); }
 .rs-applied .tickwrap svg path { stroke-dasharray: 32; stroke-dashoffset: 32; }
-.rs-applied.done .tickwrap svg path { animation: rs-draw .42s cubic-bezier(.4,0,.2,1) .14s forwards; }
+.rs-applied.done .tickwrap svg path { animation: rs-draw .28s cubic-bezier(.4,0,.2,1) .08s forwards; }
 @keyframes rs-draw { to { stroke-dashoffset: 0; } }
 .rs-applied .ripple { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; border-radius: 50%;
   background: rgba(255,255,255,.4); transform: translate(-50%,-50%) scale(0); pointer-events: none; }
-.rs-applied.done .ripple { animation: rs-ripple .7s ease-out forwards; }
+.rs-applied.done .ripple { animation: rs-ripple .45s ease-out forwards; }
 @keyframes rs-ripple { to { transform: translate(-50%,-50%) scale(34); opacity: 0; } }
 
 .rs-applied .burst { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .rs-applied .burst i { position: absolute; left: 50%; top: 50%; width: 7px; height: 11px; border-radius: 1.5px; opacity: 0; }
-.rs-applied .burst.go i { animation: rs-pop .95s cubic-bezier(.16,.8,.3,1) forwards; }
+.rs-applied .burst.go i { animation: rs-pop .62s cubic-bezier(.16,.8,.3,1) forwards; }
 @keyframes rs-pop {
   0% { opacity: 0; transform: translate(-50%,-50%) rotate(0) scale(.4); }
   12% { opacity: 1; }
