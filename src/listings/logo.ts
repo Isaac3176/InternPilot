@@ -10,6 +10,16 @@ import { mirrorLocalSetting } from "../cloud/userSettings";
 
 // Names that don't slugify cleanly to "{name}.com".
 const OVERRIDES: Record<string, string> = {
+  "apple": "apple.com", "google": "google.com", "microsoft": "microsoft.com",
+  "amazon": "amazon.com", "cloudflare": "cloudflare.com", "databricks": "databricks.com",
+  "datadog": "datadoghq.com", "nvidia": "nvidia.com", "netflix": "netflix.com",
+  "stripe": "stripe.com", "airbnb": "airbnb.com", "uber": "uber.com",
+  "doordash": "doordash.com", "roblox": "roblox.com", "tesla": "tesla.com",
+  "spacex": "spacex.com", "github": "github.com", "gitlab": "gitlab.com",
+  "figma": "figma.com", "atlassian": "atlassian.com", "snowflake": "snowflake.com",
+  "mongodb": "mongodb.com", "coinbase": "coinbase.com", "block": "block.xyz",
+  "square": "squareup.com", "paypal": "paypal.com", "intuit": "intuit.com",
+  "adobe": "adobe.com", "salesforce": "salesforce.com", "workday": "workday.com",
   "two sigma": "twosigma.com", "jane street": "janestreet.com",
   "d. e. shaw": "deshaw.com", "de shaw": "deshaw.com",
   "hudson river trading": "hudsonrivertrading.com", "jump trading": "jumptrading.com",

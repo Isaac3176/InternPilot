@@ -20,8 +20,12 @@ function monogramBg(name: string): string {
   const c = colorFor(name);
   return `linear-gradient(140deg, ${shade(c, 22)}, ${c} 55%, ${shade(c, -26)})`;
 }
-function initialsFor(name: string): string {
-  return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+export function companyInitials(name: string): string {
+  const words = name.match(/[a-z0-9]+/gi) ?? [];
+  if (words.length === 0) return "?";
+  if (words.every((w) => /^\d+$/.test(w))) return words[0]?.slice(0, 2) ?? "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return words.slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
 /**
@@ -39,20 +43,25 @@ function initialUrls(company: string): string[] {
 export default function CompanyLogo({ company, className }: { company: string; className?: string }) {
   const [urls, setUrls] = useState<string[]>(() => initialUrls(company));
   const [idx, setIdx] = useState(0);
+  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => { setUrls(initialUrls(company)); setIdx(0); }, [company]);
+  useEffect(() => { setUrls(initialUrls(company)); setIdx(0); setLoaded(false); }, [company]);
 
   const showImg = idx < urls.length;
-  const cls = "logo" + (showImg ? " img" : "") + (className ? ` ${className}` : "");
+  const cls = "logo" + (showImg ? ` img ${loaded ? "is-loaded" : "is-loading"}` : "") + (className ? ` ${className}` : "");
+  const initials = companyInitials(company);
+  const label = `${company} logo`;
 
   if (showImg) {
     const src = urls[idx];
     return (
-      <div className={cls}>
+      <div className={cls} title={label} role="img" aria-label={label} style={loaded ? undefined : { background: monogramBg(company) }}>
+        <span className="logo-fallback">{initials}</span>
         <img
           src={src} alt="" loading="lazy"
-          onLoad={() => { if (logoCacheGet(company) !== src) logoCacheSet(company, src); }}
+          onLoad={() => { setLoaded(true); if (logoCacheGet(company) !== src) logoCacheSet(company, src); }}
           onError={() => {
+            setLoaded(false);
             if (idx + 1 < urls.length) { setIdx(idx + 1); return; }
             // Exhausted: a stale single cached URL → clear so it re-resolves next
             // mount; a full-chain miss → remember there's no logo.
@@ -64,5 +73,5 @@ export default function CompanyLogo({ company, className }: { company: string; c
       </div>
     );
   }
-  return <div className={cls} style={{ background: monogramBg(company) }}>{initialsFor(company)}</div>;
+  return <div className={cls} title={label} role="img" aria-label={label} style={{ background: monogramBg(company) }}>{initials}</div>;
 }
