@@ -28,8 +28,9 @@ import {
   setSimplifyOn,
   setSimplifyUrl,
 } from "../listings/config";
-import { probeSources, clearListingsCache, type SourceProbe } from "../listings/sources";
+import { probeSources, clearListingsCache, fetchAllListings, type SourceProbe } from "../listings/sources";
 import { isLogosOn, setLogosOn, getLogoToken, setLogoToken } from "../listings/logo";
+import { buildFeedDiagnostics, type FeedDiagnostics } from "../listings/diagnostics";
 import { getPrefs, savePrefs, DEFAULT_PREFS, type RankingPrefs } from "../ranking/prefs";
 import { learnSummary, resetLearning, type LearnSummary } from "../ranking/learning";
 import { QRCodeSVG } from "qrcode.react";
@@ -37,6 +38,7 @@ import { cloudSignIn, cloudSignUp, cloudSignOut, cloudSession, onCloudAuth, clou
 import { supabase, throwIfSupabaseError } from "../cloud/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { getDb } from "../db";
+import { getProfile } from "../db/profile";
 import { isTauri } from "../lib/env";
 import { authErrorMessage } from "../lib/errors";
 import { AUTH_CAPTCHA_ENABLED, GMAIL_SYNC_ENABLED } from "../lib/features";
@@ -150,6 +152,9 @@ export default function Settings() {
   }
   const [probe, setProbe] = useState<{ simplify: SourceProbe; auto: SourceProbe } | null>(null);
   const [probing, setProbing] = useState(false);
+  const [feedDiagnostics, setFeedDiagnostics] = useState<FeedDiagnostics | null>(null);
+  const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState("");
   const [dataMsg, setDataMsg] = useState("");
 
   async function saveAndTestSources() {
@@ -185,6 +190,19 @@ export default function Settings() {
     if (!p) return "";
     if (p.error) return `Error: ${p.error}`;
     return `${p.count} listing${p.count === 1 ? "" : "s"}`;
+  }
+
+  async function runFeedDiagnostics() {
+    setDiagnosticsBusy(true);
+    setDiagnosticsError("");
+    try {
+      const [rawListings, profile] = await Promise.all([fetchAllListings(true), getProfile()]);
+      setFeedDiagnostics(buildFeedDiagnostics(rawListings, profile, getPrefs()));
+    } catch (e) {
+      setDiagnosticsError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDiagnosticsBusy(false);
+    }
   }
 
   async function pageReachable(path: string): Promise<boolean> {
@@ -507,6 +525,50 @@ export default function Settings() {
           <button type="button" onClick={saveAndTestSources} disabled={probing}>{probing ? "Testing…" : "Save & test"}</button>
           <button type="button" className="secondary" onClick={resetSources}>Reset to defaults</button>
         </div>
+      </div>
+
+      <div className="card prod-health">
+        <div className="prod-health-head">
+          <div>
+            <h2>Feed diagnostics</h2>
+            <p className="hint mb-0">
+              Shows how many raw postings survive each profile and ranking filter before Fast Apply sees them.
+            </p>
+          </div>
+          <button type="button" className="secondary" onClick={runFeedDiagnostics} disabled={diagnosticsBusy}>
+            {diagnosticsBusy ? "Running..." : "Run diagnostics"}
+          </button>
+        </div>
+        {diagnosticsError && <p className="hint text-red">{diagnosticsError}</p>}
+        {!feedDiagnostics ? (
+          <p className="muted-note">No diagnostic has run in this session.</p>
+        ) : (
+          <>
+            <div className="prod-health-list">
+              <div className="prod-health-row">
+                <div>
+                  <b>Raw postings</b>
+                  <span>Fetched from all enabled sources before user filters.</span>
+                </div>
+                <strong>{feedDiagnostics.raw}</strong>
+              </div>
+              {feedDiagnostics.steps.map((step) => (
+                <div className="prod-health-row" key={step.key}>
+                  <div>
+                    <b>{step.label}</b>
+                    <span>{step.removed} removed at this step.</span>
+                  </div>
+                  <strong>{step.count}</strong>
+                </div>
+              ))}
+            </div>
+            <p className="hint mb-0" style={{ marginTop: 12 }}>
+              Active target: {feedDiagnostics.filters.targetSeason};{" "}
+              {feedDiagnostics.filters.roles.length ? feedDiagnostics.filters.roles.join(", ") : "any role"};{" "}
+              {feedDiagnostics.filters.locations.length ? feedDiagnostics.filters.locations.join(", ") : "any location"}.
+            </p>
+          </>
+        )}
       </div>
 
       <div className="card">
