@@ -171,8 +171,6 @@ function LiveOpenings() {
   const [polledAt, setPolledAt] = useState<number | null>(null);
 
   useEffect(() => {
-    const cached = getCachedLiveOpenings();
-    if (cached) { setItems(cached.openings); setPolledAt(cached.polledAt); }
     getLiveOpenings()
       .then((o) => { setItems(o); setPolledAt(getCachedLiveOpenings()?.polledAt ?? Date.now()); })
       .catch(() => setItems((prev) => prev ?? []));
@@ -214,7 +212,7 @@ function LiveOpenings() {
       {items === null ? (
         <p className="hint">Checking company career pages…</p>
       ) : items.length === 0 ? (
-        <Empty text="No live internship postings on your watchlist's boards right now. This reads Greenhouse/Lever/Ashby directly — add more target companies to widen coverage." />
+        <Empty text={`No live postings match your current target filters: ${getPrefs().targetSeason}, your degree level, and your profile locations. This reads ATS boards directly; add more target companies or broaden your profile to widen coverage.`} />
       ) : (
         <div className="live-list">
           {items.slice(0, 12).map((o) => (

@@ -129,6 +129,11 @@ export default function Queue() {
   const digest = queue?.digest ?? [];
   const resumes = queue?.resumes ?? [];
   const instantCount = queue?.counts.instant ?? 0;
+  const emptyApplyDetail = digest.length > 0
+    ? `No instant or standard matches are ready, but ${digest.length} lower-priority match${digest.length === 1 ? " is" : "es are"} in the digest.`
+    : (queue?.counts.muted ?? 0) > 0
+      ? `${queue?.counts.muted} role${queue?.counts.muted === 1 ? " was" : "s were"} filtered out by eligibility, seniority, freshness, blocked roles, or prior feedback.`
+      : "No roles passed your current profile filters for season, location, job type, eligibility, and target role.";
 
   return (
     <div className="queue">
@@ -164,8 +169,13 @@ export default function Queue() {
       {today.length === 0 ? (
         <EmptyState
           title="Nothing urgent right now"
-          detail="New roles from your Priority-0/1 companies will surface here first. Meanwhile, lower-scored matches are in the digest below."
-          action={<button type="button" className="btn small" onClick={() => navigate("/internships")}>Open Discover</button>}
+          detail={emptyApplyDetail}
+          action={
+            <>
+              <button type="button" className="btn small" onClick={() => navigate("/internships")}>Open Discover</button>
+              <button type="button" className="btn small" onClick={() => navigate("/profile")}>Edit profile</button>
+            </>
+          }
         />
       ) : (
         <div className="qlist">
