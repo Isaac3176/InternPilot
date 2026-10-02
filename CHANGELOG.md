@@ -5,7 +5,16 @@ Notable changes to InternPilot. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet._
+- Profile and Browse location targeting now supports country-level choices like
+  United States across onboarding, Browse filters, Fast Apply, and live openings.
+- Added regression tests for U.S. location matching, ranked-feed hard filters,
+  live-opening filters, and score guardrails.
+- Improved company logo reliability with known-domain overrides, accessible
+  monogram fallbacks, and loading/error polish.
+- Added Settings -> Feed diagnostics to show how many raw postings survive each
+  profile/ranking filter stage.
+- Improved empty states for Browse, Fast Apply, and Release Radar when current
+  filters remove all jobs.
 
 ## [0.1.3]
 

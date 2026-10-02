@@ -32,12 +32,18 @@ If a number looks confident, it earned it.
 
 ## Discover & Fast Apply
 
-A three-pane job browser (results · detail · rail). Listings come from a public feed
-(SimplifyJobs), are **ranked to your profile**, and non-software noise (courses, bootcamps,
-talent pools) is filtered out. Open a role and it fetches the **real job description**, scores
-**keyword coverage** against your résumé (matched / missing skills), and checks
-**work-authorization eligibility**. One click to **Save** or **Apply** (which opens the posting,
-records it, and starts the tailored apply flow).
+A three-pane job browser (results · detail · rail). Listings come from curated public feeds plus
+an automated ATS engine, are **ranked to your profile**, and are hard-filtered by job type,
+seniority, target role, location, season, and degree level before Fast Apply sees them.
+Country-level locations like **United States** work across onboarding, Browse filters, live
+openings, and Fast Apply, including remote-in-country variants. Open a role and it fetches the
+**real job description**, scores **keyword coverage** against your résumé (matched / missing
+skills), and checks **work-authorization eligibility**. One click to **Save** or **Apply** (which
+opens the posting, records it, and starts the tailored apply flow).
+
+Settings includes **Feed diagnostics**, a release/debug panel that counts how many raw postings
+survive each filtering stage. If a target like United States suddenly lets through Europe-only
+jobs, this is the first place to look.
 
 **Application packet** (the "Prepare" screen) assembles everything before you click: eligibility,
 the recommended résumé + match, referral contacts, a cold-email draft, and **bullet tailoring** —

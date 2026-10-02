@@ -78,7 +78,8 @@ TypeScript compiler can't verify:
 
 - `prep/` — pattern readiness, spaced-repetition scheduling, the OA countdown plan, OA diagnostics.
 - `diagnostics/` — the funnel + `reachedRank`, the rejection-timing guard, the auto-screen detector.
-- `listings/` — JD↔résumé matching and work-authorization eligibility.
+- `listings/` — JD↔résumé matching, work-authorization eligibility, logo fallbacks,
+  location matching, feed filtering, and feed diagnostics.
 - `apply/tailor`, `release/live` (the intern-role filter, incl. the "Internships" plural case).
 
 Guidelines:
@@ -100,6 +101,7 @@ they do not need real Supabase accounts or email delivery. Current flows cover:
 - Fresh-user onboarding into tailored jobs.
 - Saving a job, refreshing, and finding it in Applications.
 - Fast Apply queue -> Discover -> save.
+- Country-level location filtering and logo fallback rendering on the job surfaces.
 
 The bundle budget lives in [`scripts/check-bundle-size.mjs`](../scripts/check-bundle-size.mjs).
 It reads `dist/assets` after `npm run build`, checks total JS/CSS gzip size, and catches new

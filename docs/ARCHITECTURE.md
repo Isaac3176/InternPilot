@@ -173,7 +173,8 @@ flowchart TB
 - `Networking.tsx`: contacts and referrals.
 - `Diagnostics.tsx`: recruiting funnel diagnostics.
 - `PrepEngine.tsx`, `OALab.tsx`, `InterviewPrep.tsx`: coding/OA/interview prep.
-- `Settings.tsx`: account, legal links, extension settings, feature settings.
+- `Settings.tsx`: account, legal links, extension settings, feature settings,
+  production health checks, and feed diagnostics.
 
 ### Feature Logic
 
@@ -198,15 +199,17 @@ sequenceDiagram
   participant UI as Internships page
   participant Profile as Profile/resumes
   participant Listings as src/listings/service
-  participant Feed as SimplifyJobs feed
+  participant Feed as Curated feeds
+  participant Auto as Automated ATS engine
   participant ATS as ATS/job pages
   participant DB as Supabase or SQLite
 
   User->>UI: Open Browse
   UI->>Profile: Read target roles, locations, work auth, resumes
   UI->>Listings: Request personalized listings
-  Listings->>Feed: Fetch public internship feed
-  Listings->>Listings: Filter by profile targets and intern relevance
+  Listings->>Feed: Fetch public internship feeds
+  Listings->>Auto: Fetch normalized ATS-discovered jobs
+  Listings->>Listings: Filter by job type, seniority, role, location, season, degree
   Listings->>Listings: Score role fit, season, eligibility, freshness
   UI->>ATS: Fetch selected job description when needed
   UI->>Listings: Match JD against resume skills
@@ -219,7 +222,7 @@ The profile is not just display data. It affects:
 - Job family filters.
 - Internship/new-grad level filters.
 - Season/year filters.
-- Location and remote preferences.
+- Country, city/state, remote-in-country, and remote preferences.
 - Work-authorization eligibility estimates.
 - Resume/readiness matching.
 - Autofill values sent to the extension bridge.
@@ -379,7 +382,8 @@ Production-sensitive areas:
 - Auth email confirmation, CAPTCHA, SMTP, and rate limits are ops requirements
   before broad public release.
 - Settings includes a Production health panel for quick checks of cloud auth,
-  CAPTCHA config, legal pages, secure origin, and Gmail web exposure.
+  CAPTCHA config, legal pages, secure origin, and Gmail web exposure. It also
+  includes Feed diagnostics for inspecting the profile/ranking filter funnel.
 - Gmail sync is restricted-scope OAuth and should stay gated until verification.
 - OpenAI calls should eventually move behind a server-side proxy.
 - Desktop installers are currently unsigned unless code signing/notarization is

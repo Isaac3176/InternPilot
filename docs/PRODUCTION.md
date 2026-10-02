@@ -23,8 +23,8 @@ What this covers:
 - `npm run typecheck`: TypeScript correctness without rebuilding.
 - `npm run check`: unit tests, production build, and the frontend bundle budget.
 - `npm run test:e2e`: browser smoke tests for auth, onboarding, legal pages,
-  demo mode, saving jobs, tracker visibility, and the Settings production health
-  panel.
+  demo mode, Browse/Fast Apply, location filtering, logo fallback rendering,
+  saving jobs, tracker visibility, and the Settings production health panel.
 
 If `npm run check:bundle` fails, inspect the printed largest assets before
 raising a budget. The PDF worker has its own explicit allowance because resume
@@ -42,6 +42,11 @@ After Vercel deploys `main`, open `https://internpilotapp.live` and verify:
 - `/.well-known/security.txt` loads and points security reports to the current
   contact address.
 - Settings -> Production health -> Run check reports the expected statuses.
+- Settings -> Feed diagnostics -> Run diagnostics shows the expected target
+  filters and no obvious location leakage for the signed-in profile.
+- Browse and Fast Apply respect a country-level profile location such as
+  `United States`, including after refresh/cache reuse.
+- Company logos either render as an image or fall back to a clean monogram.
 
 For production, expected health results are:
 
@@ -121,9 +126,12 @@ If a release breaks auth, onboarding, or job browsing:
 - [x] **[code] Stop swallowing errors** on primary data loads — routed through
       `reportError` so failures are observable (was silent `.catch(() => {})`).
 - [x] **[code] Fresh-user E2E smoke tests** for auth-adjacent flows, onboarding,
-      demo mode, Browse, saving jobs, and tracker visibility.
+      demo mode, Browse, location filtering, logo fallback, saving jobs, and
+      tracker visibility.
 - [x] **[code] Production health panel** in Settings for auth/schema, CAPTCHA,
       legal pages, secure origin, and Gmail web-surface checks.
+- [x] **[code] Feed diagnostics panel** in Settings to inspect how many raw
+      postings survive each profile/ranking filter.
 - [x] **[code] Frontend bundle budget** in `npm run check` and CI, so accidental
       heavy imports do not silently ship.
 - [x] **[code] Distinguish "empty" from "failed"** on the core screens — a failed

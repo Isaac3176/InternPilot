@@ -63,11 +63,15 @@ the desktop app also keeps a SQLite/local bridge path for offline and extension 
 **Discover internships**
 - A three-pane job browser: a filterable results list, a detail pane with the **real job
   description** (fetched from Greenhouse / Lever / SmartRecruiters / Ashby), and a right rail.
-- Listings come from a public feed (SimplifyJobs) and are **ranked to your profile** — courses,
-  bootcamps, tutoring and talent-pools are filtered out; any engineering internship matches a
-  software-engineer's search.
+- Listings come from curated public feeds plus an automated ATS engine and are **ranked to your
+  profile** — target role, season, degree level, and preferred location are hard filters before
+  Fast Apply sees a job.
+- Location targeting supports country-level choices like **United States**, remote-in-country,
+  states, and major cities across onboarding, Browse filters, live openings, and Fast Apply.
 - **Readiness gauge + skill preflight**: once a description loads, it scores keyword coverage
   against your résumé and shows matched / missing skills ("X of Y found").
+- Company logos resolve through known company domains and optional Logo.dev support, with an
+  accessible monogram fallback when an image cannot load.
 - One click to **Save** to your tracker or **Apply with autofill**.
 
 **Release Radar & live openings**
@@ -164,7 +168,9 @@ npm run test:e2e       # browser smoke tests for release-critical flows
 ```
 
 Tests (Vitest), build, bundle budget, Playwright smoke tests, and Rust compile
-checks run in CI on every push and PR
+checks run in CI on every push and PR. The smoke tests include the release-critical job path:
+onboarding, Browse, Fast Apply, location filtering, logo fallback rendering, saving jobs, and
+tracker visibility
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Privacy
@@ -177,13 +183,13 @@ connect it. Full data-flow breakdown: [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Roadmap
 
-- ✅ **Shipped:** Discover feed + personal ranking, tracker + Outcome moments, dashboard +
+- ✅ **Shipped:** Discover feed + personal ranking, profile/location-targeted Fast Apply, tracker + Outcome moments, dashboard +
   Next-Best-Action engine, AI weekly strategy, résumé matching & per-job tailoring, referral
   CRM, Gmail classification, Apply Assist + autofill extension, work-authorization eligibility
   screening, cloud sync (Supabase) + web/phone PWA, **Release Radar + live ATS detection**,
   **Recruiting Diagnostics** (funnel + rejection-timing + question audit), **Prep Engine**
   (pattern readiness, spaced repetition, OA Lab, OA Simulation, company countdown plans),
-  unit tests + CI.
+  company logo fallback polish, feed diagnostics, unit tests + CI.
 - ⏳ **Next:** deeper component/integration test coverage, **security hardening** (secrets to the
   OS keychain), and more live-ATS company coverage (Workday is currently a curated, desktop-first
   set).
