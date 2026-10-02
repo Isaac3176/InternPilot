@@ -79,4 +79,11 @@ describe("isRelevantOpening (user-tailored)", () => {
   it("a grad user still sees PhD roles", () => {
     expect(isRelevantOpening("NVIDIA 2027 Internships: Ph.D. Research Robotics", { targetSeason: "Summer 2027", undergrad: false })).toBe(true);
   });
+  it("honors United States location preferences", () => {
+    const usOnly = { targetSeason: "Summer 2027", undergrad: true, locationPrefs: ["United States"] };
+    expect(isRelevantOpening("Software Engineering Intern", usOnly, "Boston, Massachusetts, USA")).toBe(true);
+    expect(isRelevantOpening("Software Engineering Intern", usOnly, "Aarhus, Denmark")).toBe(false);
+    expect(isRelevantOpening("Software Engineering Intern", usOnly, "London, United Kingdom")).toBe(false);
+    expect(isRelevantOpening("Software Engineering Intern", usOnly, "Berlin, Germany")).toBe(false);
+  });
 });

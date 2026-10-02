@@ -10,6 +10,7 @@ import { notify } from "../lib/notify";
 import { matchesSeason, requiresGradDegree, isUndergradDegree } from "../listings/relevance";
 import { getProfile } from "../db/profile";
 import { getPrefs } from "../ranking/prefs";
+import { matchesLocationPreferences, splitLocationFilters } from "../listings/location";
 
 // Re-export so callers (and tests) can reach the shared filters through live.ts.
 export { matchesSeason, requiresGradDegree, isUndergradDegree };
@@ -35,21 +36,25 @@ export function isInternRole(title: string): boolean {
 }
 
 /** The user's filter for live openings — from their target season + degree level. */
-export interface OpeningFilter { targetSeason: string; undergrad: boolean }
+export interface OpeningFilter { targetSeason: string; undergrad: boolean; locationPrefs?: string[] }
 
 /** Full user-tailored filter: an intern SWE role, in the user's season, at their level. */
-export function isRelevantOpening(title: string, f: OpeningFilter): boolean {
+export function isRelevantOpening(title: string, f: OpeningFilter, location = ""): boolean {
   if (!isInternRole(title)) return false;
   if (!matchesSeason(title, f.targetSeason)) return false;
   if (f.undergrad && requiresGradDegree(title)) return false;
+  if (!matchesLocationPreferences(f.locationPrefs ?? [], location ? [location] : [], /\bremote\b/i.test(location))) return false;
   return true;
 }
 
 const SEEN_KEY = "internpilot.live.seen.v1";
 // v2: bumped when the tailored season/degree filter shipped, so stale unfiltered
 // cached openings from an older poll are discarded instead of shown.
-const CACHE_KEY = "internpilot.live.cache.v2";
+// v3: location filtering now falls back to onboarding answers and should not reuse
+// a cache created before profile locations were enforced.
+const CACHE_KEY = "internpilot.live.cache.v3";
 const CACHE_TTL = 30 * 60 * 1000; // serve cached openings for 30 min between polls
+const ONBOARDING_KEY = "internpilot.onboarding.answers";
 
 function readSeen(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]")); } catch { return new Set(); }
@@ -67,6 +72,37 @@ export function getCachedLiveOpenings(): { openings: LiveOpening[]; polledAt: nu
   } catch { return null; }
 }
 
+function onboardingLocationPrefs(): string[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(ONBOARDING_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { locations?: unknown };
+    return Array.isArray(parsed.locations)
+      ? parsed.locations.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function locationPrefsForProfile(profile: Awaited<ReturnType<typeof getProfile>>): string[] {
+  const fromProfile = splitLocationFilters(profile?.locations || profile?.current_country);
+  return fromProfile.length ? fromProfile : onboardingLocationPrefs();
+}
+
+function openingFilterForProfile(profile: Awaited<ReturnType<typeof getProfile>>): OpeningFilter {
+  return {
+    targetSeason: getPrefs().targetSeason,
+    undergrad: isUndergradDegree(profile?.degree),
+    locationPrefs: locationPrefsForProfile(profile),
+  };
+}
+
+function filterOpenings(openings: LiveOpening[], filter: OpeningFilter): LiveOpening[] {
+  return openings.filter((o) => isRelevantOpening(o.title, filter, o.location));
+}
+
 /**
  * Poll every instant/high watchlist company's board and return current early-career
  * openings, newest first. `isNew` marks postings not seen on a prior poll. Companies
@@ -78,10 +114,10 @@ export async function detectLiveOpenings(opts: { markSeen?: boolean } = {}): Pro
   const fresh = new Set<string>();
   const openings: LiveOpening[] = [];
 
-  // Tailor to the user's target: season/year (prefs) + degree level (profile).
-  let degree: string | null = null;
-  try { degree = (await getProfile())?.degree ?? null; } catch { /* ignore */ }
-  const filter: OpeningFilter = { targetSeason: getPrefs().targetSeason, undergrad: isUndergradDegree(degree) };
+  // Tailor to the user's target: season/year (prefs) + degree level + location (profile).
+  let profile = null as Awaited<ReturnType<typeof getProfile>>;
+  try { profile = await getProfile(); } catch { /* ignore */ }
+  const filter = openingFilterForProfile(profile);
 
   const queue = [...targets];
   const CONCURRENCY = 4;
@@ -93,7 +129,7 @@ export async function detectLiveOpenings(opts: { markSeen?: boolean } = {}): Pro
       try { postings = await fetchCompanyPostings(c.name); } catch { postings = null; }
       if (!postings) continue;
       for (const p of postings) {
-        if (!isRelevantOpening(p.title, filter) || !p.url) continue;
+        if (!isRelevantOpening(p.title, filter, p.location) || !p.url) continue;
         fresh.add(p.id);
         openings.push({
           company: c.name, priority: c.priority,
@@ -118,7 +154,11 @@ export async function detectLiveOpenings(opts: { markSeen?: boolean } = {}): Pro
 /** Poll only if the cache is stale; otherwise return cached openings. */
 export async function getLiveOpenings(): Promise<LiveOpening[]> {
   const cached = getCachedLiveOpenings();
-  if (cached && Date.now() - cached.polledAt < CACHE_TTL) return cached.openings;
+  if (cached && Date.now() - cached.polledAt < CACHE_TTL) {
+    let profile = null as Awaited<ReturnType<typeof getProfile>>;
+    try { profile = await getProfile(); } catch { /* ignore */ }
+    return filterOpenings(cached.openings, openingFilterForProfile(profile));
+  }
   return detectLiveOpenings();
 }
 

@@ -15,12 +15,14 @@ import { getProfile } from "../db/profile";
 import { getFeed } from "../listings/service";
 import { fetchJobDescription, MAX_DESCRIPTION_CHARS } from "../listings/description";
 import { jdSkillMatch } from "../listings/match";
+import { matchesLocationFilter } from "../listings/location";
 import { assessEligibility } from "../listings/eligibility";
 import { scoreTier } from "../listings/scoreTier";
 import { leadSentence, parseDuties } from "../listings/parse";
 import { getResumeVersion, listResumeVersions } from "../db/resumes";
 import type { RankedListing } from "../listings/types";
 import type { ApplicationRow, ContactRow, Profile, ReferralRow, ResumeVersion, Status } from "../db/types";
+import { LOCATION_SUGGESTIONS } from "../data/locations";
 import FilterPill from "../components/FilterPill";
 import ReadinessGauge from "../components/ReadinessGauge";
 import CompanyLogo from "../components/CompanyLogo";
@@ -29,6 +31,7 @@ import { ErrorState, LoadingState, PageNotice } from "../components/PageState";
 
 const MAX_SHOWN = 200;
 const JOB_TYPES = ["Internship", "Co-op", "Full-time"] as const;
+const BROWSE_LOCATION_OPTIONS = LOCATION_SUGGESTIONS.slice(0, 15);
 type JobType = (typeof JOB_TYPES)[number];
 
 function jobTypeFromPref(value: string): JobType | null {
@@ -278,11 +281,11 @@ export default function Internships() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const loc = location.trim().toLowerCase();
+    const loc = location.trim();
     let rows = listings.filter((l) => {
       if (onlyNew && !l.isNew) return false;
       if (selectedTypes.length && !selectedTypes.includes(jobTypeOf(l.title))) return false;
-      if (loc && !l.locations.join(" ").toLowerCase().includes(loc)) return false;
+      if (loc && !matchesLocationFilter(loc, l.locations, l.remote)) return false;
       if (term && !l.company.toLowerCase().includes(term) && !l.title.toLowerCase().includes(term)) return false;
       if (matchesMyRoles && !l.matchesRoles) return false;
       if (hideIneligible && assessEligibility(profile, l).level === "ineligible") return false;
@@ -472,6 +475,27 @@ export default function Internships() {
     ...selectedTypes,
     ...targetLocations.slice(0, 2),
   ].filter(Boolean);
+  const activeFilterLabels = [
+    search.trim() ? `search "${search.trim()}"` : "",
+    selectedTypes.length ? selectedTypes.join(" / ") : "",
+    location.trim() ? `location "${location.trim()}"` : "",
+    onlyNew ? "new postings only" : "",
+    matchesMyRoles ? "matches my roles" : "",
+    hideIneligible ? "hide likely ineligible" : "",
+  ].filter(Boolean);
+  const emptyTitle = listView === "saved" ? "No saved roles yet"
+    : listView === "queue" ? "Your apply queue is clear"
+    : listings.length === 0 ? "No listings loaded"
+      : activeFilterLabels.length ? "No listings match these filters" : "No tailored listings right now";
+  const emptyDetail = listView === "saved"
+    ? "Click Save on a posting to keep it here."
+    : listView === "queue"
+      ? "Strong unsaved matches appear here after the feed is filtered by your profile, location, season, and eligibility."
+      : listings.length === 0
+        ? "Refresh the feed to check the configured listing sources."
+        : activeFilterLabels.length
+          ? `Active filters: ${activeFilterLabels.join(", ")}. Try clearing one filter or editing your profile targets.`
+          : "Your current profile filters did not leave any visible listings. Refresh or broaden your profile targets.";
 
   return (
     <>
@@ -493,10 +517,24 @@ export default function Internships() {
             </label>
           ))}
         </FilterPill>
-        <FilterPill label="Location" count={location.trim() ? 1 : 0} width={280}>
+        <FilterPill label="Location" count={location.trim() ? 1 : 0} width={360}>
           <div className="popover-title">Location</div>
-          <div className="popover-sub">Filter by city, state, or "remote"</div>
-          <input placeholder="e.g. New York, Remote" value={location} onChange={(e) => setLocation(e.target.value)} />
+          <div className="popover-sub">Choose a common location or enter your own.</div>
+          <div className="popover-chips location-options">
+            {BROWSE_LOCATION_OPTIONS.map((opt) => (
+              <button
+                type="button"
+                key={opt}
+                className={location.trim().toLowerCase() === opt.toLowerCase() ? "on" : ""}
+                onClick={() => setLocation(opt)}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          <div className="popover-divider" />
+          <input placeholder="Custom city, state, or country" value={location} onChange={(e) => setLocation(e.target.value)} />
+          {location.trim() && <button type="button" className="pop-clear mt-sm" onClick={() => setLocation("")}>Clear location</button>}
         </FilterPill>
         <FilterPill label="More filters" count={moreCount} width={260}>
           <div className="popover-title">More filters</div>
@@ -573,9 +611,8 @@ export default function Internships() {
               />
             ) : shown.length === 0 ? (
               <div className="empty">
-                {listView === "saved" ? "No saved roles yet — click Save on a posting to keep it here."
-                  : listView === "queue" ? "Your apply queue is clear — strong matches you haven't applied to show up here."
-                  : listings.length === 0 ? "No listings — click Refresh." : "No listings match your filters."}
+                <b>{emptyTitle}</b>
+                <p>{emptyDetail}</p>
                 {listView === "browse" && listings.length > 0 && anyActive && (
                   <div className="mt-sm"><button type="button" className="secondary small" onClick={clearAll}>Clear filters</button></div>
                 )}

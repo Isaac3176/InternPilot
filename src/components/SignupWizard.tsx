@@ -9,6 +9,7 @@ import { mirrorLocalSetting } from "../cloud/userSettings";
 import { getPrefs, syncPrefsFromProfile } from "../ranking/prefs";
 import OptionChips from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
+import { LOCATION_SUGGESTIONS } from "../data/locations";
 import { REMOTE_PREF_LABELS, REMOTE_PREFS, YES_NO } from "../db/types";
 
 const EMPLOYMENT_TYPES = [
@@ -33,22 +34,6 @@ const TIMELINE_OPTIONS = [
   { value: "three_months", label: "Within 3 months" },
   { value: "six_months", label: "Within 6 months" },
   { value: "passive", label: "Passively browsing" },
-];
-
-const LOCATION_SUGGESTIONS = [
-  "Remote in USA",
-  "New York City",
-  "San Francisco Bay Area",
-  "Los Angeles",
-  "Seattle",
-  "Boston",
-  "Chicago",
-  "Austin",
-  "Atlanta",
-  "Washington, DC",
-  "Toronto",
-  "Vancouver",
-  "London",
 ];
 
 const ONBOARDING_KEY = "internpilot.onboarding.answers";

@@ -24,7 +24,7 @@ import { buildOverview } from "../prep/engine";
 import { getProfile } from "../db/profile";
 import { computeDiagnostics } from "../diagnostics/recruiting";
 import { fastRejections, screeningItems, humanDuration } from "../diagnostics/questionAudit";
-import { getLiveOpenings, getCachedLiveOpenings, type LiveOpening } from "../release/live";
+import { getLiveOpenings, type LiveOpening } from "../release/live";
 import { openExternal } from "../lib/open";
 import { reportError } from "../lib/report";
 import CompanyLogo from "../components/CompanyLogo";
@@ -496,8 +496,6 @@ function agoLabel(sec: number | null): string {
 function LiveNowWidget({ onSeeAll }: { onSeeAll: () => void }) {
   const [items, setItems] = useState<LiveOpening[]>([]);
   useEffect(() => {
-    const cached = getCachedLiveOpenings();
-    if (cached) setItems(cached.openings);
     getLiveOpenings().then(setItems).catch((e) => reportError("dashboard: live openings", e));
   }, []);
   if (items.length === 0) return null;

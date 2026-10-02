@@ -6,6 +6,7 @@ import TagMultiSelect from "./TagMultiSelect";
 import OptionChips, { type ChipOption } from "./OptionChips";
 import { ROLE_SUGGESTIONS } from "../data/roles";
 import { SKILL_SUGGESTIONS } from "../data/skills";
+import { LOCATION_SUGGESTIONS } from "../data/locations";
 import { userErrorMessage } from "../lib/errors";
 import {
   DEGREE_OPTIONS,
@@ -37,11 +38,6 @@ const emptyState: State = {
   gender: "", race_ethnicity: "", hispanic_latino: "", veteran_status: "", disability_status: "",
   preferred_resume_id: "",
 };
-
-const LOCATION_SUGGESTIONS = [
-  "Remote", "New York, NY", "San Francisco, CA", "Seattle, WA", "Austin, TX",
-  "Boston, MA", "Chicago, IL", "Los Angeles, CA", "Atlanta, GA",
-];
 
 export interface ProfileFormApi {
   s: State;

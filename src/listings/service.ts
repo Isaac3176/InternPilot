@@ -4,6 +4,7 @@ import { fetchAllListings } from "./sources";
 import type { Listing, RankedListing } from "./types";
 import { getPrefs, type RankingPrefs } from "../ranking/prefs";
 import { matchesSeason, requiresGradDegree, isUndergradDegree } from "./relevance";
+import { matchesLocationPreferences, splitLocationFilters } from "./location";
 
 function splitCsv(value: string | null | undefined): string[] {
   return (value ?? "")
@@ -134,9 +135,8 @@ function scoreListing(listing: Listing, profile: Profile | null, prefs: RankingP
   const roles = splitCsv(profile?.target_roles);
   const effectiveRoles = roles.length ? roles : prefs.targetRoles.map((r) => r.toLowerCase());
   const skills = splitCsv(profile?.skills);
-  const locs = splitCsv(profile?.locations);
+  const locs = splitLocationFilters(profile?.locations || profile?.current_country);
   const title = listing.title.toLowerCase();
-  const listingLocs = listing.locations.join(" ").toLowerCase();
 
   // Courses / bootcamps / tutoring / talent pools are not internships — sink them.
   if (NON_ROLE.test(listing.title)) return 3;
@@ -146,7 +146,7 @@ function scoreListing(listing: Listing, profile: Profile | null, prefs: RankingP
   if (rScore < 0.8 && genericEngineeringMatch(listing.title, effectiveRoles)) rScore = Math.max(rScore, 0.8);
 
   const skillHit = skills.length ? skills.filter((s) => title.includes(s)).length / skills.length : 0;
-  const locHit = locs.length ? (locs.some((l) => listingLocs.includes(l)) ? 1 : 0) : 0;
+  const locHit = locs.length ? (matchesLocationPreferences(locs, listing.locations, listing.remote) ? 1 : 0) : 0;
   const remoteScore = remotePreferenceScore(listing, profile);
 
   let score = 0.74 * rScore + 0.12 * skillHit + 0.08 * locHit + 0.06 * remoteScore;
@@ -189,10 +189,12 @@ export async function getFeed(force = false): Promise<Feed> {
   // undergrads) grad-only roles. Ambiguous roles with no stated season are kept.
   const targetSeason = prefs.targetSeason;
   const undergrad = isUndergradDegree(profile?.degree);
+  const locs = splitLocationFilters(profile?.locations || profile?.current_country);
   const onTarget = (l: RankedListing): boolean =>
     matchesEmploymentPrefs(l, prefs) &&
     matchesSeniority(l.title, prefs.employmentTypes, prefs.targetRoles) &&
     (roles.length === 0 || l.matchesRoles) &&
+    matchesLocationPreferences(locs, l.locations, l.remote) &&
     matchesSeason(l.title, targetSeason) &&
     (!l.season || l.seasonInferred || matchesSeason(l.season, targetSeason)) &&
     !(undergrad && requiresGradDegree(l.title));
