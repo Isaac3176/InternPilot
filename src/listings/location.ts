@@ -6,6 +6,16 @@ const US_QUERY_ALIASES = new Set([
   "us",
   "u s",
   "america",
+  // Onboarding/Browse location suggestions include these as pickable tags
+  // (see src/data/locations.ts) — picking one should match the whole
+  // country, same as picking "United States" directly, not just listings
+  // whose location text happens to repeat this exact phrase.
+  "remote in usa",
+  "remote in the usa",
+  "remote in us",
+  "remote us",
+  "remote usa",
+  "remote united states",
 ]);
 
 const US_STATE_ABBREVIATIONS = [

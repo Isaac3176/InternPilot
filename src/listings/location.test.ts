@@ -14,6 +14,15 @@ describe("location filtering", () => {
     expect(matchesLocationFilter("United States", ["Los Angeles"])).toBe(true);
   });
 
+  it("treats 'Remote in USA' as a country-wide query, not a literal phrase match", () => {
+    // This is a real onboarding/Browse location suggestion (src/data/locations.ts) —
+    // picking it should surface any US listing, on-site included, the same as
+    // picking "United States" directly.
+    expect(matchesLocationFilter("Remote in USA", ["Austin, TX"], false)).toBe(true);
+    expect(matchesLocationFilter("Remote in USA", ["Seattle, WA"], false)).toBe(true);
+    expect(matchesLocationFilter("Remote in USA", ["London, United Kingdom"], false)).toBe(false);
+  });
+
   it("does not treat non-US locations as United States matches", () => {
     expect(matchesLocationFilter("United States", ["Toronto"])).toBe(false);
     expect(matchesLocationFilter("United States", ["London"])).toBe(false);
