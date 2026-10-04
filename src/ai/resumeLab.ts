@@ -122,13 +122,13 @@ export async function gapFinder(resume: string, jd: string): Promise<GapResult> 
       source: "stub",
     };
   }
-  return {
-    ...(await chat<Omit<GapResult, "source">>(
-      "You are a resume gap analyst. Compare a resume to a target job description. Identify EVERY gap: missing keywords, weak verbs, vague claims, and skills the JD wants that the resume doesn't mention. Do not invent skills. Respond ONLY with JSON: { \"summary\": string, \"rows\": [{ \"item\": string, \"type\": \"keyword\"|\"weak verb\"|\"vague claim\"|\"missing skill\", \"have\": string }] }.",
-      `RESUME:\n${resume.slice(0, 6000)}\n\nJOB DESCRIPTION:\n${jd.slice(0, 6000)}`,
-    )),
-    source: "openai",
-  };
+  // response_format: json_object only guarantees syntactically valid JSON, not
+  // that any particular key is present — default every field, same as hrRankOnce.
+  const out = await chat<Partial<Omit<GapResult, "source">>>(
+    "You are a resume gap analyst. Compare a resume to a target job description. Identify EVERY gap: missing keywords, weak verbs, vague claims, and skills the JD wants that the resume doesn't mention. Do not invent skills. Respond ONLY with JSON: { \"summary\": string, \"rows\": [{ \"item\": string, \"type\": \"keyword\"|\"weak verb\"|\"vague claim\"|\"missing skill\", \"have\": string }] }.",
+    `RESUME:\n${resume.slice(0, 6000)}\n\nJOB DESCRIPTION:\n${jd.slice(0, 6000)}`,
+  );
+  return { rows: Array.isArray(out.rows) ? out.rows : [], summary: out.summary ?? "", source: "openai" };
 }
 
 // ---------- 2. One-Click Rewrite ----------
@@ -288,11 +288,17 @@ export async function redFlagScan(resume: string, jd?: string): Promise<RedFlagR
       source: "stub",
     };
   }
+  // Same reasoning as gapFinder above: default every field rather than trust
+  // the model's JSON to include every key it was asked for.
+  const out = await chat<Partial<Omit<RedFlagResult, "source">>>(
+    "You are a busy tech recruiter who spends 6 seconds per resume. Read the resume and be brutally specific. Respond ONLY with JSON: { \"firstImpression\": string, \"skipReasons\": string[], \"cliches\": string[], \"fixes\": string[] } — skipReasons = what would make you skip it, cliches = eye-roll phrases to cut, fixes = concrete improvements.",
+    `RESUME:\n${resume.slice(0, 8000)}${jd ? `\n\nTARGET ROLE JD (for context):\n${jd.slice(0, 3000)}` : ""}`,
+  );
   return {
-    ...(await chat<Omit<RedFlagResult, "source">>(
-      "You are a busy tech recruiter who spends 6 seconds per resume. Read the resume and be brutally specific. Respond ONLY with JSON: { \"firstImpression\": string, \"skipReasons\": string[], \"cliches\": string[], \"fixes\": string[] } — skipReasons = what would make you skip it, cliches = eye-roll phrases to cut, fixes = concrete improvements.",
-      `RESUME:\n${resume.slice(0, 8000)}${jd ? `\n\nTARGET ROLE JD (for context):\n${jd.slice(0, 3000)}` : ""}`,
-    )),
+    firstImpression: out.firstImpression ?? "",
+    skipReasons: Array.isArray(out.skipReasons) ? out.skipReasons : [],
+    cliches: Array.isArray(out.cliches) ? out.cliches : [],
+    fixes: Array.isArray(out.fixes) ? out.fixes : [],
     source: "openai",
   };
 }
