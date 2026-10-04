@@ -170,7 +170,19 @@ export default function InterviewPrep() {
 function parsePlan(json: string | null): PrepPlan | null {
   if (!json) return null;
   try {
-    return JSON.parse(json) as PrepPlan;
+    const parsed = JSON.parse(json) as Partial<PrepPlan>;
+    // A plan saved by an older schema (or edited by hand) might be missing a
+    // field that PrepPlanView assumes exists — default each one defensively
+    // rather than let a bad row crash this card's render.
+    return {
+      summary: parsed.summary ?? "",
+      focusAreas: Array.isArray(parsed.focusAreas) ? parsed.focusAreas : [],
+      studyPlan: Array.isArray(parsed.studyPlan) ? parsed.studyPlan : [],
+      practice: Array.isArray(parsed.practice) ? parsed.practice : [],
+      talkingPoints: Array.isArray(parsed.talkingPoints) ? parsed.talkingPoints : [],
+      questionsToAsk: Array.isArray(parsed.questionsToAsk) ? parsed.questionsToAsk : [],
+      source: parsed.source === "openai" ? "openai" : "stub",
+    };
   } catch {
     return null;
   }
