@@ -37,12 +37,33 @@ function newId(): string {
   return `ans-${Date.now().toString(36)}-${idc}`;
 }
 
+/** Coerce one stored entry to a safe shape, or null if it's not usable at all.
+ * Guards every caller (getReusableAnswers/matchAnswer loop over these, and a
+ * single missing `answer`/`question` would otherwise throw on `.trim()`) — a
+ * hand-edited localStorage value or a future field rename shouldn't be able to
+ * break answer matching for the whole vault. */
+function sanitizeAnswer(a: unknown): ApplicationAnswer | null {
+  if (!a || typeof a !== "object") return null;
+  const r = a as Record<string, unknown>;
+  if (typeof r.id !== "string" || !r.id) return null;
+  return {
+    id: r.id,
+    category: typeof r.category === "string" ? r.category : "Custom",
+    question: typeof r.question === "string" ? r.question : "",
+    answer: typeof r.answer === "string" ? r.answer : "",
+    pattern: typeof r.pattern === "string" ? r.pattern : "",
+    approved: r.approved === true,
+    lastReviewedAt: typeof r.lastReviewedAt === "string" ? r.lastReviewedAt : null,
+  };
+}
+
 export function getAnswers(): ApplicationAnswer[] {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
-    const a = JSON.parse(raw) as ApplicationAnswer[];
-    return Array.isArray(a) ? a : [];
+    const a = JSON.parse(raw) as unknown;
+    if (!Array.isArray(a)) return [];
+    return a.map(sanitizeAnswer).filter((x): x is ApplicationAnswer => x !== null);
   } catch {
     return [];
   }
