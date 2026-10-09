@@ -2,6 +2,7 @@ import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState } f
 import { useNavigate } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { deleteApplication, GHOST_DAYS, listApplications, setApplicationStatus } from "../db/applications";
+import { applicationsToCsv, csvFileName } from "../apply/csvExport";
 import { STATUSES, STATUS_LABELS, type ApplicationRow, type Status } from "../db/types";
 import { matchCompany } from "../ranking/companies";
 import { APP_RECORDED_EVENT } from "../bridge/shared";
@@ -308,6 +309,18 @@ export default function Applications() {
   });
 
   const openNew = useCallback(() => { setEditing(null); setModalOpen(true); }, []);
+
+  function exportCsv() {
+    // A leading BOM so Excel renders accented characters (résumé, etc.) correctly.
+    const blob = new Blob(["﻿" + applicationsToCsv(all)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = csvFileName();
+    a.click();
+    URL.revokeObjectURL(url);
+    setNotice("Spreadsheet downloaded.");
+  }
   const openEdit = useCallback((row: ApplicationRow) => { setEditing(row); setModalOpen(true); }, []);
   const onTogglePop = useCallback((id: number) => setOpenPop((p) => (p === id ? null : id)), []);
   const onClosePop = useCallback(() => setOpenPop(null), []);
@@ -419,7 +432,12 @@ export default function Applications() {
           <h1>Applications</h1>
           <p>Every company, role, and status in one place.</p>
         </div>
-        <button onClick={openNew}>+ New application</button>
+        <div className="actions">
+          <button type="button" className="secondary" onClick={exportCsv} disabled={all.length === 0}>
+            Download spreadsheet
+          </button>
+          <button onClick={openNew}>+ New application</button>
+        </div>
       </div>
 
       <div className="filters">
