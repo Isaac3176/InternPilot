@@ -130,10 +130,12 @@ const AppRow = memo(forwardRef<HTMLTableRowElement, {
         {dupe && <span className="flag" title="A near-identical row exists. Merge?">Possible dupe</span>}
       </td>
       <td className="statuscell">
+        <div className="stagecontrols">
         <button className={`status ${r.status}`} onClick={(e) => { e.stopPropagation(); onTogglePop(r.id); }}>
           <i />{STATUS_LABELS[r.status]}<Chevron />
         </button>
         {nx && <button className="quick" onClick={() => onAdvance(r)}>→ {STATUS_LABELS[nx]}</button>}
+        </div>
         {isPopOpen && (
           <div className="pop" onClick={(e) => e.stopPropagation()}>
             <span className="eyebrow lab">Move to</span>
@@ -153,17 +155,22 @@ const AppRow = memo(forwardRef<HTMLTableRowElement, {
       </td>
       <td className="hidesm">
         {r.resume_version_name
-          ? <span className="rchip">{r.resume_version_name}</span>
+          ? <span className="rchip" title={r.resume_version_name}>
+              <svg aria-hidden="true" width="15" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h5" /></svg>
+              <span>{r.resume_version_name}</span>
+            </span>
           : <span className="rchip none">None attached</span>}
       </td>
       <td className={`age ${age.cls}`}><b>{age.big}</b><span>{age.small}</span></td>
-      <td>
+      <td className="actionscell">
         <span className="rowacts">
           <button className="ibtn" title="Edit" aria-label={`Edit ${r.role_title}`} onClick={() => onEdit(r)}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+            Edit
           </button>
           <ConfirmAction className="ibtn danger" ariaLabel={`Delete ${r.role_title}`} message={`Delete ${r.role_title}?`} confirmLabel="Delete" onConfirm={() => onDelete(r)}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13" /></svg>
+            Delete
           </ConfirmAction>
         </span>
       </td>
@@ -491,12 +498,12 @@ export default function Applications() {
           <table>
             <thead>
               <tr>
-                <th>Company</th>
+                <th style={{ width: "20%" }}>Company</th>
                 <th>Role</th>
-                <th style={{ width: 250 }}>Status</th>
-                <th className="hidesm" style={{ width: 160 }}>Résumé</th>
-                <th className="age" style={{ width: 108 }}>Age</th>
-                <th style={{ width: 76 }}></th>
+                <th style={{ width: 166 }}>Status</th>
+                <th className="hidesm" style={{ width: 200 }}>Résumé</th>
+                <th className="age" style={{ width: 88 }}>Age</th>
+                <th className="actionscell" style={{ width: 190 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
